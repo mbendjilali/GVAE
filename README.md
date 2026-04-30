@@ -20,9 +20,8 @@ A scene graph where every node carries:
 | Position | 3D centroid coordinates |
 | Footprint | Semi-axes of the volumetric extent |
 | Semantic label | One-hot class vector |
-| Node type | Instance, road segment, junction, etc. |
 
-Edges encode **physical proximity** and **road connectivity**.
+Edges encode **physical proximity**.
 
 ---
 
