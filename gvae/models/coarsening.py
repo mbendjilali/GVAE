@@ -1,7 +1,5 @@
 # gvae/models/coarsening.py
 # FPS + ball-query (hard) coarsening + soft-S MLP + supernode attribute derivation
-# TODO: implement (todo id: coarsening)
-
 
 import torch
 import torch.nn as nn
@@ -12,7 +10,7 @@ import config
 class FPSCoarsening(nn.Module):
     def __init__(self, ratio: float):
         super().__init__()
-        self.ratio = ratio
+        self.ratio = config.REDUCTION_RATIO  # fraction of nodes to keep
 
         # MLP to compute soft cluster assignment S from node features (learnable part)
         self.mlp_S = nn.Sequential(
@@ -76,7 +74,7 @@ class FPSCoarsening(nn.Module):
         p_super = (S.T @ p) / (S.sum(dim=0, keepdim=True).T + 1e-6)  # (M, 3) weighted average position
 
         # size (radius)
-        r_super = torch.zeros(K, 3, device=p.device)  # (M, 3) supernode radii
+        r_super = torch.zeros(M, 3, device=p.device)  # (M, 3) supernode radii
         for j in range(M):
             members = (hard_assign == j)  # boolean mask of nodes assigned to supernode j
             if members.sum() > 0:

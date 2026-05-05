@@ -38,8 +38,7 @@ GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 GRID_MID = (16, 16, 8)        # H × W × D  →  2048 voxels
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
-# Reduction ratio r: each FPS step keeps ⌊|V| / r⌋ nodes
-REDUCTION_RATIO = 4
+REDUCTION_RATIO = 0.25  # keep 25% of nodes at each coarsening step
 
 # Ball-query radius (in normalised [-1,1]³ space) for edge construction
 # after each coarsening step
