@@ -1,5 +1,8 @@
 # config.py — Central configuration for the Scene Graph VAE
 
+# ─── Data ─────────────────────────────────────────────────────────────────────
+GRAPH_DATA_DIR = 'data/scenes'   # folder containing scene JSON files
+
 #  Semantic classes 
 # From the plan: "label" node attribute — integer for each class.
 SEMANTIC_CLASSES = [
@@ -31,11 +34,11 @@ EDGE_PROXIMITY = 0.3
 D_MODEL = 192
 
 # ─── Voxel grid resolutions ───────────────────────────────────────────────────
-# Coarse latent volume  Z^G_coarse  (diffusion level 1)
-GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
-
 # Mid latent volume  Z^G_mid  (diffusion level 2)
 GRID_MID = (16, 16, 8)        # H × W × D  →  2048 voxels
+
+# Coarse latent volume  Z^G_coarse  (diffusion level 1)
+GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
 REDUCTION_RATIO = 0.25  # keep 25% of nodes at each coarsening step
