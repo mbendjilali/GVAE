@@ -46,7 +46,7 @@ The embedding passed upward is the **pooled output of the instance-level R-GAT**
 
 ### Level 2 — Region graph (G_{L-1})
 
-![Level 2: Instance graph](media/second_encoder_level.png)
+![Level 2: Region graph](media/second_encoder_level.png)
 
 The region encoder is initialised from the concatenation of inherited embeddings and the supernode's own geometric attributes, projected to the working dimension `d`. A second shallow R-GAT with PointROPE refines these embeddings over the coarser graph topology.
 
@@ -55,6 +55,8 @@ The region encoder is initialised from the concatenation of inherited embeddings
 A second FPS step produces scene-level supernodes — a handful of large spatial regions covering the full scene. The same embedding inheritance applies.
 
 ### Level 3 — Scene graph (G_1)
+
+![Level 3: Scene graph](media/third_encoder_level.png)
 
 Because the node count is now small (~10–30), a **full exact multi-head attention** with PointROPE is applied over all supernodes simultaneously. This is the only level where full-graph communication is both necessary and computationally affordable. At finer levels, the fixed-hop R-GAT receptive field is sufficient because coarsening automatically expands the physical extent covered by each hop.
 
