@@ -37,16 +37,17 @@ def sample_volume(Z, ref_pts):
     H, W, D, d = Z.shape
     N = ref_pts.shape[0]
     # Z is (H, W, D, d), we need to permute it to (d, D, W, H) for grid_sample
-    Z_in = Z.permute(3, 2, 1, 0).unsqueeze(0) # (1, d, D, W, H) 
-    grid = ref_pts.unsqueeze(0) # (1, N, 27, 3)
-    out = F.grid_sample(Z_in, grid, mode='bilinear', 
-                        align_corners=True, padding_mode='border') # (1, d, N, 27)
-    return out.squeeze(0).permute(1, 2, 0) # (N, 27, d)
+    Z_in = Z.permute(3, 2, 1, 0).unsqueeze(0) # (1, d, D, W, H)
+    # grid_sample for 5D input requires a 5D grid: (1, N, 27, 1, 3)
+    grid = ref_pts.unsqueeze(0).unsqueeze(3) # (1, N, 27, 1, 3)
+    out = F.grid_sample(Z_in, grid, mode='bilinear',
+                        align_corners=True, padding_mode='border') # (1, d, N, 27, 1)
+    return out.squeeze(0).squeeze(-1).permute(1, 2, 0) # (N, 27, d)
 
 class SceneGraphDecoder(nn.Module):
     def __init__(self):
         super().__init__()
-        d = config.D.MODEL
+        d = config.D_MODEL
         P = 27 # number of reference points
 
         # MLP for offsets to deform the reference points

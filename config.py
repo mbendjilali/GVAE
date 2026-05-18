@@ -1,7 +1,7 @@
 # config.py — Central configuration for the Scene Graph VAE
 
 # ─── Data ─────────────────────────────────────────────────────────────────────
-GRAPH_DATA_DIR = 'data/scenes'   # folder containing scene JSON files
+GRAPH_DATA_DIR = 'data/test'   # folder containing scene JSON files
 
 #  Semantic classes 
 # From the plan: "label" node attribute — integer for each class.
@@ -72,10 +72,10 @@ KL_ANNEAL_RATIO   = 0.5        # fraction of each cycle spent ramping (vs. holdi
 LEARNING_RATE      = 3e-4
 LEARNING_RATE_FINETUNE = 1e-4  # reduced LR for stage 4 joint fine-tune
 BATCH_SIZE         = 8
-NUM_EPOCHS_STAGE1  = 20        # coarsening only
-NUM_EPOCHS_STAGE2  = 40        # + mid branch
-NUM_EPOCHS_STAGE3  = 40        # + coarse branch
-NUM_EPOCHS_STAGE4  = 60        # joint fine-tune
+NUM_EPOCHS_STAGE1  = 2        # coarsening only
+NUM_EPOCHS_STAGE2  = 4        # + mid branch
+NUM_EPOCHS_STAGE3  = 4        # + coarse branch
+NUM_EPOCHS_STAGE4  = 6        # joint fine-tune
 
 # ─── R-GAT ────────────────────────────────────────────────────────────────────
 RGAT_HEADS        = 8

@@ -25,9 +25,6 @@ import config
 
 class SceneGraph:
     """
-    SceneGraph as described in the plan file.
-
-    From the plan:
       Node attributes: (p, r, s, label)
         p    — 3D position (centroid)
         r    — radius / footprint (half-extents)
@@ -113,6 +110,15 @@ class SceneGraph:
             )                                      # (2, E)
         else:
             self.edge_index = torch.zeros(2, 0, dtype=torch.long)
+
+    def to(self, device):
+        """Move all tensors in this SceneGraph to the given device (CPU or GPU)."""
+        self.p          = self.p.to(device)
+        self.r          = self.r.to(device)
+        self.s          = self.s.to(device)
+        self.label      = self.label.to(device)
+        self.edge_index = self.edge_index.to(device)
+        return self
 
     #  Voxel occupancy ground truth 
     def voxel_occupancy(self, grid: tuple) -> Tensor:

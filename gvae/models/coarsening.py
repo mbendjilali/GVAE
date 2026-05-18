@@ -8,7 +8,7 @@ from torch_geometric.nn import radius_graph
 import config
 
 class FPSCoarsening(nn.Module):
-    def __init__(self, ratio: float):
+    def __init__(self):
         super().__init__()
         self.ratio = config.REDUCTION_RATIO  # fraction of nodes to keep
 

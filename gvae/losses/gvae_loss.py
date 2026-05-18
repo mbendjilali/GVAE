@@ -5,6 +5,7 @@
 import torch
 import torch.nn.functional as F
 import config
+from gvae.data.occupancy import compute_occupancy_gt
 
 def kl_weight(step):
     total_steps = (config.NUM_EPOCHS_STAGE1 + config.NUM_EPOCHS_STAGE2 +
@@ -87,29 +88,45 @@ def loss_pool(S, edge_index, p, N_nodes):
 
     return cut_loss + ortho_loss + spatial_loss
 
+def loss_occupancy(occ_readout, z, p, r):
+    # sample query points and compute ground truth label 
+    q, labels = compute_occupancy_gt(p, r) 
+    # predict occupancy probabilities by reading from the latent grid z
+    occu_pred = occ_readout(q, z)
+    # binary cross-entropy loss
+    return F.binary_cross_entropy(occu_pred, labels)
+
 # total loss
 def compute_loss(outputs, graph, step):
     # unpack ground truth
     p, r, s, edge_index, label = graph.p, graph.r, graph.s, graph.edge_index, graph.label
 
     # reconstruction loss
-    L_recon = (reconstruction_loss(outputs['recon_mid'], outputs['enc']['p_lm1'], outputs['enc']['r_lm1'], outputs['enc']['s_lm1'], edge_index) +
-               reconstruction_loss(outputs['recon_coarse'], outputs['enc']['p_1'], outputs['enc']['r_1'], outputs['enc']['s_1'], edge_index))
+    L_recon = (reconstruction_loss(outputs['recon_mid'],    outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'], outputs['edge_index_lm1']) +
+               reconstruction_loss(outputs['recon_coarse'], outputs['p_1'],   outputs['r_1'],   outputs['s_1'],   outputs['edge_index_1']))
     
     # KL loss 
     L_KL = (
-        KL_loss(outputs['mu_mid'], outputs['logvar_mid']) +
+        KL_loss(outputs['mu_mid'],    outputs['logvar_mid']) +
         KL_loss(outputs['mu_coarse'], outputs['logvar_coarse'])
     )
     lam_kl = kl_weight(step)
 
     # pool loss
+    # S1: original → mid-level  → use original edge_index and p
+    # S2: mid → coarse-level    → use mid-level edge_index and p
     L_pool = (loss_pool(outputs['S1'], edge_index, p, p.shape[0]) +
-               loss_pool(outputs['S2'], edge_index, p, p.shape[0]))
+              loss_pool(outputs['S2'], outputs['edge_index_lm1'], outputs['p_lm1'], outputs['p_lm1'].shape[0]))
+    
+    # occupancy loss
+    L_occ = (loss_occupancy(outputs['occ_readout'], outputs['z_mid'], p, r) +
+             loss_occupancy(outputs['occ_readout'], outputs['z_coarse'], p, r))
 
-    total = L_recon + lam_kl * L_KL + config.LAMBDA_POOL * L_pool
+    total = L_recon + lam_kl * L_KL + config.LAMBDA_POOL * L_pool + config.LAMBDA_OCC * L_occ
 
     return total, {'recon': L_recon,
-                    'KL': L_KL,
-                    'pool': L_pool,
-                    'lam_kl': lam_kl}
+                   'KL':    L_KL,
+                   'pool':  L_pool,
+                   'occ':   L_occ,
+                   'lam_kl': lam_kl}
+

@@ -138,4 +138,7 @@ class SceneGraphEncoder(nn.Module):
             # soft assignment matrices for pool losses
             'S1': c1['S'],
             'S2': c2['S'],
+            # coarsened edge indices (needed for reconstruction loss)
+            'edge_index_lm1': edge_index_1,
+            'edge_index_1':   edge_index_2,
         }
