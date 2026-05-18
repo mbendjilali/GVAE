@@ -16,38 +16,30 @@ class SceneGraphEncoder(nn.Module):
         super().__init__()
         d = config.D_MODEL
 
-        # input projection for level L
-        self.input_proj_L = nn.Linear(
+        # ------------------------------------------------------------
+        self.input_proj_L = nn.Linear( # Input projection for level L
             config.NUM_CLASSES + 3 + 3, # semantic one-hot + position + radius = 21
             d
         )
-
-        # GPS layer for level L
-        self.gps_L = nn.ModuleList([
+        self.gps_L = nn.ModuleList([ # GPS layer for level L
             GPSLayer(d, num_heads = 8, use_global_attention = False),
             GPSLayer(d, num_heads = 8, use_global_attention = False),
         ])
-
-        # First coarsening (L → L-1)
-        self.coarsen_1 = FPSCoarsening()
-        # input projection for level L-1 (after coarsening)
-        self.input_proj_L1 = nn.Linear(d + config.NUM_CLASSES + 3, d) # add semantic and geometric info to the coarsened features
-        # GPS layer for level L-1 
-        self.gps_L1 = nn.ModuleList([
+        self.coarsen_1 = FPSCoarsening() # First coarsening (L → L-1)
+        # ------------------------------------------------------------
+        self.input_proj_L1 = nn.Linear(d + config.NUM_CLASSES + 3, d) # Input projection for level L-1 (after coarsening)
+        self.gps_L1 = nn.ModuleList([ # GPS layer for level L-1 
             GPSLayer(d, num_heads = 8, use_global_attention = False),
             GPSLayer(d, num_heads = 8, use_global_attention = False),
         ])
-
-        # Second coarsening (L-1 → 1)
-        self.coarsen_2 = FPSCoarsening()
-        # input projection for level 1 (same shape as L-1)
-        self.input_proj_1 = nn.Linear(d + config.NUM_CLASSES + 3, d)
-        # GPS layer for level 1
-        self.gps_1 = nn.ModuleList([
+        self.coarsen_2 = FPSCoarsening() # Second coarsening (L-1 → 1)
+        # ------------------------------------------------------------
+        self.input_proj_1 = nn.Linear(d + config.NUM_CLASSES + 3, d) # Input projection for level 1 (same shape as L-1)
+        self.gps_1 = nn.ModuleList([ # GPS layer for level 1
             GPSLayer(d, num_heads = 8, use_global_attention = True), # global attention at the coarsest level
             GPSLayer(d, num_heads = 8, use_global_attention = True),
         ])
-
+        # ------------------------------------------------------------
         # Gaussian splatting layer to convert node features to voxel grid features
         self.splat_mid = GaussianSplatting(config.GRID_MID) # for mid-level features
         self.splat_coarse = GaussianSplatting(config.GRID_COARSE) # for coarse-level features

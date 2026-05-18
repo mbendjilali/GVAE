@@ -46,6 +46,8 @@ The embedding passed upward is the **pooled output of the instance-level R-GAT**
 
 ### Level 2 — Region graph (G_{L-1})
 
+![Level 2: Instance graph](media/second_encoder_level.png)
+
 The region encoder is initialised from the concatenation of inherited embeddings and the supernode's own geometric attributes, projected to the working dimension `d`. A second shallow R-GAT with PointROPE refines these embeddings over the coarser graph topology.
 
 ### Coarsening: G_{L-1} → G_1
