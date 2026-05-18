@@ -4,7 +4,6 @@
 
 import torch, torch.nn as nn
 from torch_geometric.nn import GATv2Conv
-import config
 
 # PointROPE positional encoding function
 def apply_PointROPE(x, pos):

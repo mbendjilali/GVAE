@@ -29,6 +29,8 @@ Edges encode **physical proximity**.
 
 ### Level 1 — Instance graph (G_L)
 
+![Level 1: Instance graph](media/first_encoder_level.png)
+
 The instance graph passes through a shallow 2–3 layer **Relational Graph Attention Network (R-GAT)**. Attention uses **PointROPE**: a parameter-free rotary positional embedding that divides the feature dimension equally across the x, y, z axes and applies standard 1D rotary embeddings independently per axis. This makes every attention operation implicitly aware of metric 3D geometry between nodes, with no learned positional parameters.
 
 ### Coarsening: G_L → G_{L-1}
