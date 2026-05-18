@@ -1,0 +1,29 @@
+# CUDA 12.4 (wheel installs): export BOTH before `mamba env create -f environment.yml`
+# (conda does not inject these from this file during the pip step):
+#   export PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124
+#   export PIP_FIND_LINKS=https://data.pyg.org/whl/torch-2.6.0+cu124.html
+#
+# CPU-only instead:
+#   export PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+#   export PIP_FIND_LINKS=https://data.pyg.org/whl/torch-2.6.0+cpu.html
+#
+# Torch is pinned to 2.6.x: PyG publishes wheels for scatter/cluster per torch+cuda
+# tag. Unpinned torch (e.g. 2.12) has no matching wheels; pip then builds from sdist
+# and fails (isolated build env has no torch during metadata).
+name: gvae
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10,<3.13
+  - numpy>=1.26.0
+  - scipy>=1.12.0
+  - einops>=0.7.0
+  - tqdm>=4.66.0
+  - pyyaml>=6.0.1
+  - pip
+  - pip:
+      - torch==2.6.0
+      - torch-geometric>=2.5.0
+      - torch-scatter==2.1.2
+      - torch-cluster==1.6.3
+      - laspy[laszip]

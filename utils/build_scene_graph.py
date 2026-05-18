@@ -16,6 +16,7 @@ import os
 import json
 import numpy as np
 import laspy
+import sys
 
 
 INSTANCE_FIELD = "instance"  
@@ -40,10 +41,6 @@ LABEL_MAP = {
     14: 'annex',
 }
 
-# Paths
-DATA_ROOT   = "/home/claire.peyran/GVAE/data"
-INPUT_ROOT  = os.path.join(DATA_ROOT, 'dales2')
-OUTPUT_ROOT = os.path.join(DATA_ROOT, 'graphs')
 
 def laz_to_graph(laz_path):
     # takes one .laz and returns a dict with the scene graph
@@ -78,9 +75,7 @@ def laz_to_graph(laz_path):
     return {"instances": instances}
 
 
-def process_split(split):
-    in_dir  = os.path.join(INPUT_ROOT,  split)
-    out_dir = os.path.join(OUTPUT_ROOT, split)
+def process_split(split, in_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
     laz_files = sorted(f for f in os.listdir(in_dir) if f.endswith('.laz'))
@@ -109,10 +104,16 @@ def process_split(split):
 
 
 def main():
+    if len(sys.argv) != 2:
+        print("Usage: python utils/build_scene_graph.py <data_root>")
+        sys.exit(1)
+    data_root = sys.argv[1]
+    in_dir = os.path.join(data_root, 'dales2')
+    out_dir = os.path.join(data_root, 'graphs')
     for split in ('train', 'test'):
-        split_dir = os.path.join(INPUT_ROOT, split)
+        split_dir = os.path.join(in_dir, split)
         if os.path.isdir(split_dir):
-            process_split(split)
+            process_split(split, split_dir, out_dir)
         else:
             print(f"[{split}]  not found, skipping")
 

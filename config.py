@@ -1,7 +1,7 @@
 # config.py — Central configuration for the Scene Graph VAE
 
 # ─── Data ─────────────────────────────────────────────────────────────────────
-GRAPH_DATA_DIR = 'data/test'   # folder containing scene JSON files
+GRAPH_DATA_DIR = 'data/dales2/test'   # folder containing scene JSON files
 
 #  Semantic classes 
 # From the plan: "label" node attribute — integer for each class.
