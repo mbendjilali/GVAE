@@ -59,6 +59,12 @@ class SceneGraph:
 
         instances = data["instances"]
 
+        #####
+        # optionally filter out non-instantiable background classes at load time
+        if config.REMOVE_NON_INSTANTIABLE:
+            instances = [inst for inst in instances if inst["label"] not in config.NON_INSTANTIABLE_CLASSES]
+        #####
+
         positions = [inst["position"] for inst in instances]
         radii     = [inst["radius"]   for inst in instances]
         labels    = [inst["label"]    for inst in instances]

@@ -81,8 +81,8 @@ class OccupancyReadout(nn.Module):
         attn_scores = torch.softmax(Q @ K.T / scale, dim=1) 
         z_q = attn_scores @ V
 
-        # predict occupancy probability for each query point
-        logit = self.mlp(z_q).squeeze(1) 
-        return torch.sigmoid(logit) # probabilities
+        # predict occupancy logit — sigmoid is applied inside the loss for numerical stability
+        logit = self.mlp(z_q).squeeze(1)
+        return logit  # raw logit, NOT sigmoid
     
 
