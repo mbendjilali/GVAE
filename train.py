@@ -68,14 +68,16 @@ def validate(model, loader, stage, step_counter, device):
 
     val_loss = 0.0
     all_metrics = []
+    all_components = []
 
     with torch.no_grad():
         for batch in loader:
             for graph in batch:
                 graph = graph.to(device)
                 outputs = model(graph)
-                loss, _ = compute_loss(outputs, graph, step_counter[0])
+                loss, components = compute_loss(outputs, graph, step_counter[0], stage)
                 val_loss += loss.item()
+                all_components.append({k: v.item() if hasattr(v, 'item') else v for k, v in components.items()})
 
                 m = compute_metrics(outputs, stage)
                 if m:
@@ -85,13 +87,18 @@ def validate(model, loader, stage, step_counter, device):
 
     avg_loss = val_loss / len(loader)
 
+    avg_components = {}
+    if all_components:
+        for key in all_components[0]:
+            avg_components[key] = sum(c[key] for c in all_components) / len(all_components)
+
     avg_metrics = {}
     if all_metrics:
         for key in all_metrics[0]:
             avg_metrics[key] = sum(m[key] for m in all_metrics) / len(all_metrics)
     
     model.train()  # switch back to training mode
-    return avg_loss, avg_metrics
+    return avg_loss, avg_metrics, avg_components
 
 
 def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, device, ckpt_dir):
@@ -106,27 +113,35 @@ def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, 
 
     for epoch in range(num_epochs):
         epoch_loss = 0.0
+        epoch_components = []
         for batch in loader: # batch is a list of graph objects due to collate_fn in dataloader
             # we need to loop over the list of graphs and process them one by one, since our model and loss are not designed for batching multiple graphs together
             optimizer.zero_grad()  # clear gradients before processing the batch
             for graph in batch:
                 graph = graph.to(device)  # move graph tensors to GPU
                 outputs = model(graph)  # forward pass for each graph in the batch
-                loss, _ = compute_loss(outputs, graph, step_counter[0])  # compute loss for each graph
+                loss, components = compute_loss(outputs, graph, step_counter[0], stage)  # compute loss for each graph
                 loss.backward()  # accumulate gradients for each graph
                 epoch_loss += loss.item()  # accumulate loss for logging
+                epoch_components.append({k: v.item() if hasattr(v, 'item') else v for k, v in components.items()})
                 step_counter[0] += 1  # increment global step counter for each graph
 
             optimizer.step()  # update weights once per batch, after all graphs
 
         avg_loss = epoch_loss / len(loader)
+        avg_train_components = {k: sum(c[k] for c in epoch_components) / len(epoch_components) for k in epoch_components[0]}
 
         # validation 
-        avg_val_loss, avg_metrics = validate(model, val_loader, stage, step_counter, device)
-        print(f"Stage {stage} Epoch {epoch+1}/{num_epochs}, train_loss: {avg_loss:.4f}, val_loss: {avg_val_loss:.4f}")
+        avg_val_loss, avg_metrics, avg_val_components = validate(model, val_loader, stage, step_counter, device)
+
+        print(f"Stage {stage} Epoch {epoch+1}/{num_epochs}  train: {avg_loss:.4f}  val: {avg_val_loss:.4f}")
+        train_str = '  '.join(f"{k}={v:.4f}" for k, v in avg_train_components.items())
+        val_str   = '  '.join(f"{k}={v:.4f}" for k, v in avg_val_components.items())
+        print(f"  train losses → {train_str}")
+        print(f"  val   losses → {val_str}")
         if avg_metrics:
-            print(f"mid  → acc={avg_metrics['acc_mid']:.1%}  pos_err={avg_metrics['pos_err_mid']:.4f}  size_err={avg_metrics['size_err_mid']:.4f}")
-            print(f"coarse→ acc={avg_metrics['acc_coarse']:.1%}  pos_err={avg_metrics['pos_err_coarse']:.4f}  size_err={avg_metrics['size_err_coarse']:.4f}")
+            print(f"  mid  → acc={avg_metrics['acc_mid']:.1%}  pos_err={avg_metrics['pos_err_mid']:.4f}  size_err={avg_metrics['size_err_mid']:.4f}")
+            print(f"  coarse→ acc={avg_metrics['acc_coarse']:.1%}  pos_err={avg_metrics['pos_err_coarse']:.4f}  size_err={avg_metrics['size_err_coarse']:.4f}")
 
         # save best model for this stage based on validation loss
         if avg_val_loss < best_loss:
@@ -143,7 +158,7 @@ def main(ckpt_dir):
 
     # Load dataset and create dataloader
     train_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'train'))
-    val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'val'))
+    val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'test'))
 
     train_dataloader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=lambda x: x)  # collate_fn to return list of graphs
     val_dataloader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE, shuffle=False, collate_fn=lambda x: x)
