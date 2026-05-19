@@ -25,6 +25,8 @@ import laspy
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import config
+
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
 
@@ -69,9 +71,17 @@ def run(json_path: str, ckpt_path: str):
     with open(json_path) as f:
         data = json.load(f)
 
-    for i, instance in enumerate(data['instances']):
-        instance['supernode_mid']    = assign_mid[i]
-        instance['supernode_coarse'] = assign_coarse[i]
+    # apply the same filter as SceneGraph.from_json() so indices stay aligned
+    non_instantiable = config.NON_INSTANTIABLE_CLASSES if config.REMOVE_NON_INSTANTIABLE else set()
+    filtered_idx = 0
+    for instance in data['instances']:
+        if instance['label'] in non_instantiable:
+            instance['supernode_mid']    = -1   # not part of the graph
+            instance['supernode_coarse'] = -1
+        else:
+            instance['supernode_mid']    = assign_mid[filtered_idx]
+            instance['supernode_coarse'] = assign_coarse[filtered_idx]
+            filtered_idx += 1
 
     stem  = os.path.splitext(os.path.basename(json_path))[0]
     parts = json_path.replace('\\', '/').split('/')

@@ -9,6 +9,7 @@ import os
 import torch
 from datetime import datetime
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 import config
 from gvae.models.gvae import GVAE
@@ -101,7 +102,7 @@ def validate(model, loader, stage, step_counter, device):
     return avg_loss, avg_metrics, avg_components
 
 
-def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, device, ckpt_dir):
+def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, device, ckpt_dir, writer):
     set_stage(model, stage)
     # only pass unfrozen params to the optimizer
     optimizer = torch.optim.Adam(
@@ -143,6 +144,17 @@ def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, 
             print(f"  mid  → acc={avg_metrics['acc_mid']:.1%}  pos_err={avg_metrics['pos_err_mid']:.4f}  size_err={avg_metrics['size_err_mid']:.4f}")
             print(f"  coarse→ acc={avg_metrics['acc_coarse']:.1%}  pos_err={avg_metrics['pos_err_coarse']:.4f}  size_err={avg_metrics['size_err_coarse']:.4f}")
 
+        # TensorBoard logging
+        global_epoch = step_counter[0]  # use global step so all stages share one x-axis
+        writer.add_scalars(f'stage{stage}/total', {'train': avg_loss, 'val': avg_val_loss}, global_epoch)
+        for k, v in avg_train_components.items():
+            writer.add_scalar(f'stage{stage}/train/{k}', v, global_epoch)
+        for k, v in avg_val_components.items():
+            writer.add_scalar(f'stage{stage}/val/{k}', v, global_epoch)
+        if avg_metrics:
+            for k, v in avg_metrics.items():
+                writer.add_scalar(f'stage{stage}/metrics/{k}', v, global_epoch)
+
         # save best model for this stage based on validation loss
         if avg_val_loss < best_loss:
             best_loss = avg_val_loss
@@ -168,26 +180,30 @@ def main(ckpt_dir):
 
     step_counter = [0]  # global step counter across all stages
 
+    writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
+    print(f"TensorBoard logs: tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}")
+
     # Stage 1
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE1,
-                stage=1, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir)
+                stage=1, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage1.pth"))
 
     # Stage 2
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE2,
-                stage=2, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir)
+                stage=2, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage2.pth"))
 
     # Stage 3
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE3,
-                stage=3, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir)
+                stage=3, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage3.pth"))
 
     # Stage 4 — reduced LR for joint fine-tune
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE4,
-                stage=4, step_counter=step_counter, lr=config.LEARNING_RATE_FINETUNE, device=device, ckpt_dir=ckpt_dir)
+                stage=4, step_counter=step_counter, lr=config.LEARNING_RATE_FINETUNE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "final.pth"))
 
+    writer.close()
     print(f"Training complete. Final model saved to {ckpt_dir}/final.pth")
 
 
