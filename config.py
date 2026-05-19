@@ -36,9 +36,13 @@ NON_INSTANTIABLE_CLASSES  = {'ground',
 # It is the distance in normalised [-1,1]³ space below which we consider two objects to be "close" and connect them with an edge in the graph.
 EDGE_PROXIMITY = 0.03
 
-# ─── Feature dimension ────────────────────────────────────────────────────────
-# Must be divisible by 6 (required by PointROPE)
-D_MODEL = 192
+# ─── Feature dimensions (progressive across graph levels) ─────────────────────
+# [instance G_L, region G_{L-1}, scene G_1] — each divisible by 6 (PointROPE)
+D_MODEL_LEVELS = [72, 144, 288]
+D_INSTANCE, D_REGION, D_SCENE = D_MODEL_LEVELS
+D_MID_LATENT = D_REGION       # Z^G_mid  channel dim
+D_COARSE_LATENT = D_SCENE     # Z^G_coarse channel dim
+D_NUM_HEADS = [8, 8, 8]       # GATv2 heads per level (d % heads == 0)
 
 # ─── Voxel grid resolutions ───────────────────────────────────────────────────
 # Mid latent volume  Z^G_mid  (diffusion level 2)

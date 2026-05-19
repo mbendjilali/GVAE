@@ -114,13 +114,13 @@ def compute_loss(outputs, graph, step, stage=4):
     lambda_kl = kl_weight(step)
     L_recon = reconstruction_loss(outputs['recon_mid'], outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'], outputs['edge_index_lm1'])
     L_KL    = KL_loss(outputs['mu_mid'], outputs['logvar_mid'])
-    L_occ   = loss_occupancy(outputs['occ_readout'], outputs['z_mid'], graph.occ_mid)
+    L_occ   = loss_occupancy(outputs['occ_readout_mid'], outputs['z_mid'], graph.occ_mid)
 
     if stage >= 3:
         # coarse branch is also active — add its contributions
         L_recon = L_recon + reconstruction_loss(outputs['recon_coarse'], outputs['p_1'], outputs['r_1'], outputs['s_1'], outputs['edge_index_1'])
         L_KL    = L_KL    + KL_loss(outputs['mu_coarse'], outputs['logvar_coarse'])
-        L_occ   = L_occ   + loss_occupancy(outputs['occ_readout'], outputs['z_coarse'], graph.occ_coarse)
+        L_occ   = L_occ   + loss_occupancy(outputs['occ_readout_coarse'], outputs['z_coarse'], graph.occ_coarse)
 
     total = L_recon + lambda_kl * L_KL + config.LAMBDA_POOL * L_pool + config.LAMBDA_OCC * L_occ
 

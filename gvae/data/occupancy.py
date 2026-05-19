@@ -7,7 +7,6 @@ import torch.nn as nn
 import config
 from gvae.data.voxelize import sample_occupancy_queries
 
-# Re-export for loss code
 __all__ = ['OccupancyReadout', 'sample_occupancy_queries']
 
 
@@ -19,9 +18,9 @@ def fourier_encode(q, num_freqs=6):
 
 
 class OccupancyReadout(nn.Module):
-    def __init__(self):
+    def __init__(self, d: int):
         super().__init__()
-        d = config.D_MODEL
+        self.d = d
         fourier_dim = 3 * 2 * 6
 
         self.input_proj = nn.Linear(fourier_dim, d)
@@ -35,19 +34,18 @@ class OccupancyReadout(nn.Module):
         )
 
     def forward(self, q, Z):
-        q_enc = fourier_encode(q)
-        q_feat = self.input_proj(q_enc)
+        q_feat = self.input_proj(fourier_encode(q))
 
         H, W, D, d = Z.shape
+        assert d == self.d, f"Z has {d} channels but readout expects {self.d}"
         Z_flat = Z.reshape(-1, d)
 
         Q = self.W_Q(q_feat)
         K = self.W_K(Z_flat)
         V = self.W_V(Z_flat)
 
-        scale = d ** 0.5
+        scale = self.d ** 0.5
         attn_scores = torch.softmax(Q @ K.T / scale, dim=1)
         z_q = attn_scores @ V
 
-        logit = self.mlp(z_q).squeeze(1)
-        return logit
+        return self.mlp(z_q).squeeze(1)

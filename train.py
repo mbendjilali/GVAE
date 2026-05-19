@@ -45,24 +45,25 @@ def unfreeze(modules):
             param.requires_grad = True
 
 def set_stage(model, stage):
-    freeze_all(model)  # start by freezing everything
+    freeze_all(model)
     enc = model.encoder
-    dec = model.decoder
+
+    if stage >= 4:
+        unfreeze([model])
+        return
 
     if stage >= 1:
-        # coarsening modules only
         unfreeze([enc.coarsen_1, enc.coarsen_2])
 
     if stage >= 2:
-        # add mid branch
         unfreeze([enc.input_proj_L, enc.gps_L, enc.splat_mid,
                   enc.input_proj_L1, enc.gps_L1, enc.unet_mid,
-                  dec])
+                  model.decoder_mid, model.occ_readout_mid])
 
     if stage >= 3:
-        # add coarse branch
         unfreeze([enc.input_proj_1, enc.gps_1,
-                  enc.splat_coarse, enc.unet_coarse])
+                  enc.splat_coarse, enc.unet_coarse,
+                  model.decoder_coarse, model.occ_readout_coarse])
 
 def validate(model, loader, stage, step_counter, device):
     model.eval()
