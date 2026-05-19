@@ -64,6 +64,8 @@ Because the node count is now small (~10–30), a **full exact multi-head attent
 
 ## Splatting and Latent Volume Production
 
+![3D Projection](media/3D_projector.png)
+
 > Applies independently to the **region** and **scene** levels.
 
 Each node scatters its embedding across the target voxel grid via **anisotropic Gaussian splatting**: the kernel bandwidth is set directly from the node's footprint semi-axes. The kernel is truncated at ±2σ per axis and accumulated via sparse `scatter_add` operations.
