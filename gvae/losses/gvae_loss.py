@@ -5,7 +5,7 @@
 import torch
 import torch.nn.functional as F
 import config
-from gvae.data.occupancy import compute_occupancy_gt
+from gvae.data.occupancy import sample_occupancy_queries
 
 def kl_weight(step):
     total_steps = (config.NUM_EPOCHS_STAGE1 + config.NUM_EPOCHS_STAGE2 +
@@ -88,13 +88,11 @@ def loss_pool(S, edge_index, p, N_nodes):
 
     return cut_loss + ortho_loss + spatial_loss
 
-def loss_occupancy(occ_readout, z, p, r):
-    # sample query points and compute ground truth label 
-    q, labels = compute_occupancy_gt(p, r) 
-    # predict occupancy logits by reading from the latent grid z
-    occu_pred = occ_readout(q, z)
-    # binary_cross_entropy_with_logits is numerically stable: avoids log(0) when sigmoid saturates
-    return F.binary_cross_entropy_with_logits(occu_pred, labels)
+def loss_occupancy(occ_readout, z, occ_grid):
+    """Supervise latent z against point-voxelised occupancy (not graph bounding boxes)."""
+    q, labels = sample_occupancy_queries(occ_grid)
+    logits = occ_readout(q, z)
+    return F.binary_cross_entropy_with_logits(logits, labels)
 
 # total loss
 def compute_loss(outputs, graph, step, stage=4):
@@ -116,13 +114,13 @@ def compute_loss(outputs, graph, step, stage=4):
     lambda_kl = kl_weight(step)
     L_recon = reconstruction_loss(outputs['recon_mid'], outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'], outputs['edge_index_lm1'])
     L_KL    = KL_loss(outputs['mu_mid'], outputs['logvar_mid'])
-    L_occ   = loss_occupancy(outputs['occ_readout'], outputs['z_mid'], p, r)
+    L_occ   = loss_occupancy(outputs['occ_readout'], outputs['z_mid'], graph.occ_mid)
 
     if stage >= 3:
         # coarse branch is also active — add its contributions
         L_recon = L_recon + reconstruction_loss(outputs['recon_coarse'], outputs['p_1'], outputs['r_1'], outputs['s_1'], outputs['edge_index_1'])
         L_KL    = L_KL    + KL_loss(outputs['mu_coarse'], outputs['logvar_coarse'])
-        L_occ   = L_occ   + loss_occupancy(outputs['occ_readout'], outputs['z_coarse'], p, r)
+        L_occ   = L_occ   + loss_occupancy(outputs['occ_readout'], outputs['z_coarse'], graph.occ_coarse)
 
     total = L_recon + lambda_kl * L_KL + config.LAMBDA_POOL * L_pool + config.LAMBDA_OCC * L_occ
 

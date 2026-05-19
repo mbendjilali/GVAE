@@ -94,6 +94,10 @@ RGAT_LAYERS_COARSE = 2         # coarsest level (+ GPS exact attention)
 # ─── Road edge reconstruction ─────────────────────────────────────────────────
 ROAD_EDGE_NEG_RATIO = 5        # negative sampling ratio for road edges
 
-# ─── Occupancy sampling ───────────────────────────────────────────────────────
-OCC_QUERY_POINTS  = 2048       # total query points per scene during training
-OCC_POS_RATIO     = 0.5        # fraction sampled from inside occupied voxels
+# ─── Occupancy (point-cloud voxelisation) ─────────────────────────────────────
+OCC_CACHE_SUFFIX_MID    = '_occ_mid.npy'     # sidecar next to scene JSON
+OCC_CACHE_SUFFIX_COARSE = '_occ_coarse.npy'
+OCC_MAX_POINTS          = 500_000            # subsample LiDAR when building caches
+OCC_REQUIRE_CACHE       = True               # raise if caches missing at load time
+OCC_QUERY_POINTS        = 2048               # query points per scene during training
+OCC_POS_RATIO           = 0.5                # fraction sampled from occupied voxels
