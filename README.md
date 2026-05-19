@@ -29,6 +29,8 @@ Edges encode **physical proximity**.
 
 ### Level 1 — Instance graph (G_L)
 
+![Level 1: Instance graph](media/first_encoder_level.png)
+
 The instance graph passes through a shallow 2–3 layer **Relational Graph Attention Network (R-GAT)**. Attention uses **PointROPE**: a parameter-free rotary positional embedding that divides the feature dimension equally across the x, y, z axes and applies standard 1D rotary embeddings independently per axis. This makes every attention operation implicitly aware of metric 3D geometry between nodes, with no learned positional parameters.
 
 ### Coarsening: G_L → G_{L-1}
@@ -44,6 +46,8 @@ The embedding passed upward is the **pooled output of the instance-level R-GAT**
 
 ### Level 2 — Region graph (G_{L-1})
 
+![Level 2: Region graph](media/second_encoder_level.png)
+
 The region encoder is initialised from the concatenation of inherited embeddings and the supernode's own geometric attributes, projected to the working dimension `d`. A second shallow R-GAT with PointROPE refines these embeddings over the coarser graph topology.
 
 ### Coarsening: G_{L-1} → G_1
@@ -52,11 +56,15 @@ A second FPS step produces scene-level supernodes — a handful of large spatial
 
 ### Level 3 — Scene graph (G_1)
 
+![Level 3: Scene graph](media/third_encoder_level.png)
+
 Because the node count is now small (~10–30), a **full exact multi-head attention** with PointROPE is applied over all supernodes simultaneously. This is the only level where full-graph communication is both necessary and computationally affordable. At finer levels, the fixed-hop R-GAT receptive field is sufficient because coarsening automatically expands the physical extent covered by each hop.
 
 ---
 
 ## Splatting and Latent Volume Production
+
+![3D Projection](media/3D_projector.png)
 
 > Applies independently to the **region** and **scene** levels.
 
