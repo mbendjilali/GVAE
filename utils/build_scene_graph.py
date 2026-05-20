@@ -57,6 +57,38 @@ def _filter_instances(instances):
     ]
 
 
+def _instances_from_points(xyz, instance_ids, label_ids):
+    """
+    Build per-instance centroids and AABBs in O(P log P) via sort + slice
+    (avoids O(P * I) repeated full-cloud masks).
+    """
+    order = np.argsort(instance_ids, kind="stable")
+    ids_sorted = instance_ids[order]
+    xyz_sorted = xyz[order]
+    labels_sorted = label_ids[order]
+
+    unique_ids, start_idx = np.unique(ids_sorted, return_index=True)
+    instances = []
+    n = len(ids_sorted)
+
+    for i, inst in enumerate(unique_ids):
+        begin = int(start_idx[i])
+        end = int(start_idx[i + 1]) if i + 1 < len(start_idx) else n
+        points = xyz_sorted[begin:end]
+
+        centroid = points.mean(axis=0)
+        half_extent = np.maximum((points.max(axis=0) - points.min(axis=0)) / 2, 0.01)
+
+        instances.append({
+            "id": int(inst),
+            "position": centroid.tolist(),
+            "radius": half_extent.tolist(),
+            "label": LABEL_MAP[int(labels_sorted[begin])],
+        })
+
+    return instances
+
+
 def laz_to_scene(laz_path):
     """
     Returns:
@@ -68,26 +100,16 @@ def laz_to_scene(laz_path):
     instance_ids = np.array(laz[INSTANCE_FIELD], dtype=np.int64)
     label_ids = np.array(laz[LABEL_FIELD], dtype=np.int64)
 
-    instances = []
-    for inst in np.unique(instance_ids):
-        mask = instance_ids == inst
-        points = xyz[mask]
-        labels = label_ids[mask]
-
-        centroid = points.mean(axis=0)
-        half_extent = (points.max(axis=0) - points.min(axis=0)) / 2
-        half_extent = np.maximum(half_extent, 0.01)
-
-        instances.append({
-            "id": int(inst),
-            "position": centroid.tolist(),
-            "radius": half_extent.tolist(),
-            "label": LABEL_MAP[int(labels[0])],
-        })
-
+    instances = _instances_from_points(xyz, instance_ids, label_ids)
     instances = _filter_instances(instances)
     if len(instances) == 0:
         return None, None
+
+    n_coarsenable = sum(
+        1 for inst in instances if inst["label"] not in config.NON_INSTANTIABLE_CLASSES
+    )
+    if n_coarsenable == 0:
+        print(f"  warn  {os.path.basename(laz_path)}  → 0 instantiable instances")
 
     positions = np.array([inst["position"] for inst in instances], dtype=np.float64)
     centroid = positions.mean(axis=0)
@@ -95,6 +117,12 @@ def laz_to_scene(laz_path):
     scale = max(float(np.abs(centred).max()), 1e-6)
 
     points_norm = (xyz - centroid) / scale
+    if config.OCC_FILTER_NON_INSTANTIABLE:
+        keep = np.array(
+            [LABEL_MAP[int(l)] not in config.NON_INSTANTIABLE_CLASSES for l in label_ids],
+            dtype=bool,
+        )
+        points_norm = points_norm[keep]
     if points_norm.shape[0] > config.OCC_MAX_POINTS:
         idx = np.random.choice(points_norm.shape[0], config.OCC_MAX_POINTS, replace=False)
         points_norm = points_norm[idx]

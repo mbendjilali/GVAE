@@ -8,39 +8,38 @@ import torch.nn as nn
 import config
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, bn_momentum=None):
         super().__init__()
         self.block = nn.Sequential(
-            nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1), 
-            nn.BatchNorm3d(out_channels),
+            nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm3d(out_channels, momentum=bn_momentum),
             nn.ReLU(inplace=True),
             nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm3d(out_channels),
-            nn.ReLU(inplace=True)
+            nn.BatchNorm3d(out_channels, momentum=bn_momentum),
+            nn.ReLU(inplace=True),
         )
     
     def forward(self, x):
         return self.block(x)
     
 class UNet3D(nn.Module):
-    def __init__(self, d: int, depth: int):
+    def __init__(self, d: int, depth: int, bn_momentum=None):
         super().__init__()
-        self.depth = depth # number of encoder/decoder levels (2 for coarse, 3 for mid)
-        
-        # Encoder stages
+        if bn_momentum is None:
+            bn_momentum = config.BN_MOMENTUM
+        self.depth = depth
+
         self.encoders = nn.ModuleList()
         ch = d
-        for i in range(depth):
-            self.encoders.append(ConvBlock(ch, ch*2))
+        for _ in range(depth):
+            self.encoders.append(ConvBlock(ch, ch * 2, bn_momentum=bn_momentum))
             ch = ch * 2
-        
-        # Bottleneck
-        self.bottleneck = ConvBlock(ch, ch)
 
-        # Decoder stages
+        self.bottleneck = ConvBlock(ch, ch, bn_momentum=bn_momentum)
+
         self.decoders = nn.ModuleList()
-        for i in range(depth):
-            self.decoders.append(ConvBlock(ch * 2, ch//2)) # input channels are doubled due to skip connections
+        for _ in range(depth):
+            self.decoders.append(ConvBlock(ch * 2, ch // 2, bn_momentum=bn_momentum))
             ch = ch // 2
 
         

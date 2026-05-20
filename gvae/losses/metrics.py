@@ -1,4 +1,5 @@
 import torch
+import config
 
 def semantic_accuracy(pred_labels, true_labels):
     """Compute semantic accuracy: percentage of nodes with correct predicted label."""
@@ -32,10 +33,12 @@ def compute_metrics(outputs, stage):
         metrics['pos_err_mid'] = mean_position_error(outputs['recon_mid']['p'], outputs['p_lm1'])
         metrics['size_err_mid'] = mean_size_error(outputs['recon_mid']['r'], outputs['r_lm1'])
 
-        # coarse-level metrics
-        metrics['acc_coarse'] = semantic_accuracy(outputs['recon_coarse']['s'], outputs['s_1'])
-        metrics['pos_err_coarse'] = mean_position_error(outputs['recon_coarse']['p'], outputs['p_1'])
-        metrics['size_err_coarse'] = mean_size_error(outputs['recon_coarse']['r'], outputs['r_1'])
+        # coarse metrics: trained from stage 3; preview-only at stage 2
+        coarse_prefix = 'coarse' if stage >= 3 else 'coarse_preview'
+        if stage >= 3 or config.LOG_COARSE_PREVIEW_AT_STAGE2:
+            metrics[f'acc_{coarse_prefix}'] = semantic_accuracy(outputs['recon_coarse']['s'], outputs['s_1'])
+            metrics[f'pos_err_{coarse_prefix}'] = mean_position_error(outputs['recon_coarse']['p'], outputs['p_1'])
+            metrics[f'size_err_{coarse_prefix}'] = mean_size_error(outputs['recon_coarse']['r'], outputs['r_1'])
 
     return metrics
 

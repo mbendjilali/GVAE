@@ -5,107 +5,101 @@ import torch
 import torch.nn as nn
 from torch_cluster import fps
 from torch_geometric.nn import radius_graph
+
 import config
 
+
+def _empty_coarsening(device, feature_dim: int):
+    z3 = torch.zeros(0, 3, device=device)
+    zc = torch.zeros(0, config.NUM_CLASSES, device=device)
+    zh = torch.zeros(0, feature_dim, device=device)
+    return {
+        'p': z3,
+        'r': z3,
+        's': zc,
+        'edge_index': torch.zeros(2, 0, dtype=torch.long, device=device),
+        'S': torch.zeros(0, 0, device=device),
+        'hard_assign': torch.zeros(0, dtype=torch.long, device=device),
+        'h_pooled': zh,
+    }
+
+
 class FPSCoarsening(nn.Module):
-    def __init__(self):
+    def __init__(self, coarsening_level: int = 0):
         super().__init__()
-        self.ratio = config.REDUCTION_RATIO  # fraction of nodes to keep
+        self.ratio = config.REDUCTION_RATIO
+        self.ball_query_radius = config.BALL_QUERY_RADIUS_LEVELS[coarsening_level]
 
-        # MLP to compute soft cluster assignment S from node features (learnable part)
         self.mlp_S = nn.Sequential(
-            nn.Linear(1, 16),  # input: 1 distance value → 16 hidden values
+            nn.Linear(1, 16),
             nn.ReLU(),
-            nn.Linear(16, 1),  #  16 hidden values → 1 output value per node
+            nn.Linear(16, 1),
         )
-    def forward(self, p, r, s, h):
+
+    def forward(self, p, r, s, h, coarsen_mask: torch.Tensor | None = None):
         """
-        p: (N, 3) node positions
-        r: (N, 3) node radii
-        s: (N, config.NUM_CLASSES) node semantic one-hot vectors
-        h: (N, d) node features from the encoder (R-GAT layer)
+        p, r, s, h: (N, …) all graph nodes at this level.
 
-        Returns:
-        p_coarse: (M, 3) coarsened node positions
-        r_coarse: (M, 3) coarsened node radii
-        s_coarse: (M, config.NUM_CLASSES) coarsened node semantic one-hot vectors
-        h_coarse: (M, d) coarsened node features
+        coarsen_mask: (N,) bool — if given, only True rows are FPS seeds / pool members
+        (B policy: background stays at instance G_L, objects form supernodes).
         """
+        device = p.device
+        N = p.shape[0]
+        if coarsen_mask is None:
+            coarsen_mask = torch.ones(N, dtype=torch.bool, device=device)
+        else:
+            coarsen_mask = coarsen_mask.to(device)
 
-        # 1. FPS to select M representative nodes (supernodes)
-        # fps() needs a "batch" vector telling it which graph each node belongs to.
-        # Since we process one graph at a time, all nodes belong to batch 0.
-        batch = torch.zeros(p.shape[0], dtype=torch.long, device=p.device)  # single batch
+        idx = coarsen_mask.nonzero(as_tuple=True)[0]
+        n_c = idx.numel()
+        if n_c == 0:
+            return _empty_coarsening(device, h.shape[1])
 
-        # select seed node indices using FPS
-        # ratio = fraction of nodes to keep, e.g. 0.25 to keep 25% of nodes
-        seed_indices = fps(p, batch=batch, ratio=self.ratio)
+        p_c = p[idx]
+        r_c = r[idx]
+        s_c = s[idx]
+        h_c = h[idx]
 
-        # 2. Hard assignment 
-        # Get the 3D positions of the seed nodes
-        p_seeds = p[seed_indices]  # (M, 3) positions of the M seed nodes
-        # compute pairwise Euclidean distances from all nodes to all seed nodes
-        # dists[i,j] = distance from node i to seed node j
-        dist = torch.cdist(p, p_seeds)  # (N, M)
-        # for each node, find the index of the closest seed
-        hard_assign = dist.argmin(dim=1) # (N,) index of closest seed for each node
-        # hard_assign[i] = j means node i is assigned to seed node j
-        
-        # 3. Soft assignment
-        M = seed_indices.shape[0] # number of supernodes
-        N = p.shape[0] # number of original nodes
+        batch = torch.zeros(n_c, dtype=torch.long, device=device)
+        seed_local = fps(p_c, batch=batch, ratio=self.ratio)
+        seed_indices = idx[seed_local]
 
-        # normalised distance 
-        # we normalise distances by the seed's size (r) so the distance is relative to the object scale.
-        r_seeds = r[seed_indices]  # (M, 3) radii of seed nodes
-        # For each node i and seed j: distance = ||p_i - p_seed_j|| / mean(r_seed_j)
-        dist_normalised = dist / (r_seeds.mean(dim=1).unsqueeze(0) + 1e-6)  # (N, M) normalised distance
+        p_seeds = p[seed_indices]
+        dist = torch.cdist(p_c, p_seeds)
+        hard_assign = dist.argmin(dim=1)
 
-        # compute soft assignment weights using the MLP on the distances
-        scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(N, M)  # (N, M) raw scores from MLP
-        S = torch.softmax(scores, dim=1)  # (N, M) soft assignment weights
-        # S[i, j] = probability that node i belongs to supernode j
+        M = seed_indices.shape[0]
+        r_seeds = r[seed_indices]
+        dist_normalised = dist / (r_seeds.mean(dim=1).unsqueeze(0) + 1e-6)
 
-        # 4. Supernode attributes
-        # position
-        # p̄_j = sum_i(S[i,j] * p_i) / sum_i(S[i,j])
-        # In matrix form: S.T @ p  /  S.sum(dim=0)
-        # @ matrix multiplication operator
-        p_super = (S.T @ p) / (S.sum(dim=0, keepdim=True).T + 1e-6)  # (M, 3) weighted average position
+        scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(n_c, M)
+        S = torch.softmax(scores, dim=1)
 
-        # size (radius)
-        r_super = torch.zeros(M, 3, device=p.device)  # (M, 3) supernode radii
+        p_super = (S.T @ p_c) / (S.sum(dim=0, keepdim=True).T + 1e-6)
+
+        r_super = torch.zeros(M, 3, device=device)
         for j in range(M):
-            members = (hard_assign == j)  # boolean mask of nodes assigned to supernode j
+            members = hard_assign == j
             if members.sum() > 0:
-                p_members = p[members]  # (num_members, 3) positions of member nodes
-                lower_corner = p_members.min(dim=0).values  # (3,) lower corner of bounding box
-                upper_corner = p_members.max(dim=0).values  # (3,) upper corner of bounding box
-                r_super[j] = (upper_corner - lower_corner) / 2  # (3,) radius = half-extent of bounding box
-            
-        # semantic class (one-hot): semantic mix for each supernode
-        S_col_sum = S.sum(dim=0) # (M,) sum of soft assignment weights for each supernode
-        s_super = (S.T @ s) / (S_col_sum.unsqueeze(1) + 1e-6)  # (M, NUM_CLASSES) weighted average semantic vector
+                p_members = p_c[members]
+                r_super[j] = (p_members.max(dim=0).values - p_members.min(dim=0).values) / 2
 
-        # 5. New edges between supernodes
-        # connect nearby supernodes using ball-query with radius config.BALL_QUERY_RADIUS
-        edge_index_super = radius_graph(p_super, 
-                                  r=config.BALL_QUERY_RADIUS, 
-                                  loop=False,
-                                  max_num_neighbors=config.MAX_NUM_NEIGHBORS)  # (2, E_super)
-        
-        # 6. Return the coarsened graph data
-        return {'p': p_super, # (M, 3) supernode positions
-                'r': r_super, # (M, 3) supernode radius
-                's': s_super, # (M, NUM_CLASSES) supernode semantic vectors
-                'edge_index': edge_index_super, # (2, E_super) supernode edges
-                'S': S, # (N, M) soft assignment matrix
-                'hard_assign': hard_assign, # (N,) hard assignment indices
-                'h_pooled': S.T @ h / (S_col_sum.unsqueeze(1) + 1e-6) # (M, d) pooled node features for supernodes
-                }
+        S_col_sum = S.sum(dim=0)
+        s_super = (S.T @ s_c) / (S_col_sum.unsqueeze(1) + 1e-6)
 
+        edge_index_super = radius_graph(
+            p_super,
+            r=self.ball_query_radius,
+            loop=False,
+            max_num_neighbors=config.MAX_NUM_NEIGHBORS,
+        )
 
-
-
-
-
+        return {
+            'p': p_super,
+            'r': r_super,
+            's': s_super,
+            'edge_index': edge_index_super,
+            'S': S,
+            'hard_assign': hard_assign,
+            'h_pooled': S.T @ h_c / (S_col_sum.unsqueeze(1) + 1e-6),
+        }

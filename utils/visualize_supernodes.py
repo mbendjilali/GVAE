@@ -54,34 +54,38 @@ def run(json_path: str, ckpt_path: str):
     with torch.no_grad():
         outputs = model(graph)
 
-    S1 = outputs['S1']   # (N, M1)  soft assignment: original nodes → mid supernodes
-    S2 = outputs['S2']   # (M1, M2) soft assignment: mid supernodes  → coarse supernodes
+    S1 = outputs['S1']   # (N_coarsen, M1) instantiable nodes → mid supernodes
+    S2 = outputs['S2']   # (M1, M2)
     M1, M2 = S1.shape[1], S2.shape[1]
 
-    # hard assignment: each node gets the supernode index with the highest weight
-    assign_mid    = S1.argmax(dim=1)               # (N,)
-    assign_coarse = S2.argmax(dim=1)[assign_mid]   # (N,) propagated through both coarsenings
+    assign_mid = [-1] * N
+    assign_coarse = [-1] * N
+    coarsen_idx = graph.coarsen_mask.nonzero(as_tuple=True)[0].tolist()
+    if S1.numel() > 0:
+        mid_local = S1.argmax(dim=1).tolist()
+        coarse_from_mid = S2.argmax(dim=1).tolist()
+        for k, node_i in enumerate(coarsen_idx):
+            m = mid_local[k]
+            assign_mid[node_i] = m
+            assign_coarse[node_i] = coarse_from_mid[m]
 
-    assign_mid    = assign_mid.tolist()
-    assign_coarse = assign_coarse.tolist()
-
-    print(f"  {N} instances  →  {M1} mid supernodes  →  {M2} coarse supernodes")
+    print(f"  {N} nodes ({graph.num_coarsenable} coarsenable)  →  {M1} mid  →  {M2} coarse")
 
     # ── 1. Annotate and save JSON ─────────────────────────────────────────────
     with open(json_path) as f:
         data = json.load(f)
 
-    # apply the same filter as SceneGraph.from_json() so indices stay aligned
-    non_instantiable = config.NON_INSTANTIABLE_CLASSES if config.REMOVE_NON_INSTANTIABLE else set()
-    filtered_idx = 0
-    for instance in data['instances']:
-        if instance['label'] in non_instantiable:
-            instance['supernode_mid']    = -1   # not part of the graph
-            instance['supernode_coarse'] = -1
-        else:
-            instance['supernode_mid']    = assign_mid[filtered_idx]
-            instance['supernode_coarse'] = assign_coarse[filtered_idx]
-            filtered_idx += 1
+    if config.REMOVE_NON_INSTANTIABLE:
+        instances_json = [
+            inst for inst in data['instances']
+            if inst['label'] not in config.NON_INSTANTIABLE_CLASSES
+        ]
+    else:
+        instances_json = data['instances']
+
+    for i, instance in enumerate(instances_json):
+        instance['supernode_mid'] = assign_mid[i]
+        instance['supernode_coarse'] = assign_coarse[i]
 
     stem  = os.path.splitext(os.path.basename(json_path))[0]
     parts = json_path.replace('\\', '/').split('/')

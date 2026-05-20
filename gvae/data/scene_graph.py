@@ -15,6 +15,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import radius_graph
 
 import config
+from gvae.data.graph_masks import coarsen_mask_from_labels
 from gvae.data.voxelize import (
     occ_cache_paths,
     scene_normalization,
@@ -44,6 +45,9 @@ class SceneGraph:
         positions = [inst["position"] for inst in instances]
         radii = [inst["radius"] for inst in instances]
         labels = [inst["label"] for inst in instances]
+        coarsen_mask = coarsen_mask_from_labels(labels)
+        if config.REMOVE_NON_INSTANTIABLE:
+            coarsen_mask = torch.ones(len(labels), dtype=torch.bool)
 
         p = torch.tensor(positions, dtype=torch.float32)
         r = torch.tensor(radii, dtype=torch.float32)
@@ -57,8 +61,14 @@ class SceneGraph:
         else:
             centroid, scale = scene_normalization(p)
 
-        return cls(p, r, labels, centroid=centroid, scale=scale,
-                   occ_mid=occ_mid, occ_coarse=occ_coarse)
+        return cls(
+            p, r, labels,
+            centroid=centroid,
+            scale=scale,
+            occ_mid=occ_mid,
+            occ_coarse=occ_coarse,
+            coarsen_mask=coarsen_mask,
+        )
 
     @staticmethod
     def _load_occ_caches(json_path: str) -> tuple[Tensor, Tensor]:
@@ -94,6 +104,7 @@ class SceneGraph:
         scale: float | None = None,
         occ_mid: Tensor | None = None,
         occ_coarse: Tensor | None = None,
+        coarsen_mask: Tensor | None = None,
     ):
         N = position.shape[0]
         self.num_nodes = N
@@ -131,6 +142,14 @@ class SceneGraph:
         self.occ_mid = occ_mid if occ_mid is not None else torch.zeros(Hm, Wm, Dm, dtype=torch.bool)
         self.occ_coarse = occ_coarse if occ_coarse is not None else torch.zeros(Hc, Wc, Dc, dtype=torch.bool)
 
+        if coarsen_mask is None:
+            coarsen_mask = torch.ones(N, dtype=torch.bool)
+        self.coarsen_mask = coarsen_mask
+
+    @property
+    def num_coarsenable(self) -> int:
+        return int(self.coarsen_mask.sum().item())
+
     def to(self, device):
         self.p = self.p.to(device)
         self.r = self.r.to(device)
@@ -139,6 +158,7 @@ class SceneGraph:
         self.edge_index = self.edge_index.to(device)
         self.occ_mid = self.occ_mid.to(device)
         self.occ_coarse = self.occ_coarse.to(device)
+        self.coarsen_mask = self.coarsen_mask.to(device)
         return self
 
     def to_pyg(self) -> Data:
@@ -157,6 +177,6 @@ class SceneGraph:
         occ_mid = int(self.occ_mid.sum().item())
         occ_coarse = int(self.occ_coarse.sum().item())
         return (
-            f"SceneGraph(N={self.num_nodes}, E={self.edge_index.shape[1]}, "
-            f"occ_mid={occ_mid}, occ_coarse={occ_coarse})"
+            f"SceneGraph(N={self.num_nodes}, N_coarsen={self.num_coarsenable}, "
+            f"E={self.edge_index.shape[1]}, occ_mid={occ_mid}, occ_coarse={occ_coarse})"
         )

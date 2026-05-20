@@ -27,7 +27,7 @@ class SceneGraphEncoder(nn.Module):
             GPSLayer(d_L, num_heads=h_L, use_global_attention=False),
             GPSLayer(d_L, num_heads=h_L, use_global_attention=False),
         ])
-        self.coarsen_1 = FPSCoarsening()
+        self.coarsen_1 = FPSCoarsening(coarsening_level=0)
 
         # Level L-1 — region graph → mid latent
         self.input_proj_L1 = nn.Linear(d_L + config.NUM_CLASSES + 3, d_L1)
@@ -35,7 +35,7 @@ class SceneGraphEncoder(nn.Module):
             GPSLayer(d_L1, num_heads=h_L1, use_global_attention=False),
             GPSLayer(d_L1, num_heads=h_L1, use_global_attention=False),
         ])
-        self.coarsen_2 = FPSCoarsening()
+        self.coarsen_2 = FPSCoarsening(coarsening_level=1)
 
         # Level 1 — scene graph → coarse latent
         self.input_proj_1 = nn.Linear(d_L1 + config.NUM_CLASSES + 3, d_1)
@@ -61,7 +61,12 @@ class SceneGraphEncoder(nn.Module):
             h = gps(h, edge_index, edge_attr, p)
         h_L = h
 
-        c1 = self.coarsen_1(p, r, s, h_L)
+        coarsen_mask = (
+            graph.coarsen_mask
+            if config.COARSEN_EXCLUDE_NON_INSTANTIABLE
+            else None
+        )
+        c1 = self.coarsen_1(p, r, s, h_L, coarsen_mask=coarsen_mask)
         p1, r1, s1, edge_index_1 = c1['p'], c1['r'], c1['s'], c1['edge_index']
         edge_attr_1 = torch.norm(
             p1[edge_index_1[0]] - p1[edge_index_1[1]], dim=1, keepdim=True

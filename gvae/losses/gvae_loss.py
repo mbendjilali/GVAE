@@ -5,6 +5,7 @@
 import torch
 import torch.nn.functional as F
 import config
+from gvae.data.graph_masks import pool_subgraph
 from gvae.data.occupancy import sample_occupancy_queries
 
 def kl_weight(step):
@@ -17,10 +18,10 @@ def kl_weight(step):
     return config.LAMBDA_KL_MAX * min(1.0, pos_in_cycle / max(1, ramp_len))
 
 
-def reconstruction_loss(recon, p_true, r_true, s_true, edge_index):
+def reconstruction_loss(recon, p_true, r_true, s_true, edge_index, edge_margin=None):
     # recon is a dict with keys "p", "r", "s" containing the predicted values at the reference points
     # p_true, r_true, s_true are the ground truth values for the nodes in the original graph
-    delta = config.BALL_QUERY_RADIUS  # margin for edge loss
+    delta = edge_margin if edge_margin is not None else config.BALL_QUERY_RADIUS
 
     # semantic: cross-entropy loss
     L_sem = F.cross_entropy(recon['s'], s_true)
@@ -29,19 +30,18 @@ def reconstruction_loss(recon, p_true, r_true, s_true, edge_index):
     L_pos = F.mse_loss(recon['p'], p_true)
     L_size = F.mse_loss(recon['r'], r_true)
 
-    # edge loss: connected pairs should be close, non-connected far
-    p_pred = recon['p'] # (N, 3)
-    # distance between connected nodes
-    d_pos = torch.norm(p_pred[edge_index[0]] - p_pred[edge_index[1]], dim=1) # (E,)
-    L_edge_pos = torch.clamp(d_pos - delta, min=0).mean() 
-
-    # sample random non-edge (same count as edges)
-    N = p_true.shape[0]
+    p_pred = recon['p']  # (N, 3)
     num_edges = edge_index.shape[1]
-    # random pairs as negative samples
-    neg = torch.randint(0, N, (2, num_edges), device=p_true.device)
-    d_neg = torch.norm(p_pred[neg[0]] - p_pred[neg[1]], dim=1)
-    L_edge_neg = torch.clamp(delta - d_neg, min=0).mean()
+    if num_edges == 0:
+        L_edge_pos = p_pred.new_zeros(())
+        L_edge_neg = p_pred.new_zeros(())
+    else:
+        d_pos = torch.norm(p_pred[edge_index[0]] - p_pred[edge_index[1]], dim=1)
+        L_edge_pos = torch.clamp(d_pos - delta, min=0).mean()
+        N = p_true.shape[0]
+        neg = torch.randint(0, N, (2, num_edges), device=p_pred.device)
+        d_neg = torch.norm(p_pred[neg[0]] - p_pred[neg[1]], dim=1)
+        L_edge_neg = torch.clamp(delta - d_neg, min=0).mean()
 
     return (config.LAMBDA_SEM * L_sem
             + config.LAMBDA_POS * L_pos
@@ -52,6 +52,8 @@ def reconstruction_loss(recon, p_true, r_true, s_true, edge_index):
 
 def KL_loss(mu, logvar):
     # voxel-wise KL divergence: -0.5 * sum(1 + logvar - mu^2 - exp(logvar))
+    mu = mu.clamp(-20.0, 20.0)
+    logvar = logvar.clamp(-10.0, 10.0)  # keep exp(logvar) finite
     kl = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
     # normalise by number of voxels
     return kl.sum() / mu.numel()
@@ -63,14 +65,17 @@ def loss_pool(S, edge_index, p, N_nodes):
     
     M = S.shape[1] # number of supernodes
 
-    # 1. cut loss
-    deg = torch.zeros(N_nodes, device=S.device) # degree of each node
-    deg.scatter_add_(0, edge_index[0], torch.ones(edge_index.shape[1], device=S.device)) # count degree from edge_index
+    num_edges = edge_index.shape[1]
+    deg = torch.zeros(N_nodes, device=S.device)
+    if num_edges > 0:
+        deg.scatter_add_(0, edge_index[0], torch.ones(num_edges, device=S.device))
     D_S = (deg.unsqueeze(1) * S)
-    SAS = S.T @ D_S # approximate: uses D instead of A to simplicity
-    # trace of S^T A S - use edge contributions
-    StS = S[edge_index[0]] * S[edge_index[1]] # (E, M) contribution of each edge to each supernode
-    tr_SAS = StS.sum() # sum contributions of all edges to get trace
+    SAS = S.T @ D_S
+    if num_edges > 0:
+        StS = S[edge_index[0]] * S[edge_index[1]]
+        tr_SAS = StS.sum()
+    else:
+        tr_SAS = S.new_zeros(())
     tr_DDS = (D_S * S).sum() # sum of D_ii * S[i,j]^2
     cut_loss = - tr_SAS / (tr_DDS + 1e-6)
 
@@ -99,11 +104,18 @@ def compute_loss(outputs, graph, step, stage=4):
     # unpack ground truth
     p, r, s, edge_index, label = graph.p, graph.r, graph.s, graph.edge_index, graph.label
 
-    # pool loss — always active: coarsening is trained from stage 1
-    # S1: original → mid-level  → use original edge_index and p
-    # S2: mid → coarse-level    → use mid-level edge_index and p
-    L_pool = (loss_pool(outputs['S1'], edge_index, p, p.shape[0]) +
-              loss_pool(outputs['S2'], outputs['edge_index_lm1'], outputs['p_lm1'], outputs['p_lm1'].shape[0]))
+    # pool loss — S1 only on coarsenable instance nodes (B policy)
+    ei_pool, p_pool = pool_subgraph(edge_index, p, graph.coarsen_mask)
+    n_pool = p_pool.shape[0]
+    L_pool_s1 = (
+        loss_pool(outputs['S1'], ei_pool, p_pool, n_pool)
+        if n_pool > 0 and outputs['S1'].numel() > 0
+        else p.new_zeros(())
+    )
+    L_pool_s2 = loss_pool(
+        outputs['S2'], outputs['edge_index_lm1'], outputs['p_lm1'], outputs['p_lm1'].shape[0],
+    )
+    L_pool = L_pool_s1 + L_pool_s2
 
     if stage == 1:
         # only coarsening is trained — no point computing recon/KL/occ
@@ -112,21 +124,37 @@ def compute_loss(outputs, graph, step, stage=4):
 
     # stage 2+: mid branch (encoder + decoder) is active
     lambda_kl = kl_weight(step)
-    L_recon = reconstruction_loss(outputs['recon_mid'], outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'], outputs['edge_index_lm1'])
+    L_recon = reconstruction_loss(
+        outputs['recon_mid'], outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'],
+        outputs['edge_index_lm1'], edge_margin=config.BALL_QUERY_RADIUS_LEVELS[0],
+    )
     L_KL    = KL_loss(outputs['mu_mid'], outputs['logvar_mid'])
     L_occ   = loss_occupancy(outputs['occ_readout_mid'], outputs['z_mid'], graph.occ_mid)
 
+    extras = {}
+    if stage == 2 and config.LOG_COARSE_PREVIEW_AT_STAGE2:
+        extras['recon_coarse_preview'] = reconstruction_loss(
+            outputs['recon_coarse'], outputs['p_1'], outputs['r_1'], outputs['s_1'],
+            outputs['edge_index_1'], edge_margin=config.BALL_QUERY_RADIUS_LEVELS[1],
+        )
+        extras['KL_coarse_preview'] = KL_loss(outputs['mu_coarse'], outputs['logvar_coarse'])
+        extras['occ_coarse_preview'] = loss_occupancy(
+            outputs['occ_readout_coarse'], outputs['z_coarse'], graph.occ_coarse,
+        )
+
     if stage >= 3:
-        # coarse branch is also active — add its contributions
-        L_recon = L_recon + reconstruction_loss(outputs['recon_coarse'], outputs['p_1'], outputs['r_1'], outputs['s_1'], outputs['edge_index_1'])
-        L_KL    = L_KL    + KL_loss(outputs['mu_coarse'], outputs['logvar_coarse'])
-        L_occ   = L_occ   + loss_occupancy(outputs['occ_readout_coarse'], outputs['z_coarse'], graph.occ_coarse)
+        L_recon = L_recon + reconstruction_loss(
+            outputs['recon_coarse'], outputs['p_1'], outputs['r_1'], outputs['s_1'],
+            outputs['edge_index_1'], edge_margin=config.BALL_QUERY_RADIUS_LEVELS[1],
+        )
+        L_KL = L_KL + KL_loss(outputs['mu_coarse'], outputs['logvar_coarse'])
+        L_occ = L_occ + loss_occupancy(
+            outputs['occ_readout_coarse'], outputs['z_coarse'], graph.occ_coarse,
+        )
 
     total = L_recon + lambda_kl * L_KL + config.LAMBDA_POOL * L_pool + config.LAMBDA_OCC * L_occ
 
-    return total, {'recon': L_recon,
-                   'KL':    L_KL,
-                   'pool':  L_pool,
-                   'occ':   L_occ,
-                   'lambda_kl': lambda_kl}
+    components = {'recon': L_recon, 'KL': L_KL, 'pool': L_pool, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    components.update(extras)
+    return total, components
 

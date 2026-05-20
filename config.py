@@ -24,12 +24,12 @@ SEMANTIC_CLASSES = [
 ]
 NUM_CLASSES = len(SEMANTIC_CLASSES)   # = 15
 
-# Classes that do not form meaningful individual instances (large background regions)
-# Set REMOVE_NON_INSTANTIABLE = True to exclude them at load time (JSON files stay intact)
-REMOVE_NON_INSTANTIABLE  = True
-NON_INSTANTIABLE_CLASSES  = {'ground', 
-                             'vegetation', 
-                             'fence'}
+# Non-instantiable classes (large background regions: ground, vegetation, fence)
+NON_INSTANTIABLE_CLASSES = {'ground', 'vegetation', 'fence'}
+
+# B policy: keep them at instance G_L (R-GAT + edges), exclude from coarsening / Z paths
+REMOVE_NON_INSTANTIABLE = False
+COARSEN_EXCLUDE_NON_INSTANTIABLE = True
 
 # Proximitty edge construction: 
 # Connect nodes within this distance in normalised space
@@ -54,10 +54,16 @@ GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
 REDUCTION_RATIO = 0.25  # keep 25% of nodes at each coarsening step
 
-# Ball-query radius (in normalised [-1,1]³ space) for edge construction
-# after each coarsening step
-BALL_QUERY_RADIUS = 0.03
+# Ball-query radius (normalised [-1,1]³) after each coarsening step.
+# Supernodes are farther apart; use larger radii at coarser levels so E>0.
+# [region (mid graph), scene (coarse graph)]
+BALL_QUERY_RADIUS_LEVELS = [0.06, 0.12]
+# Legacy alias (region / first coarsening step)
+BALL_QUERY_RADIUS = BALL_QUERY_RADIUS_LEVELS[0]
 MAX_NUM_NEIGHBORS = 32  # max neighbors per node in ball-query to limit memory
+
+# Occupancy caches: object-only voxels (aligned with object-centric Z, no ground in occ GT)
+OCC_FILTER_NON_INSTANTIABLE = True
 
 # ─── Splatting ────────────────────────────────────────────────────────────────
 SPLAT_TRUNCATION_SIGMA = 2.0   # truncate Gaussian kernel at ±2σ
@@ -81,14 +87,23 @@ LAMBDA_FOOTPRINT = 1.0         # footprint MSE weight
 KL_ANNEAL_CYCLES  = 4          # number of ramp-hold cycles over full training
 KL_ANNEAL_RATIO   = 0.5        # fraction of each cycle spent ramping (vs. holding)
 
+# ─── Device ───────────────────────────────────────────────────────────────────
+CUDA_DEVICE = 1
+
+# ─── BatchNorm (3D U-Net, one scene per forward) ──────────────────────────────
+# momentum=None → cumulative running mean/var across training forwards
+BN_MOMENTUM = None
+BN_CALIBRATE_BEFORE_VAL = True   # full train-set pass to refresh stats before val
+
 # ─── Training ─────────────────────────────────────────────────────────────────
 LEARNING_RATE      = 3e-4
 LEARNING_RATE_FINETUNE = 1e-4  # reduced LR for stage 4 joint fine-tune
 BATCH_SIZE         = 8
 NUM_EPOCHS_STAGE1  = 40        # coarsening only
-NUM_EPOCHS_STAGE2  = 1        # + mid branch
-NUM_EPOCHS_STAGE3  = 1        # + coarse branch
-NUM_EPOCHS_STAGE4  = 1        # joint fine-tune
+NUM_EPOCHS_STAGE2  = 40        # + mid branch
+NUM_EPOCHS_STAGE3  = 40        # + coarse branch
+NUM_EPOCHS_STAGE4  = 40        # joint fine-tune
+LOG_COARSE_PREVIEW_AT_STAGE2 = True  # log coarse-branch losses (not in total) during stage 2
 
 # ─── R-GAT ────────────────────────────────────────────────────────────────────
 RGAT_HEADS        = 8
