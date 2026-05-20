@@ -1,90 +1,81 @@
 # gvae/models/unet3d.py
 # Configurable-depth 3D U-Net with skip connections for spatial densification
-# TODO: implement (todo id: unet3d)
 
 import torch
 import torch.nn as nn
 
 import config
 
+
+def _num_groups(channels: int) -> int:
+    g = config.UNET_NUM_GROUPS
+    while g > 1 and channels % g != 0:
+        g //= 2
+    return max(1, g)
+
+
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bn_momentum=None):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         self.block = nn.Sequential(
             nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm3d(out_channels, momentum=bn_momentum),
+            nn.GroupNorm(_num_groups(out_channels), out_channels),
             nn.ReLU(inplace=True),
             nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm3d(out_channels, momentum=bn_momentum),
+            nn.GroupNorm(_num_groups(out_channels), out_channels),
             nn.ReLU(inplace=True),
         )
-    
+
     def forward(self, x):
         return self.block(x)
-    
+
+
 class UNet3D(nn.Module):
-    def __init__(self, d: int, depth: int, bn_momentum=None):
+    def __init__(self, d: int, depth: int):
         super().__init__()
-        if bn_momentum is None:
-            bn_momentum = config.BN_MOMENTUM
         self.depth = depth
 
         self.encoders = nn.ModuleList()
         ch = d
         for _ in range(depth):
-            self.encoders.append(ConvBlock(ch, ch * 2, bn_momentum=bn_momentum))
+            self.encoders.append(ConvBlock(ch, ch * 2))
             ch = ch * 2
 
-        self.bottleneck = ConvBlock(ch, ch, bn_momentum=bn_momentum)
+        self.bottleneck = ConvBlock(ch, ch)
 
         self.decoders = nn.ModuleList()
         for _ in range(depth):
-            self.decoders.append(ConvBlock(ch * 2, ch // 2, bn_momentum=bn_momentum))
+            self.decoders.append(ConvBlock(ch * 2, ch // 2))
             ch = ch // 2
 
-        
-        # variational bottleneck (final output)
-        # ch is back to d after the decoder stages
-        self.final_conv = nn.Conv3d(ch, d * 2, kernel_size=1) # output mean and logvar for each feature dimension
+        self.final_conv = nn.Conv3d(ch, d * 2, kernel_size=1)
 
     def forward(self, x):
-        # x: (H, W, D, d) input features on the voxel grid (after splatting)
-        # we need to permute it to (1, d, H, W, D) for Conv3d
-        x = x.permute(3, 0, 1, 2).unsqueeze(0) # (1, d, H, W, D)
+        x = x.permute(3, 0, 1, 2).unsqueeze(0)
 
-        # Encoder path
         skips = []
         for encoder in self.encoders:
             x = encoder(x)
-            skips.append(x) # save for skip connection
-            x = nn.functional.max_pool3d(x, kernel_size=2) # downsample by 2 in each spatial dimension H, W, D
-        
-        # Bottleneck
+            skips.append(x)
+            x = nn.functional.max_pool3d(x, kernel_size=2)
+
         x = self.bottleneck(x)
 
-        # Decoder path
-        # upsample + concat skip + convblock
         for decoder in self.decoders:
-            x = nn.functional.interpolate(x, scale_factor=2, mode='trilinear', align_corners=False) # upsample by 2
-            skip = skips.pop() # get corresponding skip connection
-            x = torch.cat([x, skip], dim=1) # concatenate along channel dimension
+            x = nn.functional.interpolate(x, scale_factor=2, mode='trilinear', align_corners=False)
+            skip = skips.pop()
+            x = torch.cat([x, skip], dim=1)
             x = decoder(x)
-        
-        # Final conv to get mean and logvar
-        out = self.final_conv(x) # (1, d*2, H, W, D)
-        mu, logvar = out.chunk(2, dim=1) # split into mean and logvar each of shape (1, d, H, W, D)
 
-        std = torch.exp(0.5 * logvar) # standard deviation
-        eps = torch.randn_like(std) # random noise
-        z = mu + std * eps # reparameterisation trick to sample from N(mu, std^2)
+        out = self.final_conv(x)
+        mu, logvar = out.chunk(2, dim=1)
 
-        # permute back to (H, W, D, d)
-        z = z.squeeze(0).permute(1, 2, 3, 0) # (H, W, D, d)
-        mu = mu.squeeze(0).permute(1, 2, 3, 0) # (H, W, D, d)
-        logvar = logvar.squeeze(0).permute(1, 2, 3, 0) # (H, W, D, d)
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + std * eps
+
+        z = z.squeeze(0).permute(1, 2, 3, 0)
+        mu = mu.squeeze(0).permute(1, 2, 3, 0)
+        logvar = logvar.squeeze(0).permute(1, 2, 3, 0)
 
         return z, mu, logvar
-    
-
-
-    

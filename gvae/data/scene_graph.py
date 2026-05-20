@@ -68,6 +68,7 @@ class SceneGraph:
             occ_mid=occ_mid,
             occ_coarse=occ_coarse,
             coarsen_mask=coarsen_mask,
+            source_path=json_path,
         )
 
     @staticmethod
@@ -105,6 +106,7 @@ class SceneGraph:
         occ_mid: Tensor | None = None,
         occ_coarse: Tensor | None = None,
         coarsen_mask: Tensor | None = None,
+        source_path: str = "",
     ):
         N = position.shape[0]
         self.num_nodes = N
@@ -145,6 +147,7 @@ class SceneGraph:
         if coarsen_mask is None:
             coarsen_mask = torch.ones(N, dtype=torch.bool)
         self.coarsen_mask = coarsen_mask
+        self.source_path = source_path
 
     @property
     def num_coarsenable(self) -> int:

@@ -87,13 +87,11 @@ LAMBDA_FOOTPRINT = 1.0         # footprint MSE weight
 KL_ANNEAL_CYCLES  = 4          # number of ramp-hold cycles over full training
 KL_ANNEAL_RATIO   = 0.5        # fraction of each cycle spent ramping (vs. holding)
 
+# ─── 3D U-Net normalization (batch=1 scenes → GroupNorm, not BatchNorm) ───────
+UNET_NUM_GROUPS = 8
+
 # ─── Device ───────────────────────────────────────────────────────────────────
 CUDA_DEVICE = 1
-
-# ─── BatchNorm (3D U-Net, one scene per forward) ──────────────────────────────
-# momentum=None → cumulative running mean/var across training forwards
-BN_MOMENTUM = None
-BN_CALIBRATE_BEFORE_VAL = True   # full train-set pass to refresh stats before val
 
 # ─── Training ─────────────────────────────────────────────────────────────────
 LEARNING_RATE      = 3e-4

@@ -61,6 +61,6 @@ class SceneGraphDecoder(nn.Module):
 
         return {
             's': torch.softmax(self.mlp_s(z_pred), dim=1),
-            'p': self.mlp_p(z_pred),
+            'p': torch.tanh(self.mlp_p(z_pred)),
             'r': self.softplus(self.mlp_r(z_pred)),
         }

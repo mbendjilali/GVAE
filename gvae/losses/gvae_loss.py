@@ -2,6 +2,8 @@
 # All loss terms: recon, voxel-wise KL, occupancy, pool + cyclical KL schedule
 # TODO: implement (todo id: losses)
 
+import warnings
+
 import torch
 import torch.nn.functional as F
 import config
@@ -33,6 +35,7 @@ def reconstruction_loss(recon, p_true, r_true, s_true, edge_index, edge_margin=N
     p_pred = recon['p']  # (N, 3)
     num_edges = edge_index.shape[1]
     if num_edges == 0:
+        warnings.warn("reconstruction_loss: empty edge_index", stacklevel=2)
         L_edge_pos = p_pred.new_zeros(())
         L_edge_neg = p_pred.new_zeros(())
     else:
@@ -51,26 +54,20 @@ def reconstruction_loss(recon, p_true, r_true, s_true, edge_index, edge_margin=N
     
 
 def KL_loss(mu, logvar):
-    # voxel-wise KL divergence: -0.5 * sum(1 + logvar - mu^2 - exp(logvar))
-    mu = mu.clamp(-20.0, 20.0)
-    logvar = logvar.clamp(-10.0, 10.0)  # keep exp(logvar) finite
     kl = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
-    # normalise by number of voxels
     return kl.sum() / mu.numel()
 
 
 def loss_pool(S, edge_index, p, N_nodes):
-    # S: soft assignment matrix (N, M) where N is number of original nodes and M is number of supernodes
-    # edge_index: (2, E) edges in the original graph
-    
-    M = S.shape[1] # number of supernodes
+    M = S.shape[1]
 
     num_edges = edge_index.shape[1]
     deg = torch.zeros(N_nodes, device=S.device)
-    if num_edges > 0:
+    if num_edges == 0:
+        warnings.warn("loss_pool: empty edge_index", stacklevel=2)
+    else:
         deg.scatter_add_(0, edge_index[0], torch.ones(num_edges, device=S.device))
     D_S = (deg.unsqueeze(1) * S)
-    SAS = S.T @ D_S
     if num_edges > 0:
         StS = S[edge_index[0]] * S[edge_index[1]]
         tr_SAS = StS.sum()
