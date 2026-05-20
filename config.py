@@ -24,21 +24,25 @@ SEMANTIC_CLASSES = [
 ]
 NUM_CLASSES = len(SEMANTIC_CLASSES)   # = 15
 
-# Classes that do not form meaningful individual instances (large background regions)
-# Set REMOVE_NON_INSTANTIABLE = True to exclude them at load time (JSON files stay intact)
-REMOVE_NON_INSTANTIABLE  = True
-NON_INSTANTIABLE_CLASSES  = {'ground', 
-                             'vegetation', 
-                             'fence'}
+# Non-instantiable classes (large background regions: ground, vegetation, fence)
+NON_INSTANTIABLE_CLASSES = {'ground', 'vegetation', 'fence'}
+
+# B policy: keep them at instance G_L (R-GAT + edges), exclude from coarsening / Z paths
+REMOVE_NON_INSTANTIABLE = False
+COARSEN_EXCLUDE_NON_INSTANTIABLE = True
 
 # Proximitty edge construction: 
 # Connect nodes within this distance in normalised space
 # It is the distance in normalised [-1,1]³ space below which we consider two objects to be "close" and connect them with an edge in the graph.
 EDGE_PROXIMITY = 0.03
 
-# ─── Feature dimension ────────────────────────────────────────────────────────
-# Must be divisible by 6 (required by PointROPE)
-D_MODEL = 192
+# ─── Feature dimensions (progressive across graph levels) ─────────────────────
+# [instance G_L, region G_{L-1}, scene G_1] — each divisible by 6 (PointROPE)
+D_MODEL_LEVELS = [72, 144, 288]
+D_INSTANCE, D_REGION, D_SCENE = D_MODEL_LEVELS
+D_MID_LATENT = D_REGION       # Z^G_mid  channel dim
+D_COARSE_LATENT = D_SCENE     # Z^G_coarse channel dim
+D_NUM_HEADS = [8, 8, 8]       # GATv2 heads per level (d % heads == 0)
 
 # ─── Voxel grid resolutions ───────────────────────────────────────────────────
 # Mid latent volume  Z^G_mid  (diffusion level 2)
@@ -51,10 +55,16 @@ GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 REDUCTION_RATIO = 0.03  # keep 3% of nodes at each coarsening step
 #SOFTMAX_TEMPERATURE = 0.1  # temperature for soft assignment softmax — lower = sharper (→ collapse), higher = softer (→ uniform); start at 0.1 and increase if collapse persists
 
-# Ball-query radius (in normalised [-1,1]³ space) for edge construction
-# after each coarsening step
-BALL_QUERY_RADIUS = 0.03
+# Ball-query radius (normalised [-1,1]³) after each coarsening step.
+# Supernodes are farther apart; use larger radii at coarser levels so E>0.
+# [region (mid graph), scene (coarse graph)]
+BALL_QUERY_RADIUS_LEVELS = [0.1, 0.2]
+# Legacy alias (region / first coarsening step)
+BALL_QUERY_RADIUS = BALL_QUERY_RADIUS_LEVELS[0]
 MAX_NUM_NEIGHBORS = 32  # max neighbors per node in ball-query to limit memory
+
+# Occupancy caches: object-only voxels (aligned with object-centric Z, no ground in occ GT)
+OCC_FILTER_NON_INSTANTIABLE = True
 
 # ─── Splatting ────────────────────────────────────────────────────────────────
 SPLAT_TRUNCATION_SIGMA = 2.0   # truncate Gaussian kernel at ±2σ
@@ -78,14 +88,21 @@ LAMBDA_FOOTPRINT = 1.0         # footprint MSE weight
 KL_ANNEAL_CYCLES  = 4          # number of ramp-hold cycles over full training
 KL_ANNEAL_RATIO   = 0.5        # fraction of each cycle spent ramping (vs. holding)
 
+# ─── 3D U-Net normalization (batch=1 scenes → GroupNorm, not BatchNorm) ───────
+UNET_NUM_GROUPS = 8
+
+# ─── Device ───────────────────────────────────────────────────────────────────
+CUDA_DEVICE = 1
+
 # ─── Training ─────────────────────────────────────────────────────────────────
 LEARNING_RATE      = 3e-4
 LEARNING_RATE_FINETUNE = 1e-4  # reduced LR for stage 4 joint fine-tune
 BATCH_SIZE         = 8
 NUM_EPOCHS_STAGE1  = 40        # coarsening only
-NUM_EPOCHS_STAGE2  = 1        # + mid branch
-NUM_EPOCHS_STAGE3  = 1        # + coarse branch
-NUM_EPOCHS_STAGE4  = 1        # joint fine-tune
+NUM_EPOCHS_STAGE2  = 40        # + mid branch
+NUM_EPOCHS_STAGE3  = 40        # + coarse branch
+NUM_EPOCHS_STAGE4  = 40        # joint fine-tune
+LOG_COARSE_PREVIEW_AT_STAGE2 = True  # log coarse-branch losses (not in total) during stage 2
 
 # ─── R-GAT ────────────────────────────────────────────────────────────────────
 RGAT_HEADS        = 8
@@ -95,6 +112,10 @@ RGAT_LAYERS_COARSE = 2         # coarsest level (+ GPS exact attention)
 # ─── Road edge reconstruction ─────────────────────────────────────────────────
 ROAD_EDGE_NEG_RATIO = 5        # negative sampling ratio for road edges
 
-# ─── Occupancy sampling ───────────────────────────────────────────────────────
-OCC_QUERY_POINTS  = 2048       # total query points per scene during training
-OCC_POS_RATIO     = 0.5        # fraction sampled from inside occupied voxels
+# ─── Occupancy (point-cloud voxelisation) ─────────────────────────────────────
+OCC_CACHE_SUFFIX_MID    = '_occ_mid.npy'     # sidecar next to scene JSON
+OCC_CACHE_SUFFIX_COARSE = '_occ_coarse.npy'
+OCC_MAX_POINTS          = 500_000            # subsample LiDAR when building caches
+OCC_REQUIRE_CACHE       = True               # raise if caches missing at load time
+OCC_QUERY_POINTS        = 2048               # query points per scene during training
+OCC_POS_RATIO           = 0.5                # fraction sampled from occupied voxels

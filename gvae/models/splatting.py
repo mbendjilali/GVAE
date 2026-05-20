@@ -26,9 +26,10 @@ def make_voxel_centers(grid, device):
     return centers
 
 class GaussianSplatting(nn.Module):
-    def __init__(self, grid):
+    def __init__(self, grid, feature_dim: int):
         super().__init__()
         self.grid = grid  # (H, W, D) tuple defining the voxel grid dimensions
+        self.feature_dim = feature_dim
         self.sigma = config.SPLAT_TRUNCATION_SIGMA
 
     def forward(self, h, p, r):
@@ -81,4 +82,4 @@ class GaussianSplatting(nn.Module):
 
         # 6. Reshape the 3D grid and return
         H, W, D = self.grid
-        return voxel_features.reshape(H, W, D, config.D_MODEL)
+        return voxel_features.reshape(H, W, D, self.feature_dim)
