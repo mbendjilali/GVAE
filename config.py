@@ -57,7 +57,7 @@ REDUCTION_RATIO = 0.25  # keep 25% of nodes at each coarsening step
 # Ball-query radius (normalised [-1,1]³) after each coarsening step.
 # Supernodes are farther apart; use larger radii at coarser levels so E>0.
 # [region (mid graph), scene (coarse graph)]
-BALL_QUERY_RADIUS_LEVELS = [0.06, 0.12]
+BALL_QUERY_RADIUS_LEVELS = [0.1, 0.2]
 # Legacy alias (region / first coarsening step)
 BALL_QUERY_RADIUS = BALL_QUERY_RADIUS_LEVELS[0]
 MAX_NUM_NEIGHBORS = 32  # max neighbors per node in ball-query to limit memory
