@@ -86,7 +86,7 @@ def validate(model, loader, stage, step_counter, device):
 
                 step_counter[0] += 1
 
-    avg_loss = val_loss / len(loader)
+    avg_loss = val_loss / len(all_components)
 
     avg_components = {}
     if all_components:
@@ -102,7 +102,7 @@ def validate(model, loader, stage, step_counter, device):
     return avg_loss, avg_metrics, avg_components
 
 
-def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, device, ckpt_dir, writer):
+def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, epoch_counter, lr, device, ckpt_dir, writer):
     set_stage(model, stage)
     # only pass unfrozen params to the optimizer
     optimizer = torch.optim.Adam(
@@ -129,31 +129,42 @@ def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, lr, 
 
             optimizer.step()  # update weights once per batch, after all graphs
 
-        avg_loss = epoch_loss / len(loader)
-        avg_train_components = {k: sum(c[k] for c in epoch_components) / len(epoch_components) for k in epoch_components[0]}
+        avg_train_loss = epoch_loss / len(epoch_components) # = loss averaged over all graphs in the epoch
+        avg_train_loss_components = {k: sum(c[k] for c in epoch_components) / len(epoch_components) for k in epoch_components[0]} # = component of the loss averaged over all graphs in the epoch
 
         # validation 
-        avg_val_loss, avg_metrics, avg_val_components = validate(model, val_loader, stage, step_counter, device)
+        avg_val_loss, avg_metrics, avg_val_loss_components = validate(model, val_loader, stage, step_counter, device)
 
-        print(f"Stage {stage} Epoch {epoch+1}/{num_epochs}  train: {avg_loss:.4f}  val: {avg_val_loss:.4f}")
-        train_str = '  '.join(f"{k}={v:.4f}" for k, v in avg_train_components.items())
-        val_str   = '  '.join(f"{k}={v:.4f}" for k, v in avg_val_components.items())
+        print(f"Stage {stage} Epoch {epoch+1}/{num_epochs}  train: {avg_train_loss:.4f}  val: {avg_val_loss:.4f}")
+        train_str = '  '.join(f"{k}={v:.4f}" for k, v in avg_train_loss_components.items())
+        val_str   = '  '.join(f"{k}={v:.4f}" for k, v in avg_val_loss_components.items())
         print(f"  train losses → {train_str}")
         print(f"  val   losses → {val_str}")
         if avg_metrics:
             print(f"  mid  → acc={avg_metrics['acc_mid']:.1%}  pos_err={avg_metrics['pos_err_mid']:.4f}  size_err={avg_metrics['size_err_mid']:.4f}")
             print(f"  coarse→ acc={avg_metrics['acc_coarse']:.1%}  pos_err={avg_metrics['pos_err_coarse']:.4f}  size_err={avg_metrics['size_err_coarse']:.4f}")
 
-        # TensorBoard logging
-        global_epoch = step_counter[0]  # use global step so all stages share one x-axis
-        writer.add_scalars(f'stage{stage}/total', {'train': avg_loss, 'val': avg_val_loss}, global_epoch)
-        for k, v in avg_train_components.items():
-            writer.add_scalar(f'stage{stage}/train/{k}', v, global_epoch)
-        for k, v in avg_val_components.items():
-            writer.add_scalar(f'stage{stage}/val/{k}', v, global_epoch)
+        # TensorBoard logging — per step (x-axis = number of graphs processed)
+        global_step = step_counter[0]
+        writer.add_scalars(f'stage{stage}/total', {'train': avg_train_loss, 'val': avg_val_loss}, global_step)
+        for k, v in avg_train_loss_components.items():
+            writer.add_scalar(f'stage{stage}/train/{k}', v, global_step)
+        for k, v in avg_val_loss_components.items():
+            writer.add_scalar(f'stage{stage}/val/{k}', v, global_step)
         if avg_metrics:
             for k, v in avg_metrics.items():
-                writer.add_scalar(f'stage{stage}/metrics/{k}', v, global_epoch)
+                writer.add_scalar(f'stage{stage}/metrics/{k}', v, global_step)
+
+        # TensorBoard logging — per epoch (x-axis = global epoch across all stages)
+        epoch_counter[0] += 1
+        writer.add_scalars(f'stage{stage}_epoch/total', {'train': avg_train_loss, 'val': avg_val_loss}, epoch_counter[0])
+        for k, v in avg_train_loss_components.items():
+            writer.add_scalar(f'stage{stage}_epoch/train/{k}', v, epoch_counter[0])
+        for k, v in avg_val_loss_components.items():
+            writer.add_scalar(f'stage{stage}_epoch/val/{k}', v, epoch_counter[0])
+        if avg_metrics:
+            for k, v in avg_metrics.items():
+                writer.add_scalar(f'stage{stage}_epoch/metrics/{k}', v, epoch_counter[0])
 
         # save best model for this stage based on validation loss
         if avg_val_loss < best_loss:
@@ -178,29 +189,30 @@ def main(ckpt_dir):
     # Create model
     model = GVAE().to(device)
 
-    step_counter = [0]  # global step counter across all stages
+    step_counter = [0]   # global step counter across all stages (number of graphs processed)
+    epoch_counter = [0]  # global epoch counter across all stages
 
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
     print(f"TensorBoard logs: tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}")
 
     # Stage 1
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE1,
-                stage=1, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=1, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage1.pth"))
 
     # Stage 2
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE2,
-                stage=2, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=2, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage2.pth"))
 
     # Stage 3
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE3,
-                stage=3, step_counter=step_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=3, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage3.pth"))
 
     # Stage 4 — reduced LR for joint fine-tune
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE4,
-                stage=4, step_counter=step_counter, lr=config.LEARNING_RATE_FINETUNE, device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=4, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE_FINETUNE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "final.pth"))
 
     writer.close()

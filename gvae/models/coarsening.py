@@ -63,7 +63,9 @@ class FPSCoarsening(nn.Module):
 
         # compute soft assignment weights using the MLP on the distances
         scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(N, M)  # (N, M) raw scores from MLP
-        S = torch.softmax(scores, dim=1)  # (N, M) soft assignment weights
+        # divide by temperature before softmax: higher temperature → softer distribution → less collapse
+#        S = torch.softmax(scores / config.SOFTMAX_TEMPERATURE, dim=1)  # (N, M) soft assignment weights
+        S = torch.softmax(scores, dim=1)
         # S[i, j] = probability that node i belongs to supernode j
 
         # 4. Supernode attributes

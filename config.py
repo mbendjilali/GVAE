@@ -48,7 +48,8 @@ GRID_MID = (16, 16, 8)        # H × W × D  →  2048 voxels
 GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
-REDUCTION_RATIO = 0.25  # keep 25% of nodes at each coarsening step
+REDUCTION_RATIO = 0.03  # keep 3% of nodes at each coarsening step
+#SOFTMAX_TEMPERATURE = 0.1  # temperature for soft assignment softmax — lower = sharper (→ collapse), higher = softer (→ uniform); start at 0.1 and increase if collapse persists
 
 # Ball-query radius (in normalised [-1,1]³ space) for edge construction
 # after each coarsening step

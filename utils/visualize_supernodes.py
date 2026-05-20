@@ -31,7 +31,7 @@ from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
 
 # ── Edit these before running ─────────────────────────────────────────────────
-CHECKPOINT = "checkpoint/20260518_173147/stage1_best.pth"  
+CHECKPOINT = "checkpoint/20260520_110645/stage1_best.pth"  
 DATA_ROOT  = "/home/claire.peyran/GVAE/data"
 # ─────────────────────────────────────────────────────────────────────────────
 
