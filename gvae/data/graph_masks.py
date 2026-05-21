@@ -10,7 +10,7 @@ def is_instantiable_label(label: str) -> bool:
 
 
 def coarsen_mask_from_labels(labels: list[str]) -> torch.Tensor:
-    """True = node participates in FPS / soft-S pooling."""
+    """True = node participates in FPS coarsening."""
     return torch.tensor(
         [is_instantiable_label(lbl) for lbl in labels],
         dtype=torch.bool,

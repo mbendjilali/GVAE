@@ -7,8 +7,9 @@ Converts every .laz tile in dales2/train and dales2/test into:
 
 Output (per tile, same directory):
     <stem>.json
-    <stem>_occ_mid.npy      bool (16, 16, 8)
-    <stem>_occ_coarse.npy   bool (8, 8, 4)
+    <stem>_occ_fine.npy     bool (64, 64, 64)
+    <stem>_occ_mid.npy      bool (32, 32, 32)
+    <stem>_occ_coarse.npy   bool (16, 16, 16)
 
 Run from the repo root:
     python utils/build_scene_graph.py <data_root>
@@ -138,14 +139,17 @@ def laz_to_scene(laz_path):
 
 
 def write_occupancy_caches(stem_path, points_norm):
-    """Write *_occ_mid.npy and *_occ_coarse.npy next to <stem_path>.json."""
+    """Write fine / mid / coarse occupancy sidecars next to <stem_path>.json."""
+    occ_fine = voxelize_points_np(points_norm, config.GRID_FINE)
     occ_mid = voxelize_points_np(points_norm, config.GRID_MID)
     occ_coarse = voxelize_points_np(points_norm, config.GRID_COARSE)
+    np.save(stem_path + config.OCC_CACHE_SUFFIX_FINE, occ_fine)
     np.save(stem_path + config.OCC_CACHE_SUFFIX_MID, occ_mid)
     np.save(stem_path + config.OCC_CACHE_SUFFIX_COARSE, occ_coarse)
 
 
 def process_split(split, in_dir, out_dir):
+    out_dir = os.path.join(out_dir, split)
     os.makedirs(out_dir, exist_ok=True)
 
     laz_files = sorted(f for f in os.listdir(in_dir) if f.endswith('.laz'))
@@ -155,11 +159,13 @@ def process_split(split, in_dir, out_dir):
         stem = os.path.splitext(fname)[0]
         in_path = os.path.join(in_dir, fname)
         json_path = os.path.join(out_dir, stem + '.json')
+        occ_fine_path = os.path.join(out_dir, stem + config.OCC_CACHE_SUFFIX_FINE)
         occ_mid_path = os.path.join(out_dir, stem + config.OCC_CACHE_SUFFIX_MID)
         occ_coarse_path = os.path.join(out_dir, stem + config.OCC_CACHE_SUFFIX_COARSE)
 
         if (
             os.path.exists(json_path)
+            and os.path.exists(occ_fine_path)
             and os.path.exists(occ_mid_path)
             and os.path.exists(occ_coarse_path)
         ):

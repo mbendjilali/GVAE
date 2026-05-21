@@ -139,6 +139,10 @@ def sample_occupancy_queries(
     return torch.cat(q_parts, dim=0), torch.cat(label_parts, dim=0)
 
 
-def occ_cache_paths(json_path: str) -> tuple[str, str]:
+def occ_cache_paths(json_path: str) -> tuple[str, str, str]:
     base = json_path[: -len(".json")] if json_path.endswith(".json") else json_path
-    return base + config.OCC_CACHE_SUFFIX_MID, base + config.OCC_CACHE_SUFFIX_COARSE
+    return (
+        base + config.OCC_CACHE_SUFFIX_FINE,
+        base + config.OCC_CACHE_SUFFIX_MID,
+        base + config.OCC_CACHE_SUFFIX_COARSE,
+    )

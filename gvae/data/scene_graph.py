@@ -52,7 +52,7 @@ class SceneGraph:
         p = torch.tensor(positions, dtype=torch.float32)
         r = torch.tensor(radii, dtype=torch.float32)
 
-        occ_mid, occ_coarse = cls._load_occ_caches(json_path)
+        occ_fine, occ_mid, occ_coarse = cls._load_occ_caches(json_path)
 
         # Prefer normalization stored at build time (matches LiDAR voxelisation)
         if "normalization" in data:
@@ -65,6 +65,7 @@ class SceneGraph:
             p, r, labels,
             centroid=centroid,
             scale=scale,
+            occ_fine=occ_fine,
             occ_mid=occ_mid,
             occ_coarse=occ_coarse,
             coarsen_mask=coarsen_mask,
@@ -72,9 +73,11 @@ class SceneGraph:
         )
 
     @staticmethod
-    def _load_occ_caches(json_path: str) -> tuple[Tensor, Tensor]:
-        mid_path, coarse_path = occ_cache_paths(json_path)
-        missing = [p for p in (mid_path, coarse_path) if not os.path.isfile(p)]
+    def _load_occ_caches(json_path: str) -> tuple[Tensor, Tensor, Tensor]:
+        fine_path, mid_path, coarse_path = occ_cache_paths(json_path)
+        paths = (fine_path, mid_path, coarse_path)
+        expected = (config.GRID_FINE, config.GRID_MID, config.GRID_COARSE)
+        missing = [p for p in paths if not os.path.isfile(p)]
         if missing:
             msg = (
                 "Point-cloud occupancy cache missing. Run:\n"
@@ -85,16 +88,30 @@ class SceneGraph:
                 raise FileNotFoundError(msg)
             import warnings
             warnings.warn(msg + " — using empty occupancy grids.")
-            Hm, Wm, Dm = config.GRID_MID
-            Hc, Wc, Dc = config.GRID_COARSE
             return (
-                torch.zeros(Hm, Wm, Dm, dtype=torch.bool),
-                torch.zeros(Hc, Wc, Dc, dtype=torch.bool),
+                torch.zeros(*config.GRID_FINE, dtype=torch.bool),
+                torch.zeros(*config.GRID_MID, dtype=torch.bool),
+                torch.zeros(*config.GRID_COARSE, dtype=torch.bool),
             )
 
-        occ_mid = torch.from_numpy(np.load(mid_path))
-        occ_coarse = torch.from_numpy(np.load(coarse_path))
-        return occ_mid, occ_coarse
+        grids = []
+        for path, shape in zip(paths, expected):
+            arr = np.load(path)
+            if tuple(arr.shape) != shape:
+                if config.OCC_REQUIRE_CACHE:
+                    raise ValueError(
+                        f"Occupancy cache {path} has shape {arr.shape}, "
+                        f"expected {shape}. Rebuild caches with utils/build_scene_graph.py"
+                    )
+                import warnings
+                warnings.warn(
+                    f"Occupancy cache {path} shape {arr.shape} != {shape}; using empty grid.",
+                    stacklevel=2,
+                )
+                grids.append(torch.zeros(*shape, dtype=torch.bool))
+            else:
+                grids.append(torch.from_numpy(arr))
+        return grids[0], grids[1], grids[2]
 
     def __init__(
         self,
@@ -103,6 +120,7 @@ class SceneGraph:
         label: list,
         centroid: Tensor | None = None,
         scale: float | None = None,
+        occ_fine: Tensor | None = None,
         occ_mid: Tensor | None = None,
         occ_coarse: Tensor | None = None,
         coarsen_mask: Tensor | None = None,
@@ -139,8 +157,10 @@ class SceneGraph:
         else:
             self.edge_index = torch.zeros(2, 0, dtype=torch.long)
 
+        Hf, Wf, Df = config.GRID_FINE
         Hm, Wm, Dm = config.GRID_MID
         Hc, Wc, Dc = config.GRID_COARSE
+        self.occ_fine = occ_fine if occ_fine is not None else torch.zeros(Hf, Wf, Df, dtype=torch.bool)
         self.occ_mid = occ_mid if occ_mid is not None else torch.zeros(Hm, Wm, Dm, dtype=torch.bool)
         self.occ_coarse = occ_coarse if occ_coarse is not None else torch.zeros(Hc, Wc, Dc, dtype=torch.bool)
 
@@ -159,10 +179,27 @@ class SceneGraph:
         self.s = self.s.to(device)
         self.label = self.label.to(device)
         self.edge_index = self.edge_index.to(device)
+        self.occ_fine = self.occ_fine.to(device)
         self.occ_mid = self.occ_mid.to(device)
         self.occ_coarse = self.occ_coarse.to(device)
         self.coarsen_mask = self.coarsen_mask.to(device)
         return self
+
+    def on_device(self, device, non_blocking: bool = False):
+        """Copy tensor fields to device without mutating a cached CPU instance."""
+        import copy
+        g = copy.copy(self)
+        kw = {"non_blocking": non_blocking}
+        g.p = self.p.to(device, **kw)
+        g.r = self.r.to(device, **kw)
+        g.s = self.s.to(device, **kw)
+        g.label = self.label.to(device, **kw)
+        g.edge_index = self.edge_index.to(device, **kw)
+        g.occ_fine = self.occ_fine.to(device, **kw)
+        g.occ_mid = self.occ_mid.to(device, **kw)
+        g.occ_coarse = self.occ_coarse.to(device, **kw)
+        g.coarsen_mask = self.coarsen_mask.to(device, **kw)
+        return g
 
     def to_pyg(self) -> Data:
         return Data(
@@ -171,15 +208,18 @@ class SceneGraph:
             s=self.s,
             label=self.label,
             edge_index=self.edge_index,
+            occ_fine=self.occ_fine,
             occ_mid=self.occ_mid,
             occ_coarse=self.occ_coarse,
             num_nodes=self.num_nodes,
         )
 
     def __repr__(self) -> str:
+        occ_fine = int(self.occ_fine.sum().item())
         occ_mid = int(self.occ_mid.sum().item())
         occ_coarse = int(self.occ_coarse.sum().item())
         return (
             f"SceneGraph(N={self.num_nodes}, N_coarsen={self.num_coarsenable}, "
-            f"E={self.edge_index.shape[1]}, occ_mid={occ_mid}, occ_coarse={occ_coarse})"
+            f"E={self.edge_index.shape[1]}, occ_fine={occ_fine}, "
+            f"occ_mid={occ_mid}, occ_coarse={occ_coarse})"
         )

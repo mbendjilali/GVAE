@@ -18,8 +18,9 @@ def make_ref_grid(p, r):
 
 
 def sample_volume(Z, ref_pts):
-    H, W, D, d = Z.shape
-    Z_in = Z.permute(3, 2, 1, 0).unsqueeze(0)
+    """Z: (C, H, W, D). grid_sample layout matches legacy (C, D, W, H) ordering."""
+    C, H, W, D = Z.shape
+    Z_in = Z.permute(0, 3, 2, 1).unsqueeze(0)
     grid = ref_pts.unsqueeze(0).unsqueeze(3)
     out = F.grid_sample(Z_in, grid, mode='bilinear',
                         align_corners=True, padding_mode='border')

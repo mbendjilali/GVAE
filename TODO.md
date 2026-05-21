@@ -12,11 +12,14 @@ Backlog for work **outside** Layer A (PR2) implementation.
 
 ## In progress — Layer A (PR2)
 
-- [ ] `Z_fine` encoder path from instance graph `G_L` (instantiable nodes only)
-- [ ] Instance reconstruction loss with one-hot labels
-- [ ] `occ_fine` cache + occupancy readout at fine grid
-- [ ] Training stages / checkpoint wiring (load compatible weights from PR1)
-- [ ] Primary metrics: `inst_pos_err_fine`, `pos_err_fine`, `miou_fine`, `occ_iou_fine`
+- [x] `Z_fine` encoder path from instance graph `G_L` (instantiable nodes only)
+- [x] Instance reconstruction loss with one-hot labels
+- [x] `occ_fine` cache + occupancy readout at fine grid (rebuild caches required)
+- [x] Training stages / stage-aware forward (skip unused U-Nets per stage)
+- [x] Primary metrics: `pos_err_fine`, `miou_fine`, `occ_iou_fine`
+- [x] Grids updated: fine 64³, mid 32³, coarse 16³
+- [ ] Rebuild all occupancy caches: `python utils/build_scene_graph.py <data_root>`
+- [ ] Full training run + baseline comparison
 
 ---
 

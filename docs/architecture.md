@@ -2,8 +2,7 @@
 
 Scene Graph VAE (GVAE): encodes a 3D outdoor scene graph into KL-regularised spatial latent volumes for hierarchical diffusion conditioning.
 
-**Current outputs:** `Z_coarse` (8×8×4), `Z_mid` (16×16×8).  
-**Planned (PR2 / Layer A):** `Z_fine` from instance graph `G_L`.
+**Current outputs:** `Z_fine` (64×64×64), `Z_mid` (32×32×32), `Z_coarse` (16×16×16).
 
 ---
 
@@ -54,6 +53,12 @@ flowchart TD
     G1 --> SC
 ```
 
+### Fine level — Instance (`G_L`, instantiable nodes)
+
+- Shares instance R-GAT (`gps_L`) with the mid path.
+- Splat → deeper U-Net (depth 3) → `Z_fine` on coarsenable instance nodes only.
+- Instance decoder loss with one-hot labels; metrics: `pos_err_fine`, `miou_fine`.
+
 ### Level 1 — Instance (`G_L`)
 
 - Shallow R-GAT (3 layers) with **PointROPE** on Q/K.
@@ -85,8 +90,9 @@ flowchart TD
 
 | Output | Grid | Voxels | Latent dim |
 |--------|------|--------|------------|
-| `Z_mid` | 16 × 16 × 8 | 2 048 | 144 |
-| `Z_coarse` | 8 × 8 × 4 | 256 | 288 |
+| `Z_fine` | 64 × 64 × 64 | 262 144 | 72 |
+| `Z_mid` | 32 × 32 × 32 | 32 768 | 144 |
+| `Z_coarse` | 16 × 16 × 16 | 4 096 | 288 |
 
 `Z_mid` and `Z_coarse` are **independent fixed grids**, not spatially nested subdivisions of each other.
 
@@ -136,7 +142,10 @@ Logged each val epoch when stage ≥ 2:
 
 | Metric | Meaning |
 |--------|---------|
-| `inst_pos_err_mid` | Instance position error via `S1` hard assign → mid supernode recon |
+| `pos_err_fine` | Z-only instance position error (direct) |
+| `miou_fine` | Hard mIoU on instance one-hot labels |
+| `occ_iou_fine` / `occ_precision_fine` | Occupancy vs LiDAR cache at fine grid |
+| `inst_pos_err_mid` | Instance position via `S1` → mid supernode recon |
 | `pos_err_mid` | Z-only supernode position error |
 | `occ_iou_mid` / `occ_precision_mid` | Occupancy vs LiDAR cache |
 | `soft_miou_mid` | Soft mIoU on merged supernode labels — **diagnostic only** |

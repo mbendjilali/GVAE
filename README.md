@@ -2,7 +2,7 @@
 
 Encodes 3D outdoor scene graphs into KL-regularised spatial latent volumes (`Z_coarse`, `Z_mid`) for hierarchical diffusion conditioning.
 
-**Status:** PR1 complete (Z-only decoder, soft semantic loss, stable training). PR2 / Layer A (`Z_fine`) in progress — see [TODO.md](TODO.md).
+**Status:** PR2 / Layer A implemented (`Z_fine`, 64³/32³/16³ grids). Rebuild occ caches before training.
 
 ---
 
@@ -30,7 +30,7 @@ python utils/build_scene_graph.py  # see script for args
 
 # 3. Train
 python train.py
-# → checkpoint/{timestamp}/stage*_best.pth, train.log
+# → checkpoint/{timestamp}/best.pth, train.log
 ```
 
 Configure GPU and hyperparameters in `config.py`.
@@ -41,7 +41,7 @@ Configure GPU and hyperparameters in `config.py`.
 
 ```
 gvae/           model, losses, data loaders
-train.py        four-stage training loop
+train.py        single-stage training loop (LR decay)
 config.py       hyperparameters
 utils/          graph building, diagnostics, visualization
 data/graphs/    train/ and test/ scene JSON + occ sidecars
@@ -56,8 +56,8 @@ TODO.md         backlog
 
 | Latent | Grid | Role |
 |--------|------|------|
-| `Z_coarse` | 8×8×4 | Diffusion level 1 conditioning |
-| `Z_mid` | 16×16×8 | Diffusion level 2 conditioning |
-| `Z_fine` | *planned* | Instance-level layout (PR2) |
+| `Z_fine` | 64×64×64 | Diffusion level 3 / instance layout |
+| `Z_coarse` | 16×16×16 | Diffusion level 1 conditioning |
+| `Z_mid` | 32×32×32 | Diffusion level 2 conditioning |
 
-Use `stage{N}_best.pth`, not `final.pth`. Details in [docs/training.md](docs/training.md).
+Use `best.pth`, not `last.pth`. Details in [docs/training.md](docs/training.md).
