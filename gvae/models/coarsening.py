@@ -1,5 +1,5 @@
 # gvae/models/coarsening.py
-# FPS + ball-query (hard) coarsening + soft-S MLP + supernode attribute derivation
+# FPS coarsening + learnable-temperature soft assignment + supernode attribute derivation
 
 import torch
 import torch.nn as nn
@@ -30,10 +30,12 @@ class FPSCoarsening(nn.Module):
         self.ratio = config.REDUCTION_RATIO_LEVELS[coarsening_level]
         self.ball_query_radius = config.BALL_QUERY_RADIUS_LEVELS[coarsening_level]
 
-        self.mlp_S = nn.Sequential(
-            nn.Linear(1, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1),
+        # Learnable temperature for soft assignment S = softmax(-dist / T).
+        # Initialised at SOFTMAX_TEMPERATURE; optimised jointly with the pool loss.
+        # Using -dist (monotone) avoids the MLP initialisation collapse where all
+        # supernodes converge to the centroid.
+        self.log_temperature = nn.Parameter(
+            torch.log(torch.tensor(float(config.SOFTMAX_TEMPERATURE)))
         )
 
     def forward(self, p, r, s, h, coarsen_mask: torch.Tensor | None = None):
@@ -65,18 +67,16 @@ class FPSCoarsening(nn.Module):
         seed_indices = idx[seed_local]
 
         p_seeds = p[seed_indices]
-        dist = torch.cdist(p_c, p_seeds)
+        dist = torch.cdist(p_c, p_seeds)   # (n_c, M)
         hard_assign = dist.argmin(dim=1)
 
         M = seed_indices.shape[0]
-        r_seeds = r[seed_indices]
-        if config.NORMALIZE_DIST_BY_SEED_SIZE:
-            dist_normalised = dist / (r_seeds.mean(dim=1).unsqueeze(0) + 1e-6)
-        else:
-            dist_normalised = dist
 
-        scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(n_c, M)
-        S = torch.softmax(scores / config.SOFTMAX_TEMPERATURE, dim=1)
+        # Soft assignment: monotone w.r.t. distance — closer seeds always win.
+        # Temperature is a per-level learnable scalar; clamped to avoid degenerate
+        # extremes (too cold → pure hard-assign, too hot → uniform).
+        temperature = self.log_temperature.exp().clamp(min=1e-2, max=10.0)
+        S = torch.softmax(-dist / temperature, dim=1)
 
         p_super = (S.T @ p_c) / (S.sum(dim=0, keepdim=True).T + 1e-6)
 

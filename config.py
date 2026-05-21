@@ -53,10 +53,11 @@ GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
 # Fraction of nodes kept at each coarsening step: [instance→region, region→scene]
-REDUCTION_RATIO_LEVELS = [0.1, 0.1]
-SOFTMAX_TEMPERATURE = 1.0  # temperature for soft assignment softmax — lower = sharper (→ collapse), higher = softer (→ uniform)
+REDUCTION_RATIO_LEVELS = [0.05, 0.3]  # coarsening ratios — fraction of nodes kept at each level (e.g. 0.1 = keep 10% of nodes)
+SOFTMAX_TEMPERATURE = 1.0  # initial temperature for the per-level learnable scalar T in S = softmax(-dist/T)
 
-NORMALIZE_DIST_BY_SEED_SIZE = False  # whether to normalise node-seed distances by seed size (mean radius of seed nodes) before feeding into MLP_S — helps generalisation across scales
+# (NORMALIZE_DIST_BY_SEED_SIZE was removed: dividing distances by instance bounding-box
+# half-extent is conceptually wrong and biases large objects to attract distant nodes.)
 
 # Ball-query radius (normalised [-1,1]³) after each coarsening step.
 # Supernodes are farther apart; use larger radii at coarser levels so E>0.
@@ -86,9 +87,8 @@ LAMBDA_OCC      = 1.0          # occupancy BCE weight
 LAMBDA_POOL     = 0.1          # global weight for the full pool loss block (vs recon/KL/occ)
 # pool loss components
 LAMBDA_CUT      = 1.0          # MinCut component — encourages intra-cluster edges; pushes toward collapse
-LAMBDA_ORTHO    = 3.0          # orthogonality component — main defence against collapse (now fixed); pushes supernodes to cover distinct regions
+LAMBDA_ORTHO    = 3.0          # orthogonality component — main defence against collapse; pushes supernodes to cover distinct regions
 LAMBDA_SPATIAL  = 5.0          # spatial compactness — increase now that S is sharper again
-LAMBDA_ENTROPY  = 0.0          # entropy regularisation — disabled: was a band-aid for broken ortho; now ortho handles anti-collapse
 
 LAMBDA_EDGE     = 1.0          # proximity edge margin loss weight
 LAMBDA_SEM      = 1.0          # semantic CE weight

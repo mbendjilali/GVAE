@@ -93,7 +93,7 @@ def _print_loss_block(title: str, components: dict, metrics: dict | None = None,
         print(f"  ({n_graphs - n_failed}/{n_graphs} graphs finite)", end='')
     print()
     ordered = (
-        'recon', 'KL', 'pool', 'pool_cut', 'pool_ortho', 'pool_spatial', 'pool_entropy', 'occ', 'lambda_kl',
+        'recon', 'KL', 'pool', 'pool_cut', 'pool_ortho', 'pool_spatial', 'occ', 'lambda_kl',
         'recon_coarse_preview', 'KL_coarse_preview', 'occ_coarse_preview',
     )
     for key in ordered:
