@@ -3,11 +3,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import torch
 
+import config
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
 from gvae.losses.gvae_loss import compute_loss
 
-GRAPH_PATH = '/home/claire.peyran/GVAE/data/test/5080_54400.json'  
+GRAPH_PATH = os.path.join(config.GRAPH_DATA_DIR, 'test', '5080_54400.json')
 
 # load the graph
 print("Loading graph...")

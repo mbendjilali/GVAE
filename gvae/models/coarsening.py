@@ -1,5 +1,5 @@
 # gvae/models/coarsening.py
-# FPS + ball-query (hard) coarsening + soft-S MLP + supernode attribute derivation
+# FPS coarsening + configurable assignment (hard Voronoi | soft distance softmax)
 
 import torch
 import torch.nn as nn
@@ -24,25 +24,50 @@ def _empty_coarsening(device, feature_dim: int):
     }
 
 
+def _supernode_radii(p_c: torch.Tensor, hard_assign: torch.Tensor, M: int) -> torch.Tensor:
+    r_super = torch.zeros(M, 3, device=p_c.device)
+    for j in range(M):
+        members = hard_assign == j
+        if members.any():
+            p_members = p_c[members]
+            r_super[j] = (p_members.max(dim=0).values - p_members.min(dim=0).values) / 2
+    return r_super
+
+
+def _build_assignment(
+    dist: torch.Tensor,
+    hard_assign: torch.Tensor,
+    log_temperature: nn.Parameter | None,
+) -> torch.Tensor:
+    mode = config.COARSEN_ASSIGNMENT
+    if mode == "hard":
+        n_c, M = dist.shape
+        S = torch.zeros(n_c, M, device=dist.device)
+        S[torch.arange(n_c, device=dist.device), hard_assign] = 1.0
+        return S
+    if mode == "soft":
+        if log_temperature is None:
+            raise RuntimeError("soft coarsening requires log_temperature parameter")
+        temperature = log_temperature.exp().clamp(min=1e-2, max=10.0)
+        return torch.softmax(-dist / temperature, dim=1)
+    raise ValueError(f"unknown COARSEN_ASSIGNMENT: {mode!r}")
+
+
 class FPSCoarsening(nn.Module):
+    """FPS seeds + hard or soft member assignment → supernode graph."""
+
     def __init__(self, coarsening_level: int = 0):
         super().__init__()
-        self.ratio = config.REDUCTION_RATIO
+        self.coarsening_level = coarsening_level
+        self.ratio = config.REDUCTION_RATIO_LEVELS[coarsening_level]
         self.ball_query_radius = config.BALL_QUERY_RADIUS_LEVELS[coarsening_level]
-
-        self.mlp_S = nn.Sequential(
-            nn.Linear(1, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1),
-        )
+        self.log_temperature: nn.Parameter | None = None
+        if config.COARSEN_ASSIGNMENT == "soft":
+            self.log_temperature = nn.Parameter(
+                torch.log(torch.tensor(float(config.SOFTMAX_TEMPERATURE)))
+            )
 
     def forward(self, p, r, s, h, coarsen_mask: torch.Tensor | None = None):
-        """
-        p, r, s, h: (N, …) all graph nodes at this level.
-
-        coarsen_mask: (N,) bool — if given, only True rows are FPS seeds / pool members
-        (B policy: background stays at instance G_L, objects form supernodes).
-        """
         device = p.device
         N = p.shape[0]
         if coarsen_mask is None:
@@ -67,25 +92,16 @@ class FPSCoarsening(nn.Module):
         p_seeds = p[seed_indices]
         dist = torch.cdist(p_c, p_seeds)
         hard_assign = dist.argmin(dim=1)
-
         M = seed_indices.shape[0]
-        r_seeds = r[seed_indices]
-        dist_normalised = dist / (r_seeds.mean(dim=1).unsqueeze(0) + 1e-6)
 
-        scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(n_c, M)
-        S = torch.softmax(scores, dim=1)
+        S = _build_assignment(dist, hard_assign, self.log_temperature)
+        S_feat = S.detach() if config.COARSEN_DETACH_FEATURES and config.COARSEN_ASSIGNMENT == "soft" else S
+        col_sum = S_feat.sum(dim=0).clamp(min=1e-6)
 
-        p_super = (S.T @ p_c) / (S.sum(dim=0, keepdim=True).T + 1e-6)
-
-        r_super = torch.zeros(M, 3, device=device)
-        for j in range(M):
-            members = hard_assign == j
-            if members.sum() > 0:
-                p_members = p_c[members]
-                r_super[j] = (p_members.max(dim=0).values - p_members.min(dim=0).values) / 2
-
-        S_col_sum = S.sum(dim=0)
-        s_super = (S.T @ s_c) / (S_col_sum.unsqueeze(1) + 1e-6)
+        p_super = (S_feat.T @ p_c) / col_sum.unsqueeze(1)
+        s_super = (S_feat.T @ s_c) / col_sum.unsqueeze(1)
+        h_pooled = (S_feat.T @ h_c) / col_sum.unsqueeze(1)
+        r_super = _supernode_radii(p_c, hard_assign, M)
 
         edge_index_super = radius_graph(
             p_super,
@@ -101,5 +117,5 @@ class FPSCoarsening(nn.Module):
             'edge_index': edge_index_super,
             'S': S,
             'hard_assign': hard_assign,
-            'h_pooled': S.T @ h_c / (S_col_sum.unsqueeze(1) + 1e-6),
+            'h_pooled': h_pooled,
         }

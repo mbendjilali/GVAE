@@ -1,3 +1,8 @@
+> **Deprecated.** Original prose description (pre-PR1).  
+> Superseded by [../architecture.md](../architecture.md). Kept for reference only.
+
+---
+
 **GVAE description**
 
 The Scene Graph VAE is a standalone module whose job is to compress a structured 3D outdoor scene graph into two dense spatial volumes of latent features — one at a coarse resolution matched to the first level of the diffusion model, and one at a medium resolution matched to the second level. These volumes are KL-regularised toward a standard Gaussian, so the diffusion model can treat them as a layout prior and condition on them directly.

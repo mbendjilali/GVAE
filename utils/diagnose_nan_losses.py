@@ -5,7 +5,7 @@ Per-scene loss breakdown for NaN / val-instability debugging.
 Usage (repo root):
   python utils/diagnose_nan_losses.py --split test --stage 2
   python utils/diagnose_nan_losses.py --split test --stage 2 \\
-      --checkpoint checkpoint/<run>/stage2_best.pth --mode eval
+      --checkpoint checkpoint/<run>/best.pth --mode eval
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def _flag_reason(bd, stats: dict[str, float], loss_total: float) -> list[str]:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", choices=("train", "test"), default="test")
-    parser.add_argument("--stage", type=int, default=2, choices=(1, 2, 3, 4))
+    parser.add_argument("--stage", type=int, default=1, choices=(1,), help="kept for CLI compat; always full forward")
     parser.add_argument("--limit", type=int, default=0, help="0 = all scenes")
     parser.add_argument("--checkpoint", type=str, default="")
     parser.add_argument(
@@ -103,11 +103,11 @@ def main():
             outputs = model(graph)
         bd = loss_breakdown(
             outputs, graph, step=0, stage=args.stage, path=path,
-            include_coarse_in_total=(args.stage >= 3),
+            include_coarse_in_total=(args.stage >= 1),
         )
         total_tensor, components = compute_loss(outputs, graph, step=0, stage=args.stage)
         loss_total = total_tensor.item()
-        stats = _scene_stats(outputs) if args.stage >= 2 else {"max_abs_p": 0.0, "max_abs_z": 0.0}
+        stats = _scene_stats(outputs) if args.stage >= 1 else {"max_abs_p": 0.0, "max_abs_z": 0.0}
         rows.append((loss_total if math.isfinite(loss_total) else float("inf"), path, {
             "components": {k: (v.item() if hasattr(v, "item") else v) for k, v in components.items()},
             "stats": stats,

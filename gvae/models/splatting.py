@@ -1,85 +1,102 @@
 # gvae/models/splatting.py
-# Truncated anisotropic Gaussian splatting with scatter_add; O(Σ|N_i|) complexity
-# TODO: implement (todo id: splatting)
+# Truncated anisotropic Gaussian splatting with scatter_add.
+# Full dense path when N×V is small; chunked dense for large scenes.
 
 import torch
 import torch.nn as nn
 from torch_scatter import scatter_add
+
 import config
 
-# Return the 3D position and center of each voxel in the grid
-def make_voxel_centers(grid, device):
-    # Create a grid of voxel centers
-    H, W, D = grid 
 
-    # create a 1D list of center positions along each axis
+def make_voxel_centers(grid, device):
+    H, W, D = grid
     x_centers = torch.linspace(-1, 1, H, device=device)
     y_centers = torch.linspace(-1, 1, W, device=device)
     z_centers = torch.linspace(-1, 1, D, device=device)
+    gx, gy, gz = torch.meshgrid(x_centers, y_centers, z_centers, indexing='ij')
+    return torch.stack([gx.flatten(), gy.flatten(), gz.flatten()], dim=-1)
 
-    # Build the grid 
-    gx, gy, gz = torch.meshgrid(x_centers, y_centers, z_centers, indexing='ij') # generate 3D grid of shape (H, W, D)
 
-    # flatten and stack them as column
-    centers = torch.stack([gx.flatten(), gy.flatten(), gz.flatten()], dim=-1) # (H*W*D, 3)
+def _splat_dense(h, p, r, grid, sigma, eps, vox_centers=None):
+    """N × V masked scatter (fast when N×V fits in memory)."""
+    device = h.device
+    N, d = h.shape
+    H, W, D = grid
+    if vox_centers is None:
+        vox_centers = make_voxel_centers(grid, device)
+    diff = vox_centers[None] - p[:, None, :]
+    within_trunc = (diff.abs() <= (sigma * r)[:, None, :]).all(dim=2)
+    node_idx, voxel_idx = within_trunc.nonzero(as_tuple=True)
 
-    return centers
+    valid_diff = diff[node_idx, voxel_idx]
+    valid_r = r[node_idx]
+    diff_normalised = valid_diff / (valid_r + 1e-6)
+    w = torch.exp(-0.5 * (diff_normalised ** 2).sum(dim=1))
+
+    V = vox_centers.shape[0]
+    weighted_features = w.unsqueeze(1) * h[node_idx]
+    voxel_features = scatter_add(weighted_features, voxel_idx, dim=0, dim_size=V)
+    weight_sum = scatter_add(w, voxel_idx, dim=0, dim_size=V)
+    voxel_features = voxel_features / (weight_sum.unsqueeze(1) + eps)
+    return voxel_features.T.reshape(d, H, W, D)
+
+
+def _splat_dense_chunked(h, p, r, grid, sigma, eps, node_chunk: int):
+    """Process nodes in chunks to avoid materialising full N×V mask."""
+    device = h.device
+    N, d = h.shape
+    H, W, D = grid
+    V = H * W * D
+
+    if N == 0:
+        return h.new_zeros(h.shape[1], H, W, D)
+
+    vox_centers = make_voxel_centers(grid, device)
+    voxel_features = torch.zeros(V, d, device=device, dtype=h.dtype)
+    weight_sum = torch.zeros(V, device=device, dtype=h.dtype)
+
+    for start in range(0, N, node_chunk):
+        end = min(start + node_chunk, N)
+        h_c = h[start:end]
+        p_c = p[start:end]
+        r_c = r[start:end]
+
+        diff = vox_centers[None] - p_c[:, None, :]
+        within_trunc = (diff.abs() <= (sigma * r_c)[:, None, :]).all(dim=2)
+        node_idx, voxel_idx = within_trunc.nonzero(as_tuple=True)
+
+        if node_idx.numel() == 0:
+            continue
+
+        valid_diff = diff[node_idx, voxel_idx]
+        valid_r = r_c[node_idx]
+        diff_normalised = valid_diff / (valid_r + 1e-6)
+        w = torch.exp(-0.5 * (diff_normalised ** 2).sum(dim=1))
+
+        weighted_features = w.unsqueeze(1) * h_c[node_idx]
+        voxel_features = scatter_add(weighted_features, voxel_idx, dim=0, out=voxel_features)
+        weight_sum = scatter_add(w, voxel_idx, dim=0, out=weight_sum)
+
+    voxel_features = voxel_features / (weight_sum.unsqueeze(1) + eps)
+    return voxel_features.T.reshape(d, H, W, D)
+
 
 class GaussianSplatting(nn.Module):
     def __init__(self, grid, feature_dim: int):
         super().__init__()
-        self.grid = grid  # (H, W, D) tuple defining the voxel grid dimensions
+        self.grid = grid
         self.feature_dim = feature_dim
         self.sigma = config.SPLAT_TRUNCATION_SIGMA
 
     def forward(self, h, p, r):
-        """
-        h: (N, d) node features
-        p: (N, 3) node positions
-        r: (N, 3) node radii
+        voxels = self.grid[0] * self.grid[1] * self.grid[2]
+        n_nodes = p.shape[0]
+        pairs = n_nodes * voxels
 
-        Returns:
-        voxel_features: (H*W*D, d) features for each voxel after splatting
-        """
-        device = h.device
-        N, d = h.shape
-        H, W, D = self.grid
-
-        # 1. Get voxel centers
-        vox_centers = make_voxel_centers(self.grid, device)  # (H*W*D, 3)
-
-        # 2. Find which voxels are within truncation distance of each node
-        # we need to know for each object i and each voxel v, whether the voxel is within +- 2r_i of the object's center p_i along each axis.
-        # difference vector between each node and each voxel center
-        diff = vox_centers[None] - p[:, None, :] 
-        # boolean mask : True if voxel is within truncation distance of node i along all axes
-        within_trunc = (diff.abs() <= (self.sigma * r)[:, None, :]).all(dim=2) # (N, H*W*D) .all(dim=2) checks if all 3 axes satisfy the condition
-        
-        # 3. Extract valid (object, voxel) pairs
-        node_idx, voxel_idx = within_trunc.nonzero(as_tuple=True)
-
-        # 4. compute Gaussian weights for valid pairs
-        # select the valid pairs
-        valid_diff = diff[node_idx, voxel_idx]  # (num_valid, 3) difference vectors for valid pairs
-        valid_r = r[node_idx]  # (num_valid, 3) radius for valid nodes
-
-        # normalise the offset by the object size to get a scale-invariant distance
-        diff_normalised = valid_diff / (valid_r + 1e-6)  # (num_valid, 3)
-        w = torch.exp(-0.5 * (diff_normalised ** 2).sum(dim=1))  # (num_valid,) one weights per valid pair
-
-        # 5. Scatter onto the voxel grid
-        # now we accumulate : each valid pair contributes h[node_idx] * w to voxel_idx
-        V = vox_centers.shape[0]
-
-        # compute weighted features for valid pairs
-        weighted_features = w.unsqueeze(1) * h[node_idx]  # (num_valid, d)
-        # sum weighted features for each voxel using scatter_add
-        voxel_features = scatter_add(weighted_features, voxel_idx, dim=0, dim_size=V)  # (H*W*D, d)
-        # sum weights into each voxel for normalisation
-        weight_sum = scatter_add(w, voxel_idx, dim=0, dim_size=V)
-        # normalise weighted average
-        voxel_features = voxel_features / (weight_sum.unsqueeze(1) + config.SPLAT_EPS)
-
-        # 6. Reshape the 3D grid and return
-        H, W, D = self.grid
-        return voxel_features.reshape(H, W, D, self.feature_dim)
+        if pairs <= config.SPLAT_DENSE_MAX_PAIRS:
+            return _splat_dense(h, p, r, self.grid, self.sigma, config.SPLAT_EPS)
+        return _splat_dense_chunked(
+            h, p, r, self.grid, self.sigma, config.SPLAT_EPS,
+            node_chunk=config.SPLAT_NODE_CHUNK,
+        )
