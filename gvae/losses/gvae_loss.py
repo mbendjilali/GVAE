@@ -6,6 +6,7 @@ import warnings
 import torch
 import torch.nn.functional as F
 import config
+from gvae.data.graph_masks import pool_subgraph
 from gvae.data.occupancy import occ_query_count, sample_occupancy_queries
 
 def kl_weight(step):
@@ -63,6 +64,68 @@ def loss_occupancy(occ_readout, z, occ_grid):
     q, labels = sample_occupancy_queries(occ_grid, n_queries=n_q)
     logits = occ_readout(q, z)
     return F.binary_cross_entropy_with_logits(logits, labels)
+
+
+def loss_pool(S, edge_index, p, N_nodes):
+    """MinCut-style pool regularisation on soft assignment S."""
+    M = S.shape[1]
+    num_edges = edge_index.shape[1]
+    deg = torch.zeros(N_nodes, device=S.device)
+    if num_edges == 0:
+        warnings.warn("loss_pool: empty edge_index", stacklevel=2)
+    else:
+        deg.scatter_add_(0, edge_index[0], torch.ones(num_edges, device=S.device))
+    D_S = deg.unsqueeze(1) * S
+    if num_edges > 0:
+        tr_SAS = (S[edge_index[0]] * S[edge_index[1]]).sum()
+    else:
+        tr_SAS = S.new_zeros(())
+    tr_DDS = (D_S * S).sum()
+    cut_loss = -tr_SAS / (tr_DDS + 1e-6)
+
+    StS_mat = S.T @ S
+    StS_norm = StS_mat / (StS_mat.norm() + 1e-6)
+    I_norm = torch.eye(M, device=S.device) / (M ** 0.5)
+    ortho_loss = (StS_norm - I_norm).norm()
+
+    p_super = (S.T @ p) / (S.sum(dim=0).unsqueeze(1) + 1e-6)
+    diff = p.unsqueeze(1) - p_super.unsqueeze(0)
+    dist_sq = (diff ** 2).sum(dim=2)
+    spatial_loss = (S * dist_sq).sum() / (S.sum() + 1e-6)
+
+    total = (
+        config.LAMBDA_CUT * cut_loss
+        + config.LAMBDA_ORTHO * ortho_loss
+        + config.LAMBDA_SPATIAL * spatial_loss
+    )
+    return total, cut_loss, ortho_loss, spatial_loss
+
+
+def compute_pool_loss(outputs, graph) -> tuple[torch.Tensor, dict]:
+    """Pool loss on S1 (coarsenable instances) and S2 (mid graph)."""
+    p = graph.p
+    zero = p.new_zeros(())
+    ei_pool, p_pool = pool_subgraph(graph.edge_index, p, graph.coarsen_mask)
+    n_pool = p_pool.shape[0]
+
+    if n_pool > 0 and outputs['S1'].numel() > 0:
+        L_pool_s1, L_cut_s1, L_ortho_s1, L_spatial_s1 = loss_pool(
+            outputs['S1'], ei_pool, p_pool, n_pool,
+        )
+    else:
+        L_pool_s1 = L_cut_s1 = L_ortho_s1 = L_spatial_s1 = zero
+
+    L_pool_s2, L_cut_s2, L_ortho_s2, L_spatial_s2 = loss_pool(
+        outputs['S2'], outputs['edge_index_lm1'], outputs['p_lm1'], outputs['p_lm1'].shape[0],
+    )
+    L_pool = L_pool_s1 + L_pool_s2
+    parts = {
+        'pool': L_pool,
+        'pool_cut': L_cut_s1 + L_cut_s2,
+        'pool_ortho': L_ortho_s1 + L_ortho_s2,
+        'pool_spatial': L_spatial_s1 + L_spatial_s2,
+    }
+    return config.LAMBDA_POOL * L_pool, parts
 
 
 def _maybe_branch_loss(
@@ -137,6 +200,11 @@ def compute_branch_losses(outputs, graph, step, stage=1):
         outputs['occ_readout_coarse'], outputs['z_coarse'], graph.occ_coarse,
         'coarse', lambda_kl,
     )
+
+    if config.USE_POOL_LOSS and config.COARSEN_ASSIGNMENT == "soft":
+        L_pool, pool_parts = compute_pool_loss(outputs, graph)
+        branches.append(('pool', L_pool, pool_parts))
+
     return branches, lambda_kl
 
 
@@ -144,14 +212,17 @@ def compute_loss(outputs, graph, step, stage=1):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step, stage=stage)
     zero = p.new_zeros(())
-    L_recon = zero
-    L_KL = zero
-    L_occ = zero
+    L_recon = L_KL = L_occ = zero
+    L_pool = zero
+    pool_extras = {}
 
     for _, _, parts in branches:
-        L_recon = L_recon + parts['recon']
-        L_KL = L_KL + parts['KL']
-        L_occ = L_occ + parts['occ']
+        L_recon = L_recon + parts.get('recon', zero)
+        L_KL = L_KL + parts.get('KL', zero)
+        L_occ = L_occ + parts.get('occ', zero)
+        if 'pool' in parts:
+            L_pool = L_pool + parts['pool']
+            pool_extras = {k: v for k, v in parts.items() if k.startswith('pool')}
 
     if branches:
         total = sum(branch[1] for branch in branches)
@@ -159,4 +230,7 @@ def compute_loss(outputs, graph, step, stage=1):
         total = zero
 
     components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    if pool_extras:
+        components['pool'] = L_pool
+        components.update(pool_extras)
     return total, components

@@ -1,5 +1,5 @@
 # train.py — Single-stage training loop for the Scene Graph VAE
-# All branches (fine + mid + coarse); hard FPS coarsening; LR decay mid-run
+# All branches (fine + mid + coarse); configurable FPS coarsening; LR decay mid-run
 
 import math
 import os
@@ -69,12 +69,16 @@ def _forward_loss(model, graph, step, device, use_amp: bool):
         branches, lambda_kl = compute_branch_losses(outputs, graph, step, TRAIN_STAGE)
 
     zero = graph.p.new_zeros(())
-    L_recon = L_KL = L_occ = zero
+    L_recon = L_KL = L_occ = L_pool = zero
     for _, _, parts in branches:
-        L_recon = L_recon + parts['recon']
-        L_KL = L_KL + parts['KL']
-        L_occ = L_occ + parts['occ']
+        L_recon = L_recon + parts.get('recon', zero)
+        L_KL = L_KL + parts.get('KL', zero)
+        L_occ = L_occ + parts.get('occ', zero)
+        if 'pool' in parts:
+            L_pool = L_pool + parts['pool']
     components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    if config.USE_POOL_LOSS and config.COARSEN_ASSIGNMENT == "soft":
+        components['pool'] = L_pool
     return graph, outputs, branches, components
 
 
@@ -389,6 +393,9 @@ def main(ckpt_dir):
         f"@ ep {config.LR_DECAY_EPOCH + 1} · batch {config.BATCH_SIZE}",
         f"{term.paint('grid', Style.DIM)}     "
         f"fine {config.GRID_FINE} · mid {config.GRID_MID} · coarse {config.GRID_COARSE}",
+        f"{term.paint('coarsen', Style.DIM)}  "
+        f"{config.COARSEN_ASSIGNMENT} · ratios {config.REDUCTION_RATIO_LEVELS}"
+        + (f" · pool λ={config.LAMBDA_POOL}" if config.USE_POOL_LOSS else ""),
         f"{term.paint('tb', Style.DIM)}       "
         f"tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}",
     ]
