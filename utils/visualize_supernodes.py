@@ -32,7 +32,7 @@ from gvae.data.scene_graph import SceneGraph
 
 # ── Edit these before running ─────────────────────────────────────────────────
 CHECKPOINT = "checkpoint/20260520_110645/stage1_best.pth"  
-DATA_ROOT  = "/home/claire.peyran/GVAE/data"
+DATA_ROOT  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 # ─────────────────────────────────────────────────────────────────────────────
 
 INSTANCE_FIELD = "instance"   # name of the instance-ID field in the .laz files

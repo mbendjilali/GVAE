@@ -53,7 +53,7 @@ GRID_COARSE = (16, 16, 4)   # Z^G_coarse
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
 # Assignment: "hard" = FPS + Voronoi one-hot (default baseline, no trainable coarsening)
-#             "soft" = FPS + softmax(-dist/T) with learnable per-level temperature (dev-claire3)
+#             "soft" = FPS + softmax(-dist/T) with learnable per-level temperature
 COARSEN_ASSIGNMENT = "hard"
 REDUCTION_RATIO_LEVELS = [0.25, 0.25]  # fraction kept per step [instance→mid, mid→coarse]
 REDUCTION_RATIO = REDUCTION_RATIO_LEVELS[0]  # legacy alias
