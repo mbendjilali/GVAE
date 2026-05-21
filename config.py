@@ -52,8 +52,11 @@ GRID_MID = (16, 16, 8)        # H × W × D  →  2048 voxels
 GRID_COARSE = (8, 8, 4)       # H × W × D  →  256 voxels
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
-REDUCTION_RATIO = 0.03  # keep 3% of nodes at each coarsening step
-#SOFTMAX_TEMPERATURE = 0.1  # temperature for soft assignment softmax — lower = sharper (→ collapse), higher = softer (→ uniform); start at 0.1 and increase if collapse persists
+# Fraction of nodes kept at each coarsening step: [instance→region, region→scene]
+REDUCTION_RATIO_LEVELS = [0.1, 0.1]
+SOFTMAX_TEMPERATURE = 1.0  # temperature for soft assignment softmax — lower = sharper (→ collapse), higher = softer (→ uniform)
+
+NORMALIZE_DIST_BY_SEED_SIZE = False  # whether to normalise node-seed distances by seed size (mean radius of seed nodes) before feeding into MLP_S — helps generalisation across scales
 
 # Ball-query radius (normalised [-1,1]³) after each coarsening step.
 # Supernodes are farther apart; use larger radii at coarser levels so E>0.
@@ -78,7 +81,15 @@ NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 # but we add some scaling factor to control how much each component loss contributes to the total loss
 LAMBDA_KL_MAX   = 1e-3         # β — maximum KL weight after annealing ramp
 LAMBDA_OCC      = 1.0          # occupancy BCE weight
-LAMBDA_POOL     = 0.1          # MinCutPool + spatial compactness weight
+
+# Pool loss
+LAMBDA_POOL     = 0.1          # global weight for the full pool loss block (vs recon/KL/occ)
+# pool loss components
+LAMBDA_CUT      = 1.0          # MinCut component — encourages intra-cluster edges; pushes toward collapse
+LAMBDA_ORTHO    = 3.0          # orthogonality component — main defence against collapse (now fixed); pushes supernodes to cover distinct regions
+LAMBDA_SPATIAL  = 5.0          # spatial compactness — increase now that S is sharper again
+LAMBDA_ENTROPY  = 0.0          # entropy regularisation — disabled: was a band-aid for broken ortho; now ortho handles anti-collapse
+
 LAMBDA_EDGE     = 1.0          # proximity edge margin loss weight
 LAMBDA_SEM      = 1.0          # semantic CE weight
 LAMBDA_POS      = 1.0          # position MSE weight
@@ -99,9 +110,9 @@ LEARNING_RATE      = 3e-4
 LEARNING_RATE_FINETUNE = 1e-4  # reduced LR for stage 4 joint fine-tune
 BATCH_SIZE         = 8
 NUM_EPOCHS_STAGE1  = 40        # coarsening only
-NUM_EPOCHS_STAGE2  = 40        # + mid branch
-NUM_EPOCHS_STAGE3  = 40        # + coarse branch
-NUM_EPOCHS_STAGE4  = 40        # joint fine-tune
+NUM_EPOCHS_STAGE2  = 0        # + mid branch
+NUM_EPOCHS_STAGE3  = 0        # + coarse branch
+NUM_EPOCHS_STAGE4  = 0        # joint fine-tune
 LOG_COARSE_PREVIEW_AT_STAGE2 = True  # log coarse-branch losses (not in total) during stage 2
 
 # ─── R-GAT ────────────────────────────────────────────────────────────────────

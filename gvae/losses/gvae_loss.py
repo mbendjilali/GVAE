@@ -73,14 +73,19 @@ def loss_pool(S, edge_index, p, N_nodes):
         tr_SAS = StS.sum()
     else:
         tr_SAS = S.new_zeros(())
-    tr_DDS = (D_S * S).sum() # sum of D_ii * S[i,j]^2
+    tr_DDS = (D_S * S).sum() # Tr(S^T D S) = ||D^{1/2} S||_F^2
     cut_loss = - tr_SAS / (tr_DDS + 1e-6)
 
-    # 2. othogonality loss
-    StS_mat = S.T @ S # (M, M) should be close to diagonal
-    StS_norm = StS_mat / (StS_mat.norm() + 1e-6) # normalise for stability
-    I_norm = torch.eye(M, device=S.device) / (M ** 0.5) # normalised identity matrix
-    ortho_loss = (StS_norm - I_norm).norm() 
+    # 2. orthogonality loss
+    # Target: S^T S / N ≈ I / M  (balanced clusters, no shared membership)
+    # Normalise by N (not by ||S^T S||) so collapse and perfect clustering are NOT equivalent.
+    # Collapse: S^T S ≈ diag(N,0,...) → S^T S/N ≈ diag(1,0,...) → large distance from I/M
+    # Perfect M clusters: S^T S = (N/M)*I → S^T S/N = I/M → distance = 0
+    StS_mat = S.T @ S  # (M, M)
+    I_target = torch.eye(M, device=S.device) / M
+    # Squared Frobenius norm: gradient decays to 0 as residual → 0, enabling stable convergence.
+    # Unsquared .norm() has unit-magnitude gradient near the optimum, causing oscillation.
+    ortho_loss = (StS_mat / (N_nodes + 1e-6) - I_target).pow(2).sum()
 
     # 3. spatial compactness loss
     p_super = (S.T @ p) / (S.sum(dim=0).unsqueeze(1) + 1e-6) # (M, 3) supernode positions
@@ -88,7 +93,14 @@ def loss_pool(S, edge_index, p, N_nodes):
     dist_sq = (diff ** 2).sum(dim=2) # (N, M) squared distance
     spatial_loss = (S * dist_sq).sum() / (S.sum() + 1e-6) # weighted average distance of nodes to their assigned supernodes
 
-    return cut_loss + ortho_loss + spatial_loss
+    # 4. entropy regularisation — maximise H(S) rows to prevent collapse
+    # H(S)_i = -sum_k S[i,k] * log(S[i,k])  ∈ [0, log(M)]
+    # We minimise -H(S) so the loss goes down when assignments are more uniform
+    entropy_loss = (S * torch.log(S + 1e-8)).sum(dim=1).mean()  # mean negative entropy (≤ 0)
+
+    return (config.LAMBDA_CUT * cut_loss + config.LAMBDA_ORTHO * ortho_loss
+            + config.LAMBDA_SPATIAL * spatial_loss + config.LAMBDA_ENTROPY * entropy_loss,
+            cut_loss, ortho_loss, spatial_loss, entropy_loss)
 
 def loss_occupancy(occ_readout, z, occ_grid):
     """Supervise latent z against point-voxelised occupancy (not graph bounding boxes)."""
@@ -104,20 +116,23 @@ def compute_loss(outputs, graph, step, stage=4):
     # pool loss — S1 only on coarsenable instance nodes (B policy)
     ei_pool, p_pool = pool_subgraph(edge_index, p, graph.coarsen_mask)
     n_pool = p_pool.shape[0]
-    L_pool_s1 = (
-        loss_pool(outputs['S1'], ei_pool, p_pool, n_pool)
-        if n_pool > 0 and outputs['S1'].numel() > 0
-        else p.new_zeros(())
-    )
-    L_pool_s2 = loss_pool(
+    if n_pool > 0 and outputs['S1'].numel() > 0:
+        L_pool_s1, L_cut_s1, L_ortho_s1, L_spatial_s1, L_entropy_s1 = loss_pool(outputs['S1'], ei_pool, p_pool, n_pool)
+    else:
+        L_pool_s1 = L_cut_s1 = L_ortho_s1 = L_spatial_s1 = L_entropy_s1 = p.new_zeros(())
+    L_pool_s2, L_cut_s2, L_ortho_s2, L_spatial_s2, L_entropy_s2 = loss_pool(
         outputs['S2'], outputs['edge_index_lm1'], outputs['p_lm1'], outputs['p_lm1'].shape[0],
     )
     L_pool = L_pool_s1 + L_pool_s2
+    L_cut     = L_cut_s1     + L_cut_s2
+    L_ortho   = L_ortho_s1   + L_ortho_s2
+    L_spatial = L_spatial_s1 + L_spatial_s2
+    L_entropy = L_entropy_s1 + L_entropy_s2
 
     if stage == 1:
         # only coarsening is trained — no point computing recon/KL/occ
         total = config.LAMBDA_POOL * L_pool
-        return total, {'pool': L_pool, 'lambda_kl': 0.0}
+        return total, {'pool': L_pool, 'pool_cut': L_cut, 'pool_ortho': L_ortho, 'pool_spatial': L_spatial, 'pool_entropy': L_entropy, 'lambda_kl': 0.0}
 
     # stage 2+: mid branch (encoder + decoder) is active
     lambda_kl = kl_weight(step)
@@ -151,7 +166,7 @@ def compute_loss(outputs, graph, step, stage=4):
 
     total = L_recon + lambda_kl * L_KL + config.LAMBDA_POOL * L_pool + config.LAMBDA_OCC * L_occ
 
-    components = {'recon': L_recon, 'KL': L_KL, 'pool': L_pool, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    components = {'recon': L_recon, 'KL': L_KL, 'pool': L_pool, 'pool_cut': L_cut, 'pool_ortho': L_ortho, 'pool_spatial': L_spatial, 'pool_entropy': L_entropy, 'occ': L_occ, 'lambda_kl': lambda_kl}
     components.update(extras)
     return total, components
 

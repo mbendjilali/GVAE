@@ -27,7 +27,7 @@ def _empty_coarsening(device, feature_dim: int):
 class FPSCoarsening(nn.Module):
     def __init__(self, coarsening_level: int = 0):
         super().__init__()
-        self.ratio = config.REDUCTION_RATIO
+        self.ratio = config.REDUCTION_RATIO_LEVELS[coarsening_level]
         self.ball_query_radius = config.BALL_QUERY_RADIUS_LEVELS[coarsening_level]
 
         self.mlp_S = nn.Sequential(
@@ -70,10 +70,13 @@ class FPSCoarsening(nn.Module):
 
         M = seed_indices.shape[0]
         r_seeds = r[seed_indices]
-        dist_normalised = dist / (r_seeds.mean(dim=1).unsqueeze(0) + 1e-6)
+        if config.NORMALIZE_DIST_BY_SEED_SIZE:
+            dist_normalised = dist / (r_seeds.mean(dim=1).unsqueeze(0) + 1e-6)
+        else:
+            dist_normalised = dist
 
         scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(n_c, M)
-        S = torch.softmax(scores, dim=1)
+        S = torch.softmax(scores / config.SOFTMAX_TEMPERATURE, dim=1)
 
         p_super = (S.T @ p_c) / (S.sum(dim=0, keepdim=True).T + 1e-6)
 

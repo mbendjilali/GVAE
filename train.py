@@ -93,7 +93,7 @@ def _print_loss_block(title: str, components: dict, metrics: dict | None = None,
         print(f"  ({n_graphs - n_failed}/{n_graphs} graphs finite)", end='')
     print()
     ordered = (
-        'recon', 'KL', 'pool', 'occ', 'lambda_kl',
+        'recon', 'KL', 'pool', 'pool_cut', 'pool_ortho', 'pool_spatial', 'pool_entropy', 'occ', 'lambda_kl',
         'recon_coarse_preview', 'KL_coarse_preview', 'occ_coarse_preview',
     )
     for key in ordered:
@@ -333,27 +333,28 @@ def main(ckpt_dir):
 
     model = GVAE().to(device)
     step_counter = [0]
+    epoch_counter = [0]
 
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
     print(f"TensorBoard logs: tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}")
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE1,
-                stage=1, step_counter=step_counter, lr=config.LEARNING_RATE,
+                stage=1, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE,
                 device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage1.pth"))
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE2,
-                stage=2, step_counter=step_counter, lr=config.LEARNING_RATE,
+                stage=2, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE,
                 device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage2.pth"))
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE3,
-                stage=3, step_counter=step_counter, lr=config.LEARNING_RATE,
+                stage=3, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE,
                 device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage3.pth"))
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE4,
-                stage=4, step_counter=step_counter, lr=config.LEARNING_RATE_FINETUNE,
+                stage=4, step_counter=step_counter, epoch_counter=epoch_counter, lr=config.LEARNING_RATE_FINETUNE,
                 device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "final.pth"))
 

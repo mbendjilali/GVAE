@@ -192,7 +192,7 @@ def main():
     for split in ('train', 'test'):
         split_dir = os.path.join(in_dir, split)
         if os.path.isdir(split_dir):
-            process_split(split, split_dir, out_dir)
+            process_split(split, split_dir, os.path.join(out_dir, split))
         else:
             print(f"[{split}]  not found, skipping")
 
