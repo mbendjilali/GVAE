@@ -52,8 +52,20 @@ GRID_MID = (32, 32, 8)      # Z^G_mid
 GRID_COARSE = (16, 16, 4)   # Z^G_coarse
 
 # ─── Graph coarsening ─────────────────────────────────────────────────────────
-REDUCTION_RATIO = 0.25  # keep 25% of nodes at each coarsening step
-#SOFTMAX_TEMPERATURE = 0.1  # temperature for soft assignment softmax — lower = sharper (→ collapse), higher = softer (→ uniform); start at 0.1 and increase if collapse persists
+# Assignment: "hard" = FPS + Voronoi one-hot (default baseline, no trainable coarsening)
+#             "soft" = FPS + softmax(-dist/T) with learnable per-level temperature
+COARSEN_ASSIGNMENT = "hard"
+REDUCTION_RATIO_LEVELS = [0.25, 0.25]  # fraction kept per step [instance→mid, mid→coarse]
+REDUCTION_RATIO = REDUCTION_RATIO_LEVELS[0]  # legacy alias
+SOFTMAX_TEMPERATURE = 1.0       # initial T for soft mode
+COARSEN_DETACH_FEATURES = True  # soft mode: detach S on p/s/h pooling (pool loss still trains T)
+
+# Pool loss (soft mode only; USE_POOL_LOSS ignored when COARSEN_ASSIGNMENT == "hard")
+USE_POOL_LOSS = False
+LAMBDA_POOL    = 0.1
+LAMBDA_CUT     = 1.0
+LAMBDA_ORTHO   = 3.0
+LAMBDA_SPATIAL = 5.0
 
 # Ball-query radius (normalised [-1,1]³) after each coarsening step.
 # Supernodes are farther apart; use larger radii at coarser levels so E>0.
