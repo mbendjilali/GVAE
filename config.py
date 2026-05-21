@@ -105,7 +105,7 @@ LEARNING_RATE      = 3e-4
 LEARNING_RATE_LATE = 1e-4   # LR after LR_DECAY_EPOCH
 LR_DECAY_EPOCH     = 40     # epochs 1..40 at LEARNING_RATE, then LEARNING_RATE_LATE
 BATCH_SIZE         = 4
-NUM_EPOCHS         = 70
+NUM_EPOCHS         = 150
 
 # Performance (training throughput)
 USE_AMP                 = True
@@ -120,7 +120,7 @@ DECODER_GT_ANCHOR_MIX = 0.0   # 0 = Z-only anchors; (0,1] blends in GT p,r for c
 METRICS_OCC_THRESHOLD = 0.5   # binarisation threshold for occupancy IoU / precision / recall
 METRICS_OCC_CHUNK = 8192      # batched occ readout for full-grid IoU (memory)
 SOFT_MIOU_EPS = 1e-6          # min soft class mass to include in soft mIoU mean
-LOG_FULL_METRICS = False      # if True, log extended debug metrics to TensorBoard
+LOG_FULL_METRICS = True      # if True, log extended debug metrics to TensorBoard
 
 # Training stability
 GRAD_CLIP_NORM = 1.0          # max grad norm before optimizer.step (0 = disabled)

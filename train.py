@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import config
+from gvae.training.console import Style, Term, strip_ansi
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
 from gvae.losses.gvae_loss import compute_branch_losses, compute_loss
@@ -23,13 +24,14 @@ class SceneGraphDataset(torch.utils.data.Dataset):
     def __init__(self, data_dir):
         self.files: list[str] = []
         self.graphs: list[SceneGraph] = []
+        self.skipped: list[str] = []
         for f in sorted(os.listdir(data_dir)):
             if not f.endswith('.json'):
                 continue
             path = os.path.join(data_dir, f)
             graph = SceneGraph.from_json(path)
             if graph.num_coarsenable == 0:
-                print(f"  dataset: skip {f} (0 coarsenable nodes)")
+                self.skipped.append(f)
                 continue
             graph.source_path = path
             self.files.append(path)
@@ -95,16 +97,6 @@ def _backward_branches(
         scaler.scale(total).backward()
 
 
-def _format_scalar(v) -> str:
-    if isinstance(v, torch.Tensor):
-        v = v.item()
-    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-        return str(v)
-    if abs(v) >= 1e4 or (abs(v) > 0 and abs(v) < 1e-4):
-        return f"{v:.3e}"
-    return f"{v:.4f}"
-
-
 def _strict_mean(values: list[float]) -> tuple[float, int]:
     """Mean over all values; any non-finite input makes the mean non-finite."""
     if not values:
@@ -128,47 +120,6 @@ def _graph_label(graph) -> str:
     return os.path.basename(path) if path else repr(graph)
 
 
-def _print_loss_block(title: str, components: dict, metrics: dict | None = None,
-                        n_graphs: int = 0, n_failed: int = 0):
-    print(title, end='')
-    if n_graphs:
-        print(f"  ({n_graphs - n_failed}/{n_graphs} graphs finite)", end='')
-    print()
-    ordered = ('recon', 'KL', 'occ', 'lambda_kl')
-    for key in ordered:
-        if key in components:
-            print(f"    {key:10s} {_format_scalar(components[key])}")
-    extra = [k for k in components if k not in ordered]
-    for key in extra:
-        print(f"    {key:10s} {_format_scalar(components[key])}")
-    if metrics:
-        _print_metrics_block(metrics)
-
-
-def _metric(metrics: dict, key: str, default=0.0):
-    v = metrics.get(key, default)
-    return default if v is None else v
-
-
-def _print_metrics_block(metrics: dict):
-    print("    metrics:")
-    if "pos_err_fine" in metrics:
-        print(
-            f"      pos_err_fine={_format_scalar(_metric(metrics, 'pos_err_fine'))}  "
-            f"miou_fine={_metric(metrics, 'miou_fine'):.1%}  "
-            f"occ_iou_fine={_metric(metrics, 'occ_iou_fine'):.1%}"
-        )
-    print(
-        f"      inst_pos_err_mid={_format_scalar(_metric(metrics, 'inst_pos_err_mid'))}  "
-        f"occ_iou_mid={_metric(metrics, 'occ_iou_mid'):.1%}  "
-        f"occ_prec_mid={_metric(metrics, 'occ_precision_mid'):.1%}"
-    )
-    print(
-        f"      pos_err_mid={_format_scalar(_metric(metrics, 'pos_err_mid'))}  "
-        f"soft_miou_mid={_metric(metrics, 'soft_miou_mid'):.1%}"
-    )
-
-
 def _lr_for_epoch(epoch: int) -> float:
     """epoch is 0-indexed."""
     if epoch >= config.LR_DECAY_EPOCH:
@@ -181,6 +132,16 @@ def _set_optimizer_lr(optimizer, lr: float) -> None:
         group['lr'] = lr
 
 
+def _tqdm_kwargs(desc: str, colour: str) -> dict:
+    return {
+        "desc": desc,
+        "leave": False,
+        "dynamic_ncols": True,
+        "colour": colour,
+        "bar_format": "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+    }
+
+
 def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
     model.eval()
 
@@ -190,7 +151,7 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
     failed_paths: list[str] = []
 
     with torch.no_grad():
-        for batch in tqdm(loader, desc=desc, leave=False):
+        for batch in tqdm(loader, **_tqdm_kwargs(desc, "cyan")):
             for graph in batch:
                 graph = graph.on_device(device, non_blocking=True)
                 with torch.amp.autocast('cuda', enabled=use_amp):
@@ -224,7 +185,7 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
     return avg_loss, avg_metrics, avg_components, n_graphs, n_failed, failed_paths
 
 
-def train(model, loader, val_loader, device, ckpt_dir, writer):
+def train(model, loader, val_loader, device, ckpt_dir, writer, term: Term):
     use_amp = _use_amp(device)
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
@@ -238,15 +199,18 @@ def train(model, loader, val_loader, device, ckpt_dir, writer):
         if lr != current_lr:
             current_lr = lr
             _set_optimizer_lr(optimizer, current_lr)
-            print(f"\n  LR decay → {current_lr:.2e} (epoch {epoch + 1})")
+            tqdm.write(term.paint(
+                f"  LR → {current_lr:.1e} (epoch {epoch + 1})",
+                Style.YELLOW,
+            ))
 
         per_graph_losses = []
         epoch_components = []
+        running_loss = 0.0
 
         batch_bar = tqdm(
             loader,
-            desc=f"ep {epoch + 1}/{config.NUM_EPOCHS}",
-            leave=False,
+            **_tqdm_kwargs(f"train {epoch + 1}/{config.NUM_EPOCHS}", "green"),
         )
         for batch in batch_bar:
             optimizer.zero_grad(set_to_none=True)
@@ -267,6 +231,7 @@ def train(model, loader, val_loader, device, ckpt_dir, writer):
                 )
                 batch_had_grad = True
                 per_graph_losses.append(val)
+                running_loss = sum(per_graph_losses) / len(per_graph_losses)
                 epoch_components.append({
                     k: v.item() if hasattr(v, 'item') else v for k, v in components.items()
                 })
@@ -283,10 +248,17 @@ def train(model, loader, val_loader, device, ckpt_dir, writer):
                 scaler.step(optimizer)
                 scaler.update()
                 if scaler.get_scale() < scale_before:
-                    print("  warning: GradScaler reduced scale (non-finite gradients in batch)")
+                    tqdm.write(term.paint(
+                        "  ⚠ GradScaler reduced scale (skipped non-finite grads)",
+                        Style.YELLOW,
+                    ))
 
-            if per_graph_losses:
-                batch_bar.set_postfix(loss=f"{per_graph_losses[-1]:.4f}", lr=f"{current_lr:.1e}")
+            batch_bar.set_postfix(
+                loss=f"{per_graph_losses[-1]:.3f}" if per_graph_losses else "—",
+                avg=f"{running_loss:.3f}" if per_graph_losses else "—",
+                lr=f"{current_lr:.0e}",
+                refresh=False,
+            )
 
         n_train = len(per_graph_losses)
         avg_loss, n_train_failed = _strict_mean(per_graph_losses)
@@ -294,17 +266,26 @@ def train(model, loader, val_loader, device, ckpt_dir, writer):
 
         avg_val_loss, avg_metrics, avg_val_components, n_val, n_val_failed, val_failed = validate(
             model, val_loader, device, step=step_counter,
-            desc=f"ep {epoch + 1}/{config.NUM_EPOCHS} val",
+            desc=f"val {epoch + 1}/{config.NUM_EPOCHS}",
             use_amp=use_amp,
         )
 
-        print(f"\n── Epoch {epoch + 1}/{config.NUM_EPOCHS}  lr={current_lr:.2e} ──")
-        print(f"  total  train={_format_scalar(avg_loss)}   val={_format_scalar(avg_val_loss)}")
-        _print_loss_block("  train:", avg_train_components, n_graphs=n_train, n_failed=n_train_failed)
-        _print_loss_block("  val:  ", avg_val_components, avg_metrics if avg_metrics else None,
-                          n_graphs=n_val, n_failed=n_val_failed)
+        is_best = math.isfinite(avg_val_loss) and avg_val_loss < best_loss
+        term.epoch_header(
+            epoch + 1, config.NUM_EPOCHS, current_lr,
+            avg_loss if math.isfinite(avg_loss) else float('nan'),
+            avg_val_loss if math.isfinite(avg_val_loss) else float('nan'),
+            is_best=is_best,
+        )
+        term.metrics_line(avg_metrics)
+        if n_train_failed or n_val_failed:
+            term.warn(
+                f"non-finite: train {n_train - n_train_failed}/{n_train}, "
+                f"val {n_val - n_val_failed}/{n_val}"
+            )
         if val_failed:
-            print(f"  val non-finite scenes: {', '.join(val_failed)}")
+            term.warn(f"val scenes: {', '.join(val_failed[:5])}"
+                      + (f" (+{len(val_failed) - 5})" if len(val_failed) > 5 else ""))
 
         writer.add_scalars('total', {'train': avg_loss, 'val': avg_val_loss}, step_counter)
         writer.add_scalar('lr', current_lr, epoch_counter)
@@ -326,12 +307,12 @@ def train(model, loader, val_loader, device, ckpt_dir, writer):
             for k, v in avg_metrics.items():
                 writer.add_scalar(f'epoch/metrics/{k}', v, epoch_counter)
 
-        if math.isfinite(avg_val_loss) and avg_val_loss < best_loss:
+        if is_best:
             best_loss = avg_val_loss
             torch.save(model.state_dict(), os.path.join(ckpt_dir, "best.pth"))
-            print(f"  → New best validation loss {best_loss:.4f}, model saved.")
+            term.ok(f"saved best.pth ({best_loss:.4f})")
         elif not math.isfinite(avg_val_loss):
-            print("  → Val loss non-finite; checkpoint not updated.")
+            term.warn("val loss non-finite; checkpoint not updated")
 
 
 def get_device():
@@ -344,12 +325,14 @@ def get_device():
 
 
 class _Tee:
-    def __init__(self, *streams):
+    def __init__(self, *streams, strip_ansi_for: int | None = None):
         self.streams = streams
+        self.strip_ansi_for = strip_ansi_for
 
     def write(self, data):
-        for stream in self.streams:
-            stream.write(data)
+        for i, stream in enumerate(self.streams):
+            payload = strip_ansi(data) if i == self.strip_ansi_for else data
+            stream.write(payload)
             stream.flush()
 
     def flush(self):
@@ -374,8 +357,8 @@ def _setup_run_logging(ckpt_dir: str):
         f"{'=' * 72}\n"
     )
     log_file.flush()
-    sys.stdout = _Tee(sys.__stdout__, log_file)
-    sys.stderr = _Tee(sys.__stderr__, log_file)
+    sys.stdout = _Tee(sys.__stdout__, log_file, strip_ansi_for=1)
+    sys.stderr = _Tee(sys.__stderr__, log_file, strip_ansi_for=1)
     return log_file
 
 
@@ -388,38 +371,44 @@ def _teardown_run_logging(log_file):
 
 
 def main(ckpt_dir):
+    term = Term()
     device = get_device()
     use_amp = _use_amp(device)
-    print(f"Using device: {device}")
 
     train_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'train'))
     val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'test'))
-    print(f"Dataset: {len(train_dataset)} train graphs, {len(val_dataset)} val graphs (cached in RAM)")
-    print(f"U-Net normalization: GroupNorm (num_groups={config.UNET_NUM_GROUPS})")
-    print(f"Decoder anchors: Z-only (GT mix={config.DECODER_GT_ANCHOR_MIX})")
-    print(f"Grids: fine={config.GRID_FINE} mid={config.GRID_MID} coarse={config.GRID_COARSE}")
-    print(f"Coarsening: hard FPS + Voronoi (offline partition)")
-    print(
-        f"Training: {config.NUM_EPOCHS} epochs, "
-        f"LR {config.LEARNING_RATE:.1e} → {config.LEARNING_RATE_LATE:.1e} after epoch {config.LR_DECAY_EPOCH}"
-    )
-    print(
-        f"Performance: amp={use_amp}  sequential_backward={config.SEQUENTIAL_BACKWARD and not use_amp}  "
-        f"workers={config.DATALOADER_NUM_WORKERS}  splat_chunk={config.SPLAT_NODE_CHUNK}"
-    )
+
+    skipped = train_dataset.skipped + val_dataset.skipped
+    banner_lines = [
+        f"{term.paint('device', Style.DIM)}  {device}"
+        + (f"  {term.paint('amp', Style.DIM)} on" if use_amp else ""),
+        f"{term.paint('data', Style.DIM)}     "
+        f"{len(train_dataset)} train · {len(val_dataset)} val graphs (cached)",
+        f"{term.paint('train', Style.DIM)}    "
+        f"{config.NUM_EPOCHS} ep · lr {config.LEARNING_RATE:.0e}→{config.LEARNING_RATE_LATE:.0e} "
+        f"@ ep {config.LR_DECAY_EPOCH + 1} · batch {config.BATCH_SIZE}",
+        f"{term.paint('grid', Style.DIM)}     "
+        f"fine {config.GRID_FINE} · mid {config.GRID_MID} · coarse {config.GRID_COARSE}",
+        f"{term.paint('tb', Style.DIM)}       "
+        f"tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}",
+    ]
+    if skipped:
+        banner_lines.append(
+            term.paint(f"skipped {len(skipped)} graph(s) (0 coarsenable nodes)", Style.YELLOW)
+        )
+    term.banner("GVAE training", banner_lines)
 
     train_dataloader = make_dataloader(train_dataset, shuffle=True)
     val_dataloader = make_dataloader(val_dataset, shuffle=False)
 
     model = GVAE().to(device)
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
-    print(f"TensorBoard logs: tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}")
 
-    train(model, train_dataloader, val_dataloader, device, ckpt_dir, writer)
+    train(model, train_dataloader, val_dataloader, device, ckpt_dir, writer, term)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "last.pth"))
 
     writer.close()
-    print(f"Training complete. Checkpoints in {ckpt_dir}/ (use best.pth)")
+    term.ok(f"done — checkpoints in {ckpt_dir}/ (best.pth, last.pth)")
 
 
 if __name__ == "__main__":
@@ -428,11 +417,12 @@ if __name__ == "__main__":
     os.makedirs(ckpt_dir, exist_ok=True)
     log_file = _setup_run_logging(ckpt_dir)
     try:
-        print(f"Checkpoints will be saved to: {ckpt_dir}")
-        print(f"Terminal log: {os.path.join(ckpt_dir, 'train.log')}")
+        term = Term()
+        term.dim(f"checkpoint  {ckpt_dir}")
+        term.dim(f"log         {os.path.join(ckpt_dir, 'train.log')}")
         main(ckpt_dir)
     except KeyboardInterrupt:
-        print("\nTraining interrupted by user.")
+        tqdm.write("\nTraining interrupted.")
         raise
     finally:
         _teardown_run_logging(log_file)
