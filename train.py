@@ -103,16 +103,25 @@ def _print_loss_block(title: str, components: dict, metrics: dict | None = None,
     for key in extra:
         print(f"    {key:10s} {_format_scalar(components[key])}")
     if metrics:
-        print("    metrics:")
-        print(f"      mid    acc={metrics.get('acc_mid', 0):.1%}  "
-              f"pos={_format_scalar(metrics.get('pos_err_mid', 0))}  "
-              f"size={_format_scalar(metrics.get('size_err_mid', 0))}")
-        for ck in ('coarse', 'coarse_preview'):
-            if f'acc_{ck}' in metrics:
-                print(f"      {ck:16s} acc={metrics.get(f'acc_{ck}', 0):.1%}  "
-                      f"pos={_format_scalar(metrics.get(f'pos_err_{ck}', 0))}  "
-                      f"size={_format_scalar(metrics.get(f'size_err_{ck}', 0))}")
-                break
+        _print_metrics_block(metrics)
+
+
+def _metric(metrics: dict, key: str, default=0.0):
+    v = metrics.get(key, default)
+    return default if v is None else v
+
+
+def _print_metrics_block(metrics: dict):
+    print("    metrics:")
+    print(
+        f"      inst_pos_err_mid={_format_scalar(_metric(metrics, 'inst_pos_err_mid'))}  "
+        f"occ_iou_mid={_metric(metrics, 'occ_iou_mid'):.1%}  "
+        f"occ_prec_mid={_metric(metrics, 'occ_precision_mid'):.1%}"
+    )
+    print(
+        f"      pos_err_mid={_format_scalar(_metric(metrics, 'pos_err_mid'))}  "
+        f"soft_miou_mid={_metric(metrics, 'soft_miou_mid'):.1%}"
+    )
 
 
 def set_stage(model, stage):
@@ -137,7 +146,7 @@ def set_stage(model, stage):
                   model.decoder_coarse, model.occ_readout_coarse])
 
 
-def validate(model, loader, stage, device):
+def validate(model, loader, stage, device, step=0):
     model.eval()
 
     per_graph_losses = []
@@ -150,7 +159,7 @@ def validate(model, loader, stage, device):
             for graph in batch:
                 graph = graph.to(device)
                 outputs = model(graph)
-                loss, components = compute_loss(outputs, graph, step=0, stage=stage)
+                loss, components = compute_loss(outputs, graph, step=step, stage=stage)
                 val = loss.item()
                 per_graph_losses.append(val)
                 if not math.isfinite(val):
@@ -159,7 +168,7 @@ def validate(model, loader, stage, device):
                     k: v.item() if hasattr(v, 'item') else v for k, v in components.items()
                 })
 
-                m = compute_metrics(outputs, stage)
+                m = compute_metrics(outputs, graph, stage, step=step)
                 if m:
                     all_metrics.append(m)
 
@@ -213,6 +222,14 @@ def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, epoc
                 step_counter[0] += 1
 
             if batch_had_grad:
+                params = [p for p in model.parameters() if p.grad is not None]
+                if any(not torch.isfinite(p.grad).all() for p in params):
+                    raise RuntimeError("Non-finite gradients before optimizer.step")
+                if config.GRAD_CLIP_NORM > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        [p for p in model.parameters() if p.requires_grad],
+                        config.GRAD_CLIP_NORM,
+                    )
                 optimizer.step()
 
         n_train = len(per_graph_losses)
@@ -220,7 +237,7 @@ def train_stage(model, loader, val_loader, num_epochs, stage, step_counter, epoc
         avg_train_components = _average_components(epoch_components)
 
         avg_val_loss, avg_metrics, avg_val_components, n_val, n_val_failed, val_failed = validate(
-            model, val_loader, stage, device,
+            model, val_loader, stage, device, step=step_counter[0],
         )
 
         print(f"\n── Stage {stage}  Epoch {epoch + 1}/{num_epochs} ──")
@@ -323,6 +340,7 @@ def main(ckpt_dir):
     val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'test'))
     print(f"Dataset: {len(train_dataset)} train graphs, {len(val_dataset)} val graphs")
     print(f"U-Net normalization: GroupNorm (num_groups={config.UNET_NUM_GROUPS})")
+    print(f"Decoder anchors: Z-only (GT mix={config.DECODER_GT_ANCHOR_MIX})")
 
     train_dataloader = DataLoader(
         train_dataset, batch_size=config.BATCH_SIZE, shuffle=True, collate_fn=lambda x: x,
@@ -333,28 +351,29 @@ def main(ckpt_dir):
 
     model = GVAE().to(device)
     step_counter = [0]
+    epoch_counter = [0]
 
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
     print(f"TensorBoard logs: tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}")
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE1,
-                stage=1, step_counter=step_counter, lr=config.LEARNING_RATE,
-                device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=1, step_counter=step_counter, epoch_counter=epoch_counter,
+                lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage1.pth"))
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE2,
-                stage=2, step_counter=step_counter, lr=config.LEARNING_RATE,
-                device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=2, step_counter=step_counter, epoch_counter=epoch_counter,
+                lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage2.pth"))
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE3,
-                stage=3, step_counter=step_counter, lr=config.LEARNING_RATE,
-                device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=3, step_counter=step_counter, epoch_counter=epoch_counter,
+                lr=config.LEARNING_RATE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "stage3.pth"))
 
     train_stage(model, train_dataloader, val_dataloader, config.NUM_EPOCHS_STAGE4,
-                stage=4, step_counter=step_counter, lr=config.LEARNING_RATE_FINETUNE,
-                device=device, ckpt_dir=ckpt_dir, writer=writer)
+                stage=4, step_counter=step_counter, epoch_counter=epoch_counter,
+                lr=config.LEARNING_RATE_FINETUNE, device=device, ckpt_dir=ckpt_dir, writer=writer)
     torch.save(model.state_dict(), os.path.join(ckpt_dir, "final.pth"))
 
     writer.close()

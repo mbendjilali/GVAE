@@ -104,6 +104,17 @@ NUM_EPOCHS_STAGE3  = 40        # + coarse branch
 NUM_EPOCHS_STAGE4  = 40        # joint fine-tune
 LOG_COARSE_PREVIEW_AT_STAGE2 = True  # log coarse-branch losses (not in total) during stage 2
 
+# Decoder — Z-only readout (PR1): anchors from h, not GT supernode geometry
+DECODER_GT_ANCHOR_MIX = 0.0   # 0 = Z-only anchors; (0,1] blends in GT p,r for curriculum
+
+# Validation metrics
+METRICS_OCC_THRESHOLD = 0.5   # binarisation threshold for occupancy IoU / precision / recall
+SOFT_MIOU_EPS = 1e-6          # min soft class mass to include in soft mIoU mean
+LOG_FULL_METRICS = False      # if True, log extended debug metrics to TensorBoard
+
+# Training stability
+GRAD_CLIP_NORM = 1.0          # max grad norm before optimizer.step (0 = disabled)
+
 # ─── R-GAT ────────────────────────────────────────────────────────────────────
 RGAT_HEADS        = 8
 RGAT_LAYERS_FINE  = 3          # instance & region levels

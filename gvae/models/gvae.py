@@ -24,15 +24,15 @@ class GVAE(nn.Module):
 
         dec_mid = self.decoder_mid(
             h=enc['h_lm1'],
-            p=enc['p_lm1'],
-            r=enc['r_lm1'],
             Z=enc['z_mid'],
+            p_gt=enc['p_lm1'],
+            r_gt=enc['r_lm1'],
         )
         dec_coarse = self.decoder_coarse(
             h=enc['h_1'],
-            p=enc['p_1'],
-            r=enc['r_1'],
             Z=enc['z_coarse'],
+            p_gt=enc['p_1'],
+            r_gt=enc['r_1'],
         )
 
         return {
@@ -42,6 +42,8 @@ class GVAE(nn.Module):
             'logvar_coarse': enc['logvar_coarse'],
             'z_mid': enc['z_mid'],
             'z_coarse': enc['z_coarse'],
+            'h_lm1': enc['h_lm1'],
+            'h_1': enc['h_1'],
             'recon_mid': dec_mid,
             'recon_coarse': dec_coarse,
             'p_lm1': enc['p_lm1'], 'r_lm1': enc['r_lm1'], 's_lm1': enc['s_lm1'],

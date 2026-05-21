@@ -1,5 +1,6 @@
 # gvae/models/decoder.py
 # Deformable cross-attention readout + MLP heads (s, p, r)
+# Reference queries are anchored on h-predicted (p, r), not GT geometry.
 
 import torch
 import torch.nn as nn
@@ -31,6 +32,8 @@ class SceneGraphDecoder(nn.Module):
         self.d = d
         P = config.NUM_REF_POINTS
 
+        self.mlp_p_anchor = nn.Linear(d, 3)
+        self.mlp_r_anchor = nn.Linear(d, 3)
         self.mlp_offset = nn.Sequential(
             nn.Linear(d, d),
             nn.ReLU(),
@@ -44,8 +47,19 @@ class SceneGraphDecoder(nn.Module):
         self.mlp_r = nn.Linear(d, 3)
         self.softplus = nn.Softplus()
 
-    def forward(self, h, p, r, Z):
-        ref_pts = make_ref_grid(p, r)
+    def _reference_geometry(self, h, p_gt=None, r_gt=None):
+        p_anchor = torch.tanh(self.mlp_p_anchor(h))
+        r_anchor = self.softplus(self.mlp_r_anchor(h))
+        mix = config.DECODER_GT_ANCHOR_MIX
+        if mix > 0.0 and p_gt is not None and r_gt is not None:
+            p_ref = (1.0 - mix) * p_anchor + mix * p_gt
+            r_ref = (1.0 - mix) * r_anchor + mix * r_gt
+            return p_ref, r_ref
+        return p_anchor, r_anchor
+
+    def forward(self, h, Z, p_gt=None, r_gt=None):
+        p_ref, r_ref = self._reference_geometry(h, p_gt=p_gt, r_gt=r_gt)
+        ref_pts = make_ref_grid(p_ref, r_ref)
         delta = self.mlp_offset(h).reshape(-1, config.NUM_REF_POINTS, 3)
         ref_pts = (ref_pts + delta).clamp(-1, 1)
 

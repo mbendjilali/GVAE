@@ -20,13 +20,19 @@ def kl_weight(step):
     return config.LAMBDA_KL_MAX * min(1.0, pos_in_cycle / max(1, ramp_len))
 
 
+def soft_semantic_loss(pred_probs: torch.Tensor, true_soft: torch.Tensor) -> torch.Tensor:
+    """KL(pred || true) for soft supernode semantic targets (rows sum to 1)."""
+    true = true_soft / true_soft.sum(dim=1, keepdim=True).clamp(min=config.SOFT_MIOU_EPS)
+    log_pred = pred_probs.clamp(min=config.SOFT_MIOU_EPS).log()
+    return F.kl_div(log_pred, true, reduction='batchmean')
+
+
 def reconstruction_loss(recon, p_true, r_true, s_true, edge_index, edge_margin=None):
     # recon is a dict with keys "p", "r", "s" containing the predicted values at the reference points
     # p_true, r_true, s_true are the ground truth values for the nodes in the original graph
     delta = edge_margin if edge_margin is not None else config.BALL_QUERY_RADIUS
 
-    # semantic: cross-entropy loss
-    L_sem = F.cross_entropy(recon['s'], s_true)
+    L_sem = soft_semantic_loss(recon['s'], s_true)
 
     # position and radius: MSE
     L_pos = F.mse_loss(recon['p'], p_true)

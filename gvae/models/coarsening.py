@@ -74,8 +74,11 @@ class FPSCoarsening(nn.Module):
 
         scores = self.mlp_S(dist_normalised.reshape(-1, 1)).reshape(n_c, M)
         S = torch.softmax(scores, dim=1)
+        # Stop recon/KL/occ gradients through soft-S; pool loss still trains mlp_S.
+        S_feat = S.detach()
 
-        p_super = (S.T @ p_c) / (S.sum(dim=0, keepdim=True).T + 1e-6)
+        S_col_sum = S_feat.sum(dim=0)
+        p_super = (S_feat.T @ p_c) / (S_col_sum.unsqueeze(1) + 1e-6)
 
         r_super = torch.zeros(M, 3, device=device)
         for j in range(M):
@@ -84,8 +87,7 @@ class FPSCoarsening(nn.Module):
                 p_members = p_c[members]
                 r_super[j] = (p_members.max(dim=0).values - p_members.min(dim=0).values) / 2
 
-        S_col_sum = S.sum(dim=0)
-        s_super = (S.T @ s_c) / (S_col_sum.unsqueeze(1) + 1e-6)
+        s_super = (S_feat.T @ s_c) / (S_col_sum.unsqueeze(1) + 1e-6)
 
         edge_index_super = radius_graph(
             p_super,
@@ -101,5 +103,5 @@ class FPSCoarsening(nn.Module):
             'edge_index': edge_index_super,
             'S': S,
             'hard_assign': hard_assign,
-            'h_pooled': S.T @ h_c / (S_col_sum.unsqueeze(1) + 1e-6),
+            'h_pooled': S_feat.T @ h_c / (S_col_sum.unsqueeze(1) + 1e-6),
         }
