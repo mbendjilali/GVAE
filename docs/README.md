@@ -5,7 +5,7 @@
 | [architecture.md](architecture.md) | Encoder, coarsening, splatting, decoder, losses — **current implementation** |
 | [training.md](training.md) | Environment, running training, checkpoints, metrics |
 | [data.md](data.md) | Scene graphs, LiDAR pipeline, occupancy caches |
-| [../TODO.md](../TODO.md) | Active backlog (Layer A / PR2, diagnostics, ablations) |
+| [../TODO.md](../TODO.md) | Active backlog (Z localization, probes, diagnostics) |
 
 ## Archive
 
