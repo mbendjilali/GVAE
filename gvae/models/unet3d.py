@@ -33,9 +33,10 @@ class ConvBlock(nn.Module):
 
 
 class UNet3D(nn.Module):
-    def __init__(self, d: int, depth: int):
+    def __init__(self, d: int, depth: int, pool_kernel: tuple = (2, 2, 1)):
         super().__init__()
         self.depth = depth
+        self.pool_kernel = pool_kernel
 
         self.encoders = nn.ModuleList()
         ch = d
@@ -77,12 +78,12 @@ class UNet3D(nn.Module):
         for encoder in self.encoders:
             x = self._run_block(encoder, x)
             skips.append(x)
-            x = nn.functional.max_pool3d(x, kernel_size=2)
+            x = nn.functional.max_pool3d(x, kernel_size=self.pool_kernel)
 
         x = self._run_block(self.bottleneck, x)
 
         for decoder in self.decoders:
-            x = nn.functional.interpolate(x, scale_factor=2, mode='trilinear', align_corners=False)
+            x = nn.functional.interpolate(x, scale_factor=self.pool_kernel, mode='trilinear', align_corners=False)
             skip = skips.pop()
             x = torch.cat([x, skip], dim=1)
             x = self._run_block(decoder, x)
