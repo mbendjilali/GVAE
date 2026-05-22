@@ -39,19 +39,20 @@ class GVAE(nn.Module):
             'z_fine': enc['z_fine'],
             'z_mid': enc['z_mid'],
             'z_coarse': enc['z_coarse'],
-            'h_inst': enc['h_inst'],
+            'h_fine': enc['h_fine'],
             'h_lm1': enc['h_lm1'],
             'h_1': enc['h_1'],
-            'p_inst': enc['p_inst'],
-            'r_inst': enc['r_inst'],
-            's_inst': enc['s_inst'],
-            'edge_index_inst': enc['edge_index_inst'],
+            'p_fine': enc['p_fine'],
+            'r_fine': enc['r_fine'],
+            's_fine': enc['s_fine'],
+            'edge_index_fine': enc['edge_index_fine'],
             'p_lm1': enc['p_lm1'],
             'r_lm1': enc['r_lm1'],
             's_lm1': enc['s_lm1'],
             'p_1': enc['p_1'],
             'r_1': enc['r_1'],
             's_1': enc['s_1'],
+            'S0': enc['S0'],
             'S1': enc['S1'],
             'S2': enc['S2'],
             'edge_index_lm1': enc['edge_index_lm1'],
@@ -67,12 +68,12 @@ class GVAE(nn.Module):
             'recon_coarse': None,
         }
 
-        if stage >= 1 and enc['h_inst'].numel() > 0:
+        if stage >= 1 and enc['h_fine'].numel() > 0:
             out['recon_fine'] = self.decoder_fine(
-                h=enc['h_inst'],
+                h=enc['h_fine'],
                 Z=enc['z_fine'],
-                p_gt=enc['p_inst'],
-                r_gt=enc['r_inst'],
+                p_gt=enc['p_fine'],
+                r_gt=enc['r_fine'],
             )
 
         if stage >= 1 and enc['h_lm1'].numel() > 0:

@@ -55,7 +55,7 @@ GRID_COARSE = (16, 16, 4)   # Z^G_coarse
 # Assignment: "hard" = FPS + Voronoi one-hot (default baseline, no trainable coarsening)
 #             "soft" = FPS + softmax(-dist/T) with learnable per-level temperature
 COARSEN_ASSIGNMENT = "hard"
-REDUCTION_RATIO_LEVELS = [0.25, 0.25]  # fraction kept per step [instance→mid, mid→coarse]
+REDUCTION_RATIO_LEVELS = [0.1, 0.25, 0.25]  # fraction kept per step [instance→fine, fine→mid, mid→coarse]
 REDUCTION_RATIO = REDUCTION_RATIO_LEVELS[0]  # legacy alias
 SOFTMAX_TEMPERATURE = 1.0       # initial T for soft mode
 COARSEN_DETACH_FEATURES = True  # soft mode: detach S on p/s/h pooling (pool loss still trains T)
@@ -69,9 +69,9 @@ LAMBDA_SPATIAL = 5.0
 
 # Ball-query radius (normalised [-1,1]³) after each coarsening step.
 # Supernodes are farther apart; use larger radii at coarser levels so E>0.
-# [region (mid graph), scene (coarse graph)]
-BALL_QUERY_RADIUS_LEVELS = [0.1, 0.2]
-# Legacy alias (region / first coarsening step)
+# [fine graph, region (mid graph), scene (coarse graph)]
+BALL_QUERY_RADIUS_LEVELS = [0.06, 0.1, 0.2]
+# Legacy alias (fine / first coarsening step)
 BALL_QUERY_RADIUS = BALL_QUERY_RADIUS_LEVELS[0]
 MAX_NUM_NEIGHBORS = 32  # max neighbors per node in ball-query to limit memory
 

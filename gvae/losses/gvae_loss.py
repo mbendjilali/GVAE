@@ -102,15 +102,23 @@ def loss_pool(S, edge_index, p, N_nodes):
 
 
 def compute_pool_loss(outputs, graph) -> tuple[torch.Tensor, dict]:
-    """Pool loss on S1 (coarsenable instances) and S2 (mid graph)."""
+    """Pool loss on S0 (instances→fine), S1 (fine→mid), S2 (mid→coarse)."""
     p = graph.p
     zero = p.new_zeros(())
     ei_pool, p_pool = pool_subgraph(graph.edge_index, p, graph.coarsen_mask)
     n_pool = p_pool.shape[0]
 
-    if n_pool > 0 and outputs['S1'].numel() > 0:
+    if n_pool > 0 and outputs['S0'].numel() > 0:
+        L_pool_s0, L_cut_s0, L_ortho_s0, L_spatial_s0 = loss_pool(
+            outputs['S0'], ei_pool, p_pool, n_pool,
+        )
+    else:
+        L_pool_s0 = L_cut_s0 = L_ortho_s0 = L_spatial_s0 = zero
+
+    if outputs['p_fine'].numel() > 0 and outputs['S1'].numel() > 0:
         L_pool_s1, L_cut_s1, L_ortho_s1, L_spatial_s1 = loss_pool(
-            outputs['S1'], ei_pool, p_pool, n_pool,
+            outputs['S1'], outputs['edge_index_fine'], outputs['p_fine'],
+            outputs['p_fine'].shape[0],
         )
     else:
         L_pool_s1 = L_cut_s1 = L_ortho_s1 = L_spatial_s1 = zero
@@ -118,12 +126,12 @@ def compute_pool_loss(outputs, graph) -> tuple[torch.Tensor, dict]:
     L_pool_s2, L_cut_s2, L_ortho_s2, L_spatial_s2 = loss_pool(
         outputs['S2'], outputs['edge_index_lm1'], outputs['p_lm1'], outputs['p_lm1'].shape[0],
     )
-    L_pool = L_pool_s1 + L_pool_s2
+    L_pool = L_pool_s0 + L_pool_s1 + L_pool_s2
     parts = {
         'pool': L_pool,
-        'pool_cut': L_cut_s1 + L_cut_s2,
-        'pool_ortho': L_ortho_s1 + L_ortho_s2,
-        'pool_spatial': L_spatial_s1 + L_spatial_s2,
+        'pool_cut': L_cut_s0 + L_cut_s1 + L_cut_s2,
+        'pool_ortho': L_ortho_s0 + L_ortho_s1 + L_ortho_s2,
+        'pool_spatial': L_spatial_s0 + L_spatial_s1 + L_spatial_s2,
     }
     return config.LAMBDA_POOL * L_pool, parts
 
@@ -184,9 +192,9 @@ def compute_branch_losses(outputs, graph, step, stage=1):
     _maybe_branch_loss(
         branches,
         outputs.get('recon_fine'),
-        outputs['p_inst'], outputs['r_inst'], outputs['s_inst'],
-        outputs['edge_index_inst'],
-        config.EDGE_PROXIMITY,
+        outputs['p_fine'], outputs['r_fine'], outputs['s_fine'],
+        outputs['edge_index_fine'],
+        config.BALL_QUERY_RADIUS_LEVELS[0],
         outputs['mu_fine'], outputs['logvar_fine'],
         outputs['occ_readout_fine'], outputs['occ_grid_head_fine'],
         outputs['z_fine'], graph.occ_fine,
@@ -197,7 +205,7 @@ def compute_branch_losses(outputs, graph, step, stage=1):
         outputs.get('recon_mid'),
         outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'],
         outputs['edge_index_lm1'],
-        config.BALL_QUERY_RADIUS_LEVELS[0],
+        config.BALL_QUERY_RADIUS_LEVELS[1],
         outputs['mu_mid'], outputs['logvar_mid'],
         outputs['occ_readout_mid'], outputs['occ_grid_head_mid'],
         outputs['z_mid'], graph.occ_mid,
@@ -208,7 +216,7 @@ def compute_branch_losses(outputs, graph, step, stage=1):
         outputs.get('recon_coarse'),
         outputs['p_1'], outputs['r_1'], outputs['s_1'],
         outputs['edge_index_1'],
-        config.BALL_QUERY_RADIUS_LEVELS[1],
+        config.BALL_QUERY_RADIUS_LEVELS[2],
         outputs['mu_coarse'], outputs['logvar_coarse'],
         outputs['occ_readout_coarse'], outputs['occ_grid_head_coarse'],
         outputs['z_coarse'], graph.occ_coarse,

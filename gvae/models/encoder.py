@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 
 import config
-from gvae.data.graph_masks import subgraph_edge_index
 from gvae.models.gps import GPSLayer
 from gvae.models.coarsening import FPSCoarsening
 from gvae.models.splatting import GaussianSplatting
@@ -31,14 +30,21 @@ class SceneGraphEncoder(nn.Module):
             GPSLayer(d_L, num_heads=h_L, use_global_attention=False),
             GPSLayer(d_L, num_heads=h_L, use_global_attention=False),
         ])
-        self.coarsen_1 = FPSCoarsening(coarsening_level=0)
+        self.coarsen_0 = FPSCoarsening(coarsening_level=0)   # instances → fine
+
+        self.input_proj_fine = nn.Linear(d_L + config.NUM_CLASSES + 3, d_L)
+        self.gps_fine = nn.ModuleList([
+            GPSLayer(d_L, num_heads=h_L, use_global_attention=False),
+            GPSLayer(d_L, num_heads=h_L, use_global_attention=False),
+        ])
+        self.coarsen_1 = FPSCoarsening(coarsening_level=1)   # fine → mid
 
         self.input_proj_L1 = nn.Linear(d_L + config.NUM_CLASSES + 3, d_L1)
         self.gps_L1 = nn.ModuleList([
             GPSLayer(d_L1, num_heads=h_L1, use_global_attention=False),
             GPSLayer(d_L1, num_heads=h_L1, use_global_attention=False),
         ])
-        self.coarsen_2 = FPSCoarsening(coarsening_level=1)
+        self.coarsen_2 = FPSCoarsening(coarsening_level=2)   # mid → coarse
 
         self.input_proj_1 = nn.Linear(d_L1 + config.NUM_CLASSES + 3, d_1)
         self.gps_1 = nn.ModuleList([
@@ -59,6 +65,18 @@ class SceneGraphEncoder(nn.Module):
         self.unet_fine = UNet3D(d_L, depth=3)
         self.unet_mid = UNet3D(d_L1, depth=3)
         self.unet_coarse = UNet3D(d_1, depth=2)
+
+    def _fine_graph(self, c0):
+        p0, r0, s0, edge_index_0 = c0['p'], c0['r'], c0['s'], c0['edge_index']
+        edge_attr_0 = torch.norm(
+            p0[edge_index_0[0]] - p0[edge_index_0[1]], dim=1, keepdim=True
+        ) if edge_index_0.numel() > 0 else torch.zeros(0, 1, device=p0.device)
+
+        x_fine = torch.cat([c0['h_pooled'], s0, torch.log(r0 + 1e-6)], dim=1)
+        h = self.input_proj_fine(x_fine)
+        for gps in self.gps_fine:
+            h = gps(h, edge_index_0, edge_attr_0, p0)
+        return h, p0, r0, s0, edge_index_0
 
     def _region_graph(self, c1):
         p1, r1, s1, edge_index_1 = c1['p'], c1['r'], c1['s'], c1['edge_index']
@@ -102,13 +120,21 @@ class SceneGraphEncoder(nn.Module):
             if config.COARSEN_EXCLUDE_NON_INSTANTIABLE
             else None
         )
-        c1 = self.coarsen_1(p, r, s, h_L, coarsen_mask=coarsen_mask)
+        c0 = self.coarsen_0(p, r, s, h_L, coarsen_mask=coarsen_mask)
+        h_fine, p_fine, r_fine, s_fine, edge_index_fine = self._fine_graph(c0)
+        c1 = self.coarsen_1(p_fine, r_fine, s_fine, h_fine)
         h_Lm1, p1, r1, s1, edge_index_1 = self._region_graph(c1)
         c2 = self.coarsen_2(p1, r1, s1, h_Lm1)
 
         out = {
+            'S0': c0['S'],
             'S1': c1['S'],
             'S2': c2['S'],
+            'p_fine': p_fine,
+            'r_fine': r_fine,
+            's_fine': s_fine,
+            'h_fine': h_fine,
+            'edge_index_fine': edge_index_fine,
             'edge_index_lm1': edge_index_1,
             'edge_index_1': c2['edge_index'],
             'p_lm1': p1,
@@ -119,11 +145,6 @@ class SceneGraphEncoder(nn.Module):
             'r_1': c2['r'],
             's_1': c2['s'],
             'h_1': torch.zeros(0, config.D_SCENE, device=device),
-            'h_inst': torch.zeros(0, config.D_INSTANCE, device=device),
-            'p_inst': torch.zeros(0, 3, device=device),
-            'r_inst': torch.zeros(0, 3, device=device),
-            's_inst': torch.zeros(0, config.NUM_CLASSES, device=device),
-            'edge_index_inst': torch.zeros(2, 0, dtype=torch.long, device=device),
         }
         for key, grid, d in (
             ('fine', config.GRID_FINE, config.D_INSTANCE),
@@ -136,16 +157,8 @@ class SceneGraphEncoder(nn.Module):
             out[f'logvar_{key}'] = lv
 
         if stage >= 1:
-            inst_mask = graph.coarsen_mask.to(device)
-            idx_inst = inst_mask.nonzero(as_tuple=True)[0]
-            if idx_inst.numel() > 0:
-                out['h_inst'] = h_L[idx_inst]
-                out['p_inst'] = p[idx_inst]
-                out['r_inst'] = r[idx_inst]
-                out['s_inst'] = s[idx_inst]
-                out['edge_index_inst'] = subgraph_edge_index(edge_index, inst_mask)
-
-                F_fine = self.splat_fine(out['h_inst'], out['p_inst'], out['r_inst'])
+            if h_fine.numel() > 0:
+                F_fine = self.splat_fine(h_fine, p_fine, r_fine)
                 z_fine, mu_fine, logvar_fine = self.unet_fine(F_fine)
                 out['z_fine'] = z_fine
                 out['mu_fine'] = mu_fine
