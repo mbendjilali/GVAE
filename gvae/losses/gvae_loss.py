@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 import config
 from gvae.data.graph_masks import pool_subgraph
-from gvae.data.occupancy import occ_query_count, sample_occupancy_queries
+from gvae.data.occupancy import loss_occ_grid, occ_query_count, sample_occupancy_queries
 
 def kl_weight(step):
     total_steps = config.NUM_EPOCHS
@@ -128,6 +128,14 @@ def compute_pool_loss(outputs, graph) -> tuple[torch.Tensor, dict]:
     return config.LAMBDA_POOL * L_pool, parts
 
 
+def _lambda_occ_grid(name: str) -> float:
+    return {
+        'fine': config.LAMBDA_OCC_GRID_FINE,
+        'mid': config.LAMBDA_OCC_GRID_MID,
+        'coarse': config.LAMBDA_OCC_GRID_COARSE,
+    }[name]
+
+
 def _maybe_branch_loss(
     branches,
     recon,
@@ -139,6 +147,7 @@ def _maybe_branch_loss(
     mu,
     logvar,
     occ_readout,
+    occ_grid_head,
     z,
     occ_grid,
     name: str,
@@ -151,12 +160,14 @@ def _maybe_branch_loss(
     )
     L_kl = KL_loss(mu, logvar)
     L_occ = loss_occupancy(occ_readout, z, occ_grid)
+    lambda_grid = _lambda_occ_grid(name)
+    parts = {'recon': L_recon, 'KL': L_kl, 'occ': L_occ}
     total = L_recon + lambda_kl * L_kl + config.LAMBDA_OCC * L_occ
-    branches.append((
-        name,
-        total,
-        {'recon': L_recon, 'KL': L_kl, 'occ': L_occ},
-    ))
+    if lambda_grid > 0 and occ_grid_head is not None:
+        L_occ_grid = loss_occ_grid(occ_grid_head(z), occ_grid)
+        parts['occ_grid'] = L_occ_grid
+        total = total + lambda_grid * L_occ_grid
+    branches.append((name, total, parts))
 
 
 def compute_branch_losses(outputs, graph, step, stage=1):
@@ -177,7 +188,8 @@ def compute_branch_losses(outputs, graph, step, stage=1):
         outputs['edge_index_inst'],
         config.EDGE_PROXIMITY,
         outputs['mu_fine'], outputs['logvar_fine'],
-        outputs['occ_readout_fine'], outputs['z_fine'], graph.occ_fine,
+        outputs['occ_readout_fine'], outputs['occ_grid_head_fine'],
+        outputs['z_fine'], graph.occ_fine,
         'fine', lambda_kl,
     )
     _maybe_branch_loss(
@@ -187,7 +199,8 @@ def compute_branch_losses(outputs, graph, step, stage=1):
         outputs['edge_index_lm1'],
         config.BALL_QUERY_RADIUS_LEVELS[0],
         outputs['mu_mid'], outputs['logvar_mid'],
-        outputs['occ_readout_mid'], outputs['z_mid'], graph.occ_mid,
+        outputs['occ_readout_mid'], outputs['occ_grid_head_mid'],
+        outputs['z_mid'], graph.occ_mid,
         'mid', lambda_kl,
     )
     _maybe_branch_loss(
@@ -197,7 +210,8 @@ def compute_branch_losses(outputs, graph, step, stage=1):
         outputs['edge_index_1'],
         config.BALL_QUERY_RADIUS_LEVELS[1],
         outputs['mu_coarse'], outputs['logvar_coarse'],
-        outputs['occ_readout_coarse'], outputs['z_coarse'], graph.occ_coarse,
+        outputs['occ_readout_coarse'], outputs['occ_grid_head_coarse'],
+        outputs['z_coarse'], graph.occ_coarse,
         'coarse', lambda_kl,
     )
 
@@ -212,7 +226,7 @@ def compute_loss(outputs, graph, step, stage=1):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step, stage=stage)
     zero = p.new_zeros(())
-    L_recon = L_KL = L_occ = zero
+    L_recon = L_KL = L_occ = L_occ_grid = zero
     L_pool = zero
     pool_extras = {}
 
@@ -220,6 +234,7 @@ def compute_loss(outputs, graph, step, stage=1):
         L_recon = L_recon + parts.get('recon', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
+        L_occ_grid = L_occ_grid + parts.get('occ_grid', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
             pool_extras = {k: v for k, v in parts.items() if k.startswith('pool')}
@@ -229,7 +244,7 @@ def compute_loss(outputs, graph, step, stage=1):
     else:
         total = zero
 
-    components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'occ_grid': L_occ_grid, 'lambda_kl': lambda_kl}
     if pool_extras:
         components['pool'] = L_pool
         components.update(pool_extras)

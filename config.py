@@ -79,7 +79,10 @@ MAX_NUM_NEIGHBORS = 32  # max neighbors per node in ball-query to limit memory
 OCC_FILTER_NON_INSTANTIABLE = True
 
 # ─── Splatting ────────────────────────────────────────────────────────────────
-SPLAT_TRUNCATION_SIGMA = 2.0   # truncate Gaussian kernel at ±2σ
+SPLAT_TRUNCATION_SIGMA = 2.0   # truncate Gaussian kernel at ±2σ (mid / coarse)
+SPLAT_TRUNCATION_SIGMA_FINE = 1.0   # finer support for instance-level Z_fine (Phase 2A)
+SPLAT_FINE_VOXEL_CAP = True         # cap fine splat box to ~N voxel spacings
+SPLAT_FINE_VOXEL_RADIUS = 1.0       # max truncation in units of fine-grid voxel spacing
 SPLAT_EPS = 1e-6               # denominator stabiliser in scatter normalisation
 SPLAT_DENSE_MAX_PAIRS = 32_000_000  # use dense N×V path below this pair count
 SPLAT_NODE_CHUNK      = 64          # nodes per chunk in chunked-dense path (large scenes)
@@ -96,7 +99,13 @@ NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 # ─── Loss weights ─────────────────────────────────────────────────────────────
 # Total loss = L_recon + λ_KL * L_KL + λ_occ * L_occ
 LAMBDA_KL_MAX   = 1e-3         # β — maximum KL weight after annealing ramp
-LAMBDA_OCC      = 1.0          # occupancy BCE weight
+LAMBDA_OCC      = 1.0          # occupancy BCE weight (query readout)
+
+# Grid-aligned occupancy on Z voxels (OccGridHead); 0 = disabled per level
+LAMBDA_OCC_GRID_FINE   = 0.0
+LAMBDA_OCC_GRID_MID    = 0.0
+LAMBDA_OCC_GRID_COARSE = 0.0
+OCC_GRID_POS_WEIGHT    = None  # None = auto (neg/pos ratio per forward); float = fixed
 LAMBDA_EDGE     = 1.0          # proximity edge margin loss weight
 LAMBDA_SEM      = 1.0          # semantic CE weight
 LAMBDA_POS      = 1.0          # position MSE weight

@@ -48,6 +48,27 @@ def mean_position_error(pred_positions: torch.Tensor, true_positions: torch.Tens
     return torch.norm(pred_positions - true_positions, dim=1).mean().item()
 
 
+def _occupancy_grid_iou(
+    occ_grid_head,
+    z: torch.Tensor,
+    occ_gt: torch.Tensor,
+) -> tuple[float, float]:
+    if occ_gt.numel() == 0:
+        return float("nan"), float("nan")
+    logits = occ_grid_head(z)
+    probs = torch.sigmoid(logits)
+    pred = probs >= config.METRICS_OCC_THRESHOLD
+    flat_gt = occ_gt.flatten()
+    flat_pred = pred.flatten()
+    tp = (flat_pred & flat_gt).sum().float()
+    fp = (flat_pred & ~flat_gt).sum().float()
+    fn = (~flat_pred & flat_gt).sum().float()
+    union = tp + fp + fn
+    iou = (tp / union.clamp(min=1)).item()
+    precision = (tp / (tp + fp).clamp(min=1)).item()
+    return iou, precision
+
+
 def _occupancy_iou_precision(
     occ_readout,
     z: torch.Tensor,
@@ -104,6 +125,12 @@ def compute_metrics(outputs, graph, stage: int, step: int = 0) -> dict[str, floa
             )
             metrics["occ_iou_fine"] = iou_f
             metrics["occ_precision_fine"] = prec_f
+            if config.LAMBDA_OCC_GRID_FINE > 0:
+                giou, gprec = _occupancy_grid_iou(
+                    outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
+                )
+                metrics["occ_grid_iou_fine"] = giou
+                metrics["occ_grid_precision_fine"] = gprec
 
         if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
             metrics["pos_err_mid"] = mean_position_error(
@@ -119,6 +146,12 @@ def compute_metrics(outputs, graph, stage: int, step: int = 0) -> dict[str, floa
             )
             metrics["occ_iou_mid"] = iou
             metrics["occ_precision_mid"] = prec
+            if config.LAMBDA_OCC_GRID_MID > 0:
+                giou, gprec = _occupancy_grid_iou(
+                    outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
+                )
+                metrics["occ_grid_iou_mid"] = giou
+                metrics["occ_grid_precision_mid"] = gprec
             metrics["inst_pos_err_mid"] = _instance_pos_err_mid(outputs, graph)
 
         if config.LOG_FULL_METRICS:
@@ -157,6 +190,12 @@ def _full_metrics(outputs, graph, stage: int, step: int) -> dict[str, float]:
             )
             metrics["occ_iou_coarse"] = iou_c
             metrics["occ_precision_coarse"] = prec_c
+            if config.LAMBDA_OCC_GRID_COARSE > 0:
+                giou, gprec = _occupancy_grid_iou(
+                    outputs["occ_grid_head_coarse"], outputs["z_coarse"], graph.occ_coarse,
+                )
+                metrics["occ_grid_iou_coarse"] = giou
+                metrics["occ_grid_precision_coarse"] = gprec
 
     if outputs["mu_fine"].numel() > 0:
         metrics["kl_fine"] = KL_loss(outputs["mu_fine"], outputs["logvar_fine"]).item()

@@ -46,7 +46,14 @@ class SceneGraphEncoder(nn.Module):
             GPSLayer(d_1, num_heads=h_1, use_global_attention=True),
         ])
 
-        self.splat_fine = GaussianSplatting(config.GRID_FINE, feature_dim=d_L)
+        self.splat_fine = GaussianSplatting(
+            config.GRID_FINE,
+            feature_dim=d_L,
+            sigma=config.SPLAT_TRUNCATION_SIGMA_FINE,
+            voxel_cap_radius=(
+                config.SPLAT_FINE_VOXEL_RADIUS if config.SPLAT_FINE_VOXEL_CAP else None
+            ),
+        )
         self.splat_mid = GaussianSplatting(config.GRID_MID, feature_dim=d_L1)
         self.splat_coarse = GaussianSplatting(config.GRID_COARSE, feature_dim=d_1)
         self.unet_fine = UNet3D(d_L, depth=3)

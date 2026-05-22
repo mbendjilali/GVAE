@@ -3,11 +3,18 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import config
 from gvae.data.voxelize import sample_occupancy_queries
 
-__all__ = ['OccupancyReadout', 'sample_occupancy_queries', 'occ_query_count']
+__all__ = [
+    'OccupancyReadout',
+    'occ_grid_pos_weight',
+    'loss_occ_grid',
+    'sample_occupancy_queries',
+    'occ_query_count',
+]
 
 
 def fourier_encode(q, num_freqs=6):
@@ -88,3 +95,21 @@ class OccupancyReadout(nn.Module):
             outputs.append(self.mlp(z_q).squeeze(1))
 
         return torch.cat(outputs, dim=0)
+
+
+def occ_grid_pos_weight(occ_gt: torch.Tensor) -> float:
+    """Positive-class weight for sparse voxel BCE (neg count / pos count)."""
+    if config.OCC_GRID_POS_WEIGHT is not None:
+        return float(config.OCC_GRID_POS_WEIGHT)
+    n_pos = occ_gt.sum().float().clamp(min=1.0)
+    n_neg = (occ_gt.numel() - n_pos).clamp(min=1.0)
+    return (n_neg / n_pos).item()
+
+
+def loss_occ_grid(logits: torch.Tensor, occ_gt: torch.Tensor) -> torch.Tensor:
+    """BCE on full voxel grid aligned with Z."""
+    target = occ_gt.to(dtype=logits.dtype)
+    pos_weight = logits.new_tensor([occ_grid_pos_weight(occ_gt)])
+    return F.binary_cross_entropy_with_logits(
+        logits, target, pos_weight=pos_weight,
+    )

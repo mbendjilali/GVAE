@@ -7,6 +7,7 @@ import config
 from gvae.models.encoder import SceneGraphEncoder
 from gvae.models.decoder import SceneGraphDecoder
 from gvae.data.occupancy import OccupancyReadout
+from gvae.models.occ_grid_head import OccGridHead
 
 
 class GVAE(nn.Module):
@@ -20,6 +21,9 @@ class GVAE(nn.Module):
         self.occ_readout_fine = OccupancyReadout(config.D_FINE_LATENT)
         self.occ_readout_mid = OccupancyReadout(config.D_MID_LATENT)
         self.occ_readout_coarse = OccupancyReadout(config.D_COARSE_LATENT)
+        self.occ_grid_head_fine = OccGridHead(config.D_FINE_LATENT)
+        self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
+        self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
 
     def forward(self, graph, stage: int | None = None):
         stage = self.stage if stage is None else stage
@@ -55,6 +59,9 @@ class GVAE(nn.Module):
             'occ_readout_fine': self.occ_readout_fine,
             'occ_readout_mid': self.occ_readout_mid,
             'occ_readout_coarse': self.occ_readout_coarse,
+            'occ_grid_head_fine': self.occ_grid_head_fine,
+            'occ_grid_head_mid': self.occ_grid_head_mid,
+            'occ_grid_head_coarse': self.occ_grid_head_coarse,
             'recon_fine': None,
             'recon_mid': None,
             'recon_coarse': None,

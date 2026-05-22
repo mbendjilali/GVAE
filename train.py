@@ -4,6 +4,7 @@
 import math
 import os
 import sys
+import argparse
 import torch
 from datetime import datetime
 from torch.utils.data import DataLoader
@@ -69,14 +70,17 @@ def _forward_loss(model, graph, step, device, use_amp: bool):
         branches, lambda_kl = compute_branch_losses(outputs, graph, step, TRAIN_STAGE)
 
     zero = graph.p.new_zeros(())
-    L_recon = L_KL = L_occ = L_pool = zero
+    L_recon = L_KL = L_occ = L_occ_grid = L_pool = zero
     for _, _, parts in branches:
         L_recon = L_recon + parts.get('recon', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
+        L_occ_grid = L_occ_grid + parts.get('occ_grid', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
-    components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    components = {
+        'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'occ_grid': L_occ_grid, 'lambda_kl': lambda_kl,
+    }
     if config.USE_POOL_LOSS and config.COARSEN_ASSIGNMENT == "soft":
         components['pool'] = L_pool
     return graph, outputs, branches, components
@@ -396,9 +400,31 @@ def main(ckpt_dir):
         f"{term.paint('coarsen', Style.DIM)}  "
         f"{config.COARSEN_ASSIGNMENT} · ratios {config.REDUCTION_RATIO_LEVELS}"
         + (f" · pool λ={config.LAMBDA_POOL}" if config.USE_POOL_LOSS else ""),
+    ]
+    occ_grid = (
+        config.LAMBDA_OCC_GRID_FINE,
+        config.LAMBDA_OCC_GRID_MID,
+        config.LAMBDA_OCC_GRID_COARSE,
+    )
+    if any(w > 0 for w in occ_grid):
+        banner_lines.append(
+            f"{term.paint('occ_grid', Style.DIM)} "
+            f"λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
+        )
+    if (
+        config.SPLAT_TRUNCATION_SIGMA_FINE != config.SPLAT_TRUNCATION_SIGMA
+        or config.SPLAT_FINE_VOXEL_CAP
+    ):
+        cap = f", cap={config.SPLAT_FINE_VOXEL_RADIUS}vox" if config.SPLAT_FINE_VOXEL_CAP else ""
+        banner_lines.append(
+            f"{term.paint('splat', Style.DIM)} "
+            f"σ fine={config.SPLAT_TRUNCATION_SIGMA_FINE} "
+            f"(mid/coarse={config.SPLAT_TRUNCATION_SIGMA}){cap}"
+        )
+    banner_lines.append(
         f"{term.paint('tb', Style.DIM)}       "
         f"tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}",
-    ]
+    )
     if skipped:
         banner_lines.append(
             term.paint(f"skipped {len(skipped)} graph(s) (0 coarsenable nodes)", Style.YELLOW)
@@ -418,10 +444,56 @@ def main(ckpt_dir):
     term.ok(f"done — checkpoints in {ckpt_dir}/ (best.pth, last.pth)")
 
 
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Train GVAE")
+    parser.add_argument(
+        "--ckpt-dir", type=str, default="",
+        help="Checkpoint directory (default: checkpoint/<timestamp>)",
+    )
+    parser.add_argument("--epochs", type=int, default=None, help="Override NUM_EPOCHS")
+    parser.add_argument(
+        "--lambda-occ-grid-fine", type=float, default=None,
+        help="Override LAMBDA_OCC_GRID_FINE",
+    )
+    parser.add_argument(
+        "--lambda-occ-grid-mid", type=float, default=None,
+        help="Override LAMBDA_OCC_GRID_MID",
+    )
+    parser.add_argument(
+        "--lambda-occ-grid-coarse", type=float, default=None,
+        help="Override LAMBDA_OCC_GRID_COARSE",
+    )
+    parser.add_argument(
+        "--splat-sigma-fine", type=float, default=None,
+        help="Override SPLAT_TRUNCATION_SIGMA_FINE",
+    )
+    return parser.parse_args()
+
+
+def _apply_config_overrides(args) -> None:
+    if args.epochs is not None:
+        config.NUM_EPOCHS = args.epochs
+    if args.lambda_occ_grid_fine is not None:
+        config.LAMBDA_OCC_GRID_FINE = args.lambda_occ_grid_fine
+    if args.lambda_occ_grid_mid is not None:
+        config.LAMBDA_OCC_GRID_MID = args.lambda_occ_grid_mid
+    if args.lambda_occ_grid_coarse is not None:
+        config.LAMBDA_OCC_GRID_COARSE = args.lambda_occ_grid_coarse
+    if args.splat_sigma_fine is not None:
+        config.SPLAT_TRUNCATION_SIGMA_FINE = args.splat_sigma_fine
+
+
 if __name__ == "__main__":
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    ckpt_dir = os.path.join("checkpoint", timestamp)
-    os.makedirs(ckpt_dir, exist_ok=True)
+    args = _parse_args()
+    _apply_config_overrides(args)
+
+    if args.ckpt_dir:
+        ckpt_dir = args.ckpt_dir
+        os.makedirs(ckpt_dir, exist_ok=True)
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ckpt_dir = os.path.join("checkpoint", timestamp)
+        os.makedirs(ckpt_dir, exist_ok=True)
     log_file = _setup_run_logging(ckpt_dir)
     try:
         term = Term()
