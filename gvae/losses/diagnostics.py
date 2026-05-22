@@ -71,17 +71,17 @@ def loss_breakdown(
     L_kl = 0.0
     L_occ = 0.0
 
-    if outputs.get("recon_fine") is not None and outputs["p_inst"].numel() > 0:
+    if outputs.get("recon_fine") is not None and outputs["p_fine"].numel() > 0:
         _store_term(
             bd,
             "recon_fine",
             reconstruction_loss(
                 outputs["recon_fine"],
-                outputs["p_inst"],
-                outputs["r_inst"],
-                outputs["s_inst"],
-                outputs["edge_index_inst"],
-                edge_margin=config.EDGE_PROXIMITY,
+                outputs["p_fine"],
+                outputs["r_fine"],
+                outputs["s_fine"],
+                outputs["edge_index_fine"],
+                edge_margin=config.BALL_QUERY_RADIUS_LEVELS[0],
             ),
         )
         _store_term(bd, "KL_fine", KL_loss(outputs["mu_fine"], outputs["logvar_fine"]))
@@ -104,7 +104,7 @@ def loss_breakdown(
                 outputs["r_lm1"],
                 outputs["s_lm1"],
                 outputs["edge_index_lm1"],
-                edge_margin=config.BALL_QUERY_RADIUS_LEVELS[0],
+                edge_margin=config.BALL_QUERY_RADIUS_LEVELS[1],
             ),
         )
         _store_term(bd, "KL_mid", KL_loss(outputs["mu_mid"], outputs["logvar_mid"]))
@@ -127,7 +127,7 @@ def loss_breakdown(
                 outputs["r_1"],
                 outputs["s_1"],
                 outputs["edge_index_1"],
-                edge_margin=config.BALL_QUERY_RADIUS_LEVELS[1],
+                edge_margin=config.BALL_QUERY_RADIUS_LEVELS[2],
             ),
         )
         _store_term(bd, "KL_coarse", KL_loss(outputs["mu_coarse"], outputs["logvar_coarse"]))

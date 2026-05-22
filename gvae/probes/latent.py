@@ -30,7 +30,7 @@ class LevelSpec:
 
 LEVELS = (
     LevelSpec(
-        "fine", "z_fine", "p_inst", "r_inst", "h_inst", "s_inst",
+        "fine", "z_fine", "p_fine", "r_fine", "h_fine", "s_fine",
         "occ_fine", config.GRID_FINE, config.D_FINE_LATENT,
     ),
     LevelSpec(
