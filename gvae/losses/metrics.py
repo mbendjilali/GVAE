@@ -78,9 +78,10 @@ def _occupancy_iou_precision(
 
 def _instance_pos_err_mid(outputs, graph) -> float:
     idx = graph.coarsen_mask.nonzero(as_tuple=True)[0]
-    if idx.numel() == 0 or outputs["S1"].numel() == 0:
+    if idx.numel() == 0 or outputs["S0"].numel() == 0 or outputs["S1"].numel() == 0:
         return float("nan")
-    assign_mid = outputs["S1"].argmax(dim=1)
+    assign_fine = outputs["S0"].argmax(dim=1)              # coarsenable instance → fine supernode
+    assign_mid  = outputs["S1"].argmax(dim=1)[assign_fine] # → mid supernode
     pred_p = outputs["recon_mid"]["p"][assign_mid]
     return mean_position_error(pred_p, graph.p[idx])
 
@@ -94,11 +95,11 @@ def compute_metrics(outputs, graph, stage: int, step: int = 0) -> dict[str, floa
         metrics: dict[str, float] = {}
 
         recon_fine = outputs.get("recon_fine")
-        if recon_fine is not None and outputs["p_inst"].numel() > 0:
+        if recon_fine is not None and outputs["p_fine"].numel() > 0:
             metrics["pos_err_fine"] = mean_position_error(
-                recon_fine["p"], outputs["p_inst"],
+                recon_fine["p"], outputs["p_fine"],
             )
-            metrics["miou_fine"] = hard_miou(recon_fine["s"], outputs["s_inst"])
+            metrics["miou_fine"] = hard_miou(recon_fine["s"], outputs["s_fine"])
             iou_f, prec_f = _occupancy_iou_precision(
                 outputs["occ_readout_fine"], outputs["z_fine"], graph.occ_fine,
             )
@@ -134,9 +135,9 @@ def _full_metrics(outputs, graph, stage: int, step: int) -> dict[str, float]:
     metrics: dict[str, float] = {"lambda_kl_metric": kl_weight(step)}
 
     recon_fine = outputs.get("recon_fine")
-    if recon_fine is not None and outputs["p_inst"].numel() > 0:
+    if recon_fine is not None and outputs["p_fine"].numel() > 0:
         metrics["recon_sem_fine"] = soft_semantic_loss(
-            recon_fine["s"], outputs["s_inst"],
+            recon_fine["s"], outputs["s_fine"],
         ).item()
 
     if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
