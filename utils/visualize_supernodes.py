@@ -4,9 +4,9 @@ visualize_supernodes.py
 Run the model on a single JSON scene graph and produce two files:
 
   1. <name>_supernodes.json   — input JSON with three extra fields per instance:
-        "supernode_fine"   : fine-level index (0-based position in the instance list)
-        "supernode_mid"    : M1 supernode index (1st coarsening), -1 if non-coarsenable
-        "supernode_coarse" : M2 supernode index (2nd coarsening), -1 if non-coarsenable
+        "supernode_fine"   : fine supernode id from S0 (-1 if non-coarsenable)
+        "supernode_mid"    : mid supernode id from S1 (-1 if non-coarsenable)
+        "supernode_coarse" : coarse supernode id from S2 (-1 if non-coarsenable)
 
   2. <name>.las              — original .laz tile with three new per-point attributes
         supernode_fine    : inherited from the point's instance index
@@ -14,9 +14,7 @@ Run the model on a single JSON scene graph and produce two files:
         supernode_coarse  : inherited from the point's instance
 
 Usage (from repo root):
-    python utils/visualize_supernodes.py data/graphs/train/tile_001.json
-
-The checkpoint is set directly in this file (see CHECKPOINT below).
+    python utils/visualize_supernodes.py data/graphs/train/tile_001.json --ckpt checkpoint/<run>/best.pth
 """
 
 import os
@@ -34,10 +32,7 @@ import config
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
 
-# ── Edit these before running ─────────────────────────────────────────────────
-CHECKPOINT = "checkpoint/20260522_111554/best.pth"  
-DATA_ROOT  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-# ─────────────────────────────────────────────────────────────────────────────
+DATA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
 INSTANCE_FIELD = "instance"   # name of the instance-ID field in the .laz files
 
@@ -164,9 +159,8 @@ def run(json_path: str, ckpt_path: str):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Annotate a tile with supernode assignments.')
-    parser.add_argument('json',   help='Input scene graph JSON (e.g. data/graphs/train/tile_001.json)')
-    parser.add_argument('--ckpt', default=CHECKPOINT,
-                        help='Override the CHECKPOINT path set at the top of the script')
+    parser.add_argument('json', help='Input scene graph JSON')
+    parser.add_argument('--ckpt', required=True, help='Checkpoint path (best.pth)')
     args = parser.parse_args()
 
     run(args.json, args.ckpt)

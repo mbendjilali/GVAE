@@ -18,8 +18,6 @@ from gvae.data.scene_graph import SceneGraph
 from gvae.losses.gvae_loss import compute_branch_losses, compute_loss
 from gvae.losses.metrics import compute_metrics
 
-TRAIN_STAGE = 1  # full forward (all branches)
-
 
 class SceneGraphDataset(torch.utils.data.Dataset):
     def __init__(self, data_dir):
@@ -66,8 +64,8 @@ def _use_amp(device: torch.device) -> bool:
 def _forward_loss(model, graph, step, device, use_amp: bool):
     graph = graph.on_device(device, non_blocking=True)
     with torch.amp.autocast('cuda', enabled=use_amp):
-        outputs = model(graph, stage=TRAIN_STAGE)
-        branches, lambda_kl = compute_branch_losses(outputs, graph, step, TRAIN_STAGE)
+        outputs = model(graph)
+        branches, lambda_kl = compute_branch_losses(outputs, graph, step)
 
     zero = graph.p.new_zeros(())
     L_recon = L_KL = L_occ = L_occ_grid = L_pool = zero
@@ -163,9 +161,9 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
             for graph in batch:
                 graph = graph.on_device(device, non_blocking=True)
                 with torch.amp.autocast('cuda', enabled=use_amp):
-                    outputs = model(graph, stage=TRAIN_STAGE)
+                    outputs = model(graph)
                     loss, components = compute_loss(
-                        outputs, graph, step=step, stage=TRAIN_STAGE,
+                        outputs, graph, step=step,
                     )
                 val = loss.item()
                 per_graph_losses.append(val)
@@ -175,7 +173,7 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
                     k: v.item() if hasattr(v, 'item') else v for k, v in components.items()
                 })
 
-                m = compute_metrics(outputs, graph, TRAIN_STAGE, step=step)
+                m = compute_metrics(outputs, graph, step=step)
                 if m:
                     all_metrics.append(m)
 

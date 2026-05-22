@@ -102,7 +102,7 @@ class SceneGraphEncoder(nn.Module):
             h = gps(h, edge_index_2, edge_attr_2, p2)
         return h, p2, r2, s2, edge_index_2
 
-    def forward(self, graph, stage: int = 2):
+    def forward(self, graph):
         p, r, s, edge_index = graph.p, graph.r, graph.s, graph.edge_index
         device = p.device
         edge_attr = torch.norm(
@@ -156,33 +156,32 @@ class SceneGraphEncoder(nn.Module):
             out[f'mu_{key}'] = mu
             out[f'logvar_{key}'] = lv
 
-        if stage >= 1:
-            if h_fine.numel() > 0:
-                F_fine = self.splat_fine(h_fine, p_fine, r_fine)
-                z_fine, mu_fine, logvar_fine = self.unet_fine(F_fine)
-                out['z_fine'] = z_fine
-                out['mu_fine'] = mu_fine
-                out['logvar_fine'] = logvar_fine
+        if h_fine.numel() > 0:
+            F_fine = self.splat_fine(h_fine, p_fine, r_fine)
+            z_fine, mu_fine, logvar_fine = self.unet_fine(F_fine)
+            out['z_fine'] = z_fine
+            out['mu_fine'] = mu_fine
+            out['logvar_fine'] = logvar_fine
 
-            if h_Lm1.numel() > 0:
-                F_mid = self.splat_mid(h_Lm1, p1, r1)
-                z_mid, mu_mid, logvar_mid = self.unet_mid(F_mid)
-                out['z_mid'] = z_mid
-                out['mu_mid'] = mu_mid
-                out['logvar_mid'] = logvar_mid
+        if h_Lm1.numel() > 0:
+            F_mid = self.splat_mid(h_Lm1, p1, r1)
+            z_mid, mu_mid, logvar_mid = self.unet_mid(F_mid)
+            out['z_mid'] = z_mid
+            out['mu_mid'] = mu_mid
+            out['logvar_mid'] = logvar_mid
 
-            h_1, p2, r2, s2, edge_index_2 = self._scene_graph(c2)
-            out['h_1'] = h_1
-            out['p_1'] = p2
-            out['r_1'] = r2
-            out['s_1'] = s2
-            out['edge_index_1'] = edge_index_2
+        h_1, p2, r2, s2, edge_index_2 = self._scene_graph(c2)
+        out['h_1'] = h_1
+        out['p_1'] = p2
+        out['r_1'] = r2
+        out['s_1'] = s2
+        out['edge_index_1'] = edge_index_2
 
-            if h_1.numel() > 0:
-                F_coarse = self.splat_coarse(h_1, p2, r2)
-                z_coarse, mu_coarse, logvar_coarse = self.unet_coarse(F_coarse)
-                out['z_coarse'] = z_coarse
-                out['mu_coarse'] = mu_coarse
-                out['logvar_coarse'] = logvar_coarse
+        if h_1.numel() > 0:
+            F_coarse = self.splat_coarse(h_1, p2, r2)
+            z_coarse, mu_coarse, logvar_coarse = self.unet_coarse(F_coarse)
+            out['z_coarse'] = z_coarse
+            out['mu_coarse'] = mu_coarse
+            out['logvar_coarse'] = logvar_coarse
 
         return out

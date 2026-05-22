@@ -15,15 +15,18 @@ from gvae.losses.gvae_loss import (
     loss_occupancy,
     reconstruction_loss,
 )
+from gvae.data.occupancy import loss_occ_grid
 
 
 @dataclass
 class LossBreakdown:
     path: str = ""
     n_instance: int = 0
+    n_fine: int = 0
     n_mid: int = 0
     n_coarse: int = 0
     e_instance: int = 0
+    e_fine: int = 0
     e_mid: int = 0
     e_coarse: int = 0
     terms: dict[str, float] = field(default_factory=dict)
@@ -42,23 +45,28 @@ def _store_term(breakdown: LossBreakdown, name: str, tensor: torch.Tensor) -> No
         breakdown.nan_terms.append(name)
 
 
+def _maybe_occ_grid(bd: LossBreakdown, name: str, head, z, occ_gt, lambda_grid: float) -> float:
+    if lambda_grid <= 0 or head is None:
+        return 0.0
+    loss = loss_occ_grid(head(z), occ_gt)
+    _store_term(bd, name, loss)
+    return lambda_grid * bd.terms[name]
+
+
 def loss_breakdown(
     outputs,
     graph,
     step: int,
-    stage: int,
     *,
     path: str = "",
-    include_coarse_in_total: bool | None = None,
 ) -> LossBreakdown:
     """Decompose the training loss without side effects."""
-    if include_coarse_in_total is None:
-        include_coarse_in_total = stage >= 1
-
     bd = LossBreakdown(path=path)
     p, edge_index = graph.p, graph.edge_index
     bd.n_instance = int(p.shape[0])
     bd.e_instance = int(edge_index.shape[1])
+    bd.n_fine = int(outputs["p_fine"].shape[0])
+    bd.e_fine = int(outputs["edge_index_fine"].shape[1])
     bd.n_mid = int(outputs["p_lm1"].shape[0])
     bd.e_mid = int(outputs["edge_index_lm1"].shape[1])
     bd.n_coarse = int(outputs["p_1"].shape[0])
@@ -70,6 +78,7 @@ def loss_breakdown(
     L_recon = 0.0
     L_kl = 0.0
     L_occ = 0.0
+    L_occ_grid = 0.0
 
     if outputs.get("recon_fine") is not None and outputs["p_fine"].numel() > 0:
         _store_term(
@@ -89,6 +98,10 @@ def loss_breakdown(
             bd,
             "occ_fine",
             loss_occupancy(outputs["occ_readout_fine"], outputs["z_fine"], graph.occ_fine),
+        )
+        L_occ_grid += _maybe_occ_grid(
+            bd, "occ_grid_fine", outputs["occ_grid_head_fine"],
+            outputs["z_fine"], graph.occ_fine, config.LAMBDA_OCC_GRID_FINE,
         )
         L_recon += bd.terms["recon_fine"]
         L_kl += bd.terms["KL_fine"]
@@ -113,11 +126,15 @@ def loss_breakdown(
             "occ_mid",
             loss_occupancy(outputs["occ_readout_mid"], outputs["z_mid"], graph.occ_mid),
         )
+        L_occ_grid += _maybe_occ_grid(
+            bd, "occ_grid_mid", outputs["occ_grid_head_mid"],
+            outputs["z_mid"], graph.occ_mid, config.LAMBDA_OCC_GRID_MID,
+        )
         L_recon += bd.terms["recon_mid"]
         L_kl += bd.terms["KL_mid"]
         L_occ += bd.terms["occ_mid"]
 
-    if include_coarse_in_total and outputs.get("recon_coarse") is not None and outputs["p_1"].numel() > 0:
+    if outputs.get("recon_coarse") is not None and outputs["p_1"].numel() > 0:
         _store_term(
             bd,
             "recon_coarse",
@@ -136,11 +153,19 @@ def loss_breakdown(
             "occ_coarse",
             loss_occupancy(outputs["occ_readout_coarse"], outputs["z_coarse"], graph.occ_coarse),
         )
+        L_occ_grid += _maybe_occ_grid(
+            bd, "occ_grid_coarse", outputs["occ_grid_head_coarse"],
+            outputs["z_coarse"], graph.occ_coarse, config.LAMBDA_OCC_GRID_COARSE,
+        )
         L_recon += bd.terms["recon_coarse"]
         L_kl += bd.terms["KL_coarse"]
         L_occ += bd.terms["occ_coarse"]
 
-    bd.total = L_recon + lam_kl * L_kl + config.LAMBDA_OCC * L_occ
+    bd.total = (
+        L_recon + lam_kl * L_kl + config.LAMBDA_OCC * L_occ + L_occ_grid
+    )
+    if L_occ_grid > 0:
+        bd.terms["occ_grid_total"] = L_occ_grid
     if not math.isfinite(bd.total):
         if "total" not in bd.nan_terms:
             bd.nan_terms.append("total")

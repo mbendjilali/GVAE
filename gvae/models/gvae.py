@@ -11,9 +11,8 @@ from gvae.models.occ_grid_head import OccGridHead
 
 
 class GVAE(nn.Module):
-    def __init__(self, stage: int = 2):
+    def __init__(self):
         super().__init__()
-        self.stage = stage
         self.encoder = SceneGraphEncoder()
         self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
         self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
@@ -25,9 +24,8 @@ class GVAE(nn.Module):
         self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
         self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
 
-    def forward(self, graph, stage: int | None = None):
-        stage = self.stage if stage is None else stage
-        enc = self.encoder(graph, stage=stage)
+    def forward(self, graph):
+        enc = self.encoder(graph)
 
         out = {
             'mu_fine': enc['mu_fine'],
@@ -68,7 +66,7 @@ class GVAE(nn.Module):
             'recon_coarse': None,
         }
 
-        if stage >= 1 and enc['h_fine'].numel() > 0:
+        if enc['h_fine'].numel() > 0:
             out['recon_fine'] = self.decoder_fine(
                 h=enc['h_fine'],
                 Z=enc['z_fine'],
@@ -76,7 +74,7 @@ class GVAE(nn.Module):
                 r_gt=enc['r_fine'],
             )
 
-        if stage >= 1 and enc['h_lm1'].numel() > 0:
+        if enc['h_lm1'].numel() > 0:
             out['recon_mid'] = self.decoder_mid(
                 h=enc['h_lm1'],
                 Z=enc['z_mid'],
@@ -84,7 +82,7 @@ class GVAE(nn.Module):
                 r_gt=enc['r_lm1'],
             )
 
-        if stage >= 1 and enc['h_1'].numel() > 0:
+        if enc['h_1'].numel() > 0:
             out['recon_coarse'] = self.decoder_coarse(
                 h=enc['h_1'],
                 Z=enc['z_coarse'],

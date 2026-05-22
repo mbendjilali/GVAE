@@ -22,7 +22,7 @@ import torch
 import config
 from gvae.losses.gvae_loss import compute_branch_losses
 from gvae.models.gvae import GVAE
-from train import SceneGraphDataset, get_device, TRAIN_STAGE
+from train import SceneGraphDataset, get_device
 
 
 def _pick_heaviest(dataset: SceneGraphDataset, top_k: int) -> list[tuple[int, str, int]]:
@@ -41,8 +41,8 @@ def _train_step(model, graph, device, use_amp: bool, sequential: bool):
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
 
     with torch.amp.autocast('cuda', enabled=use_amp):
-        outputs = model(graph, stage=TRAIN_STAGE)
-        branches, _ = compute_branch_losses(outputs, graph, step=0, stage=TRAIN_STAGE)
+        outputs = model(graph)
+        branches, _ = compute_branch_losses(outputs, graph, step=0)
 
     if not branches:
         raise RuntimeError("No loss branches for this scene.")

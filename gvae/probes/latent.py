@@ -57,7 +57,7 @@ def sample_z_at_points(Z: torch.Tensor, points: torch.Tensor) -> torch.Tensor:
 def _forward_graph(model: GVAE, graph, device: torch.device) -> dict:
     model.eval()
     graph = graph.on_device(device)
-    return model(graph, stage=1)
+    return model(graph)
 
 
 def _decoder_for_level(model: GVAE, level: str):

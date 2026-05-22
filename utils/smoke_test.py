@@ -17,7 +17,7 @@ print(f" {graph.num_nodes} nodes, {graph.edge_index.shape[1]} edges")
 
 # model
 print("Creating model...")
-model = GVAE(stage=1)  
+model = GVAE()
 model.train()
 
 # forward pass

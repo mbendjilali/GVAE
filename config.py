@@ -55,8 +55,7 @@ GRID_COARSE = (16, 16, 4)   # Z^G_coarse
 # Assignment: "hard" = FPS + Voronoi one-hot (default baseline, no trainable coarsening)
 #             "soft" = FPS + softmax(-dist/T) with learnable per-level temperature
 COARSEN_ASSIGNMENT = "hard"
-REDUCTION_RATIO_LEVELS = [0.1, 0.25, 0.25]  # fraction kept per step [instance→fine, fine→mid, mid→coarse]
-REDUCTION_RATIO = REDUCTION_RATIO_LEVELS[0]  # legacy alias
+REDUCTION_RATIO_LEVELS = [0.2, 0.2, 0.2]  # fraction kept per step [instance→fine, fine→mid, mid→coarse]
 SOFTMAX_TEMPERATURE = 1.0       # initial T for soft mode
 COARSEN_DETACH_FEATURES = True  # soft mode: detach S on p/s/h pooling (pool loss still trains T)
 
@@ -70,9 +69,7 @@ LAMBDA_SPATIAL = 5.0
 # Ball-query radius (normalised [-1,1]³) after each coarsening step.
 # Supernodes are farther apart; use larger radii at coarser levels so E>0.
 # [fine graph, region (mid graph), scene (coarse graph)]
-BALL_QUERY_RADIUS_LEVELS = [0.06, 0.1, 0.2]
-# Legacy alias (fine / first coarsening step)
-BALL_QUERY_RADIUS = BALL_QUERY_RADIUS_LEVELS[0]
+BALL_QUERY_RADIUS_LEVELS = [0.05, 0.1, 0.2]
 MAX_NUM_NEIGHBORS = 32  # max neighbors per node in ball-query to limit memory
 
 # Occupancy caches: object-only voxels (aligned with object-centric Z, no ground in occ GT)
@@ -108,8 +105,7 @@ LAMBDA_OCC_GRID_COARSE = 0.0
 OCC_GRID_POS_WEIGHT    = None  # None = auto (neg/pos ratio per forward); float = fixed
 LAMBDA_EDGE     = 1.0          # proximity edge margin loss weight
 LAMBDA_SEM      = 1.0          # semantic CE weight
-LAMBDA_POS      = 1.0          # position MSE weight
-LAMBDA_FOOTPRINT = 1.0         # footprint MSE weight
+LAMBDA_POS      = 1.0          # position + footprint MSE weight
 
 # ─── Cyclical KL annealing (Fu et al., 2019) ──────────────────────────────────
 KL_ANNEAL_CYCLES  = 4          # number of ramp-hold cycles over full training
@@ -145,14 +141,6 @@ LOG_FULL_METRICS = True      # if True, log extended debug metrics to TensorBoar
 
 # Training stability
 GRAD_CLIP_NORM = 1.0          # max grad norm before optimizer.step (0 = disabled)
-
-# ─── R-GAT ────────────────────────────────────────────────────────────────────
-RGAT_HEADS        = 8
-RGAT_LAYERS_FINE  = 3          # instance & region levels
-RGAT_LAYERS_COARSE = 2         # coarsest level (+ GPS exact attention)
-
-# ─── Road edge reconstruction ─────────────────────────────────────────────────
-ROAD_EDGE_NEG_RATIO = 5        # negative sampling ratio for road edges
 
 # ─── Occupancy (point-cloud voxelisation) ─────────────────────────────────────
 OCC_CACHE_SUFFIX_FINE   = '_occ_fine.npy'

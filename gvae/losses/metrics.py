@@ -107,11 +107,8 @@ def _instance_pos_err_mid(outputs, graph) -> float:
     return mean_position_error(pred_p, graph.p[idx])
 
 
-def compute_metrics(outputs, graph, stage: int, step: int = 0) -> dict[str, float]:
+def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
     """Primary monitoring metrics (console + TensorBoard)."""
-    if stage < 1:
-        return {}
-
     with torch.no_grad():
         metrics: dict[str, float] = {}
 
@@ -156,12 +153,12 @@ def compute_metrics(outputs, graph, stage: int, step: int = 0) -> dict[str, floa
             metrics["inst_pos_err_mid"] = _instance_pos_err_mid(outputs, graph)
 
         if config.LOG_FULL_METRICS:
-            metrics.update(_full_metrics(outputs, graph, stage, step))
+            metrics.update(_full_metrics(outputs, graph, step))
 
     return metrics
 
 
-def _full_metrics(outputs, graph, stage: int, step: int) -> dict[str, float]:
+def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
     """Extended debug metrics (TensorBoard only when LOG_FULL_METRICS=True)."""
     from gvae.losses.gvae_loss import KL_loss, kl_weight
 

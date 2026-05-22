@@ -178,7 +178,7 @@ def _maybe_branch_loss(
     branches.append((name, total, parts))
 
 
-def compute_branch_losses(outputs, graph, step, stage=1):
+def compute_branch_losses(outputs, graph, step):
     """
     Per-branch losses for sequential backward (fine → mid → coarse).
 
@@ -230,9 +230,9 @@ def compute_branch_losses(outputs, graph, step, stage=1):
     return branches, lambda_kl
 
 
-def compute_loss(outputs, graph, step, stage=1):
+def compute_loss(outputs, graph, step):
     p = graph.p
-    branches, lambda_kl = compute_branch_losses(outputs, graph, step, stage=stage)
+    branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
     L_recon = L_KL = L_occ = L_occ_grid = zero
     L_pool = zero

@@ -30,6 +30,7 @@ data/graphs/
 
 Each JSON needs matching occupancy sidecars (built by `utils/build_scene_graph.py`):
 
+- `{scene}_occ_fine.npy`
 - `{scene}_occ_mid.npy`
 - `{scene}_occ_coarse.npy`
 
@@ -43,10 +44,17 @@ See [data.md](data.md) for the build pipeline.
 python train.py
 ```
 
-- Checkpoints and logs: `checkpoint/{timestamp}/`
-- TensorBoard: `tensorboard --logdir checkpoint`
+Short ablation (example — grid occ on all levels, 25 epochs):
 
-Four stages run sequentially (40 epochs each by default). Stage boundaries and LR are in `config.py`.
+```bash
+python train.py --epochs 25 --ckpt-dir checkpoint/my_ablation \\
+  --lambda-occ-grid-fine 1 --lambda-occ-grid-mid 1 --lambda-occ-grid-coarse 1
+```
+
+- Checkpoints and logs: `checkpoint/{timestamp}/` (or `--ckpt-dir`)
+- TensorBoard: `tensorboard --logdir checkpoint/<run>/tb_logs`
+
+Single-stage training: all branches (fine + mid + coarse) run every epoch. LR decays at `LR_DECAY_EPOCH` (default epoch 41).
 
 ---
 
@@ -54,23 +62,21 @@ Four stages run sequentially (40 epochs each by default). Stage boundaries and L
 
 | File | Use |
 |------|-----|
-| `stage{N}_best.pth` | **Use these** — lowest val total loss in stage N |
-| `final.pth` | Last epoch; often worse than stage best |
+| `best.pth` | **Use this** — lowest val total loss |
+| `last.pth` | Final epoch weights |
 
-**PR1 baseline:** `checkpoint/20260520_163246/stage4_best.pth` (S4 ep 15, val 0.664).
-
-PR1 checkpoints are **incompatible** with pre-PR1 weights (decoder API changed for Z-only anchors).
-
-Loading for inference or continued training:
+Loading for inference or probes:
 
 ```python
 import torch
 from gvae.models.gvae import GVAE
 
-model = GVAE(stage=4)
-model.load_state_dict(torch.load("checkpoint/.../stage4_best.pth", map_location="cpu"))
+model = GVAE()
+model.load_state_dict(torch.load("checkpoint/<run>/best.pth", map_location="cpu"))
 model.eval()
 ```
+
+Checkpoints are **not compatible** across major architecture changes (e.g. adding fine coarsening or `OccGridHead`).
 
 ---
 
@@ -80,13 +86,21 @@ Primary val metrics (console + TensorBoard):
 
 | Metric | Good direction | Notes |
 |--------|----------------|-------|
-| `inst_pos_err_mid` | ↓ | Layout proxy: instance → supernode decode |
-| `pos_err_mid` | ↓ | Z-only supernode positions (honest, harder than GT-anchored) |
-| `occ_iou_mid` | ↑ | ~73% plateau observed; check precision too |
-| `occ_precision_mid` | ↑ | High prec + low recall → conservative blob |
-| `soft_miou_mid` | ↑ (slow) | ~10% expected on merged supernode labels; not a go/no-go metric |
+| `pos_err_fine` | ↓ | Fine supernode positions (after S0 coarsening) |
+| `miou_fine` | ↑ | Hard mIoU on fine supernode labels |
+| `occ_iou_fine` | ↑ | Query readout vs LiDAR cache |
+| `inst_pos_err_mid` | ↓ | Instance → S0 → S1 → mid decode chain |
+| `pos_err_mid` | ↓ | Z-only mid supernode positions |
+| `occ_iou_mid` / `occ_precision_mid` | ↑ | Occupancy vs LiDAR cache |
+| `soft_miou_mid` | ↑ (slow) | Diagnostic only on merged supernode labels |
 
-Loss totals after PR1 use soft semantic KL — **not comparable** to pre-PR1 runs (~0.4–0.7 vs ~2–5).
+When grid occ is enabled (`LAMBDA_OCC_GRID_* > 0`), also watch `occ_grid_iou_*`.
+
+Run latent probes after training:
+
+```bash
+python utils/probe_latent.py --checkpoint checkpoint/<run>/best.pth -o checkpoint/<run>/probe_report.txt
+```
 
 ---
 
@@ -95,19 +109,20 @@ Loss totals after PR1 use soft semantic KL — **not comparable** to pre-PR1 run
 | Knob | Default | Effect |
 |------|---------|--------|
 | `DECODER_GT_ANCHOR_MIX` | `0.0` | Z-only decoder anchors |
-| `REDUCTION_RATIO` | `0.03` | Supernode count; lower = more merging |
+| `REDUCTION_RATIO_LEVELS` | `[0.2, 0.2, 0.2]` | FPS keep ratio per coarsening step |
+| `LAMBDA_OCC_GRID_*` | `0.0` | Voxel-aligned occ BCE on Z (per level) |
+| `SPLAT_TRUNCATION_SIGMA_FINE` | `1.0` | Sharper fine splat vs mid/coarse (2.0) |
 | `GRAD_CLIP_NORM` | `1.0` | Gradient clipping (0 = off) |
-| `NUM_EPOCHS_STAGE*` | 40 each | Consider shortening S1/S4 (see TODO.md B1/B2) |
-| `LOG_FULL_METRICS` | `False` | Extended debug metrics |
-| `LAMBDA_*` | see config | Loss balance |
+| `NUM_EPOCHS` | `150` | Override via `--epochs` |
+| `LOG_FULL_METRICS` | `True` | Extended TensorBoard metrics |
 
 ---
 
 ## Stability notes
 
 - **GroupNorm** in U-Net (not BatchNorm) — required for batch=1.
-- **`S.detach()`** on coarsening feature path — prevents NaN in stage 2+.
-- Empty `edge_index` warnings on sparse coarse graphs are benign.
+- **`COARSEN_DETACH_FEATURES`** — detaches soft assignment on feature pooling in soft mode.
+- Empty `edge_index` warnings on sparse graphs are benign.
 - Training skips graphs with zero coarsenable nodes.
 
 ---
@@ -117,12 +132,14 @@ Loss totals after PR1 use soft semantic KL — **not comparable** to pre-PR1 run
 | Script | Purpose |
 |--------|---------|
 | `utils/build_scene_graph.py` | LAZ → JSON + occ caches |
-| `utils/visualize_supernodes.py` | Coarsening visualisation |
+| `utils/probe_latent.py` | Anchor / linear / signal probes on a checkpoint |
+| `utils/visualize_supernodes.py` | Export S0/S1/S2 assignments to JSON + LAS |
 | `utils/diagnose_nan_losses.py` | Per-graph loss breakdown |
-| `utils/smoke_test.py` | Quick forward pass |
+| `utils/smoke_test.py` | Quick forward + backward pass |
+| `utils/profile_scene.py` | Timing on heaviest scenes |
 
 ---
 
 ## Next work
 
-See [TODO.md](../TODO.md) for Layer A (PR2), diagnostics, and ablations.
+See [TODO.md](../TODO.md) for Z-localization ablations and probe integration.
