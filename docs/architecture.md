@@ -92,23 +92,26 @@ Grids are **independent fixed volumes**, not nested subdivisions.
 
 ## Decoder (training signal)
 
-Deformable cross-attention readout:
+Deformable cross-attention readout (uses **`h`** for anchors + attention):
 
 1. Anchor bbox `(p, r)` predicted from node embedding **`h`** (MLP heads).
 2. 27 reference points on a 3×3×3 grid within that bbox (+ learned offsets).
 3. Bilinear sample **`Z`** at those points; cross-attend; MLP heads → `ŝ`, `p̂`, `r̂`.
 
-`DECODER_GT_ANCHOR_MIX = 0.0` — anchors use **predicted** geometry only (no GT `p`/`r` blend). Probe ablation: `mix=0` beats `mix=1` on fine position error. Diffusion still conditions on **`Z` only**; `h` is not exported at inference.
+**Z-only readout** (`ZOnlyDecoder`, DDM-aligned): bilinear sample **`Z` at supernode `p`** (+ train-time jitter); MLP → `ŝ`, `p̂`, `r̂` with **no `h`**. Loss weighted by `LAMBDA_RECON_ZONLY`.
+
+`DECODER_GT_ANCHOR_MIX = 0.0` — h-decoder anchors use predicted geometry only (no GT `p`/`r` blend).
 
 ---
 
 ## Losses
 
-$$\mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \sum_l \lambda_{\text{grid},l}\,\mathcal{L}_{\text{occ\_grid},l} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
+$$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_{\text{recon\_zonly}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \sum_l \lambda_{\text{grid},l}\,\mathcal{L}_{\text{occ\_grid},l} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
 
 | Term | Description |
 |------|-------------|
-| **Recon** | Soft cross-entropy on `s`, MSE on `p`/`r` (decode from `Z`) |
+| **Recon h** | Soft CE + MSE on `p`/`r` via deformable `h`+`Z` decoder |
+| **Recon zonly** | Same targets via `ZOnlyDecoder` (sample `Z` at `p`, train jitter) |
 | **KL** | Voxel-wise Gaussian KL; cyclical annealing |
 | **Occ grid** | BCE on full voxel grid (`OccGridHead` on `Z`); per level via `LAMBDA_OCC_GRID_*` |
 | **Pool** | Cut + orthogonality + spatial compactness on `S` (soft mode) |

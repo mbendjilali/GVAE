@@ -89,12 +89,25 @@ def loss_breakdown(
                 outputs["s_fine"],
             ),
         )
+        if outputs.get("recon_fine_zonly") is not None:
+            _store_term(
+                bd,
+                "recon_zonly_fine",
+                reconstruction_loss(
+                    outputs["recon_fine_zonly"],
+                    outputs["p_fine"],
+                    outputs["r_fine"],
+                    outputs["s_fine"],
+                ),
+            )
         _store_term(bd, "KL_fine", KL_loss(outputs["mu_fine"], outputs["logvar_fine"]))
         L_occ += _maybe_occ_grid(
             bd, "occ_fine", outputs["occ_grid_head_fine"],
             outputs["z_fine"], graph.occ_fine, config.LAMBDA_OCC_GRID_FINE,
         )
         L_recon += bd.terms["recon_fine"]
+        if "recon_zonly_fine" in bd.terms:
+            L_recon += bd.terms["recon_zonly_fine"]
         L_kl += bd.terms["KL_fine"]
 
     if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
@@ -108,12 +121,25 @@ def loss_breakdown(
                 outputs["s_lm1"],
             ),
         )
+        if outputs.get("recon_mid_zonly") is not None:
+            _store_term(
+                bd,
+                "recon_zonly_mid",
+                reconstruction_loss(
+                    outputs["recon_mid_zonly"],
+                    outputs["p_lm1"],
+                    outputs["r_lm1"],
+                    outputs["s_lm1"],
+                ),
+            )
         _store_term(bd, "KL_mid", KL_loss(outputs["mu_mid"], outputs["logvar_mid"]))
         L_occ += _maybe_occ_grid(
             bd, "occ_mid", outputs["occ_grid_head_mid"],
             outputs["z_mid"], graph.occ_mid, config.LAMBDA_OCC_GRID_MID,
         )
         L_recon += bd.terms["recon_mid"]
+        if "recon_zonly_mid" in bd.terms:
+            L_recon += bd.terms["recon_zonly_mid"]
         L_kl += bd.terms["KL_mid"]
 
     if outputs.get("recon_coarse") is not None and outputs["p_1"].numel() > 0:

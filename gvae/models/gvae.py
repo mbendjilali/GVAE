@@ -5,7 +5,7 @@ import torch.nn as nn
 
 import config
 from gvae.models.encoder import SceneGraphEncoder
-from gvae.models.decoder import SceneGraphDecoder
+from gvae.models.decoder import SceneGraphDecoder, ZOnlyDecoder
 from gvae.models.occ_grid_head import OccGridHead
 
 
@@ -16,6 +16,10 @@ class GVAE(nn.Module):
         self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
         self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
         self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
+        if config.USE_Z_ONLY_DECODER:
+            self.zonly_decoder_fine = ZOnlyDecoder(config.D_FINE_LATENT)
+            self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
+            self.zonly_decoder_coarse = ZOnlyDecoder(config.D_COARSE_LATENT)
         self.occ_grid_head_fine = OccGridHead(config.D_FINE_LATENT)
         self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
         self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
@@ -57,6 +61,9 @@ class GVAE(nn.Module):
             'recon_fine': None,
             'recon_mid': None,
             'recon_coarse': None,
+            'recon_fine_zonly': None,
+            'recon_mid_zonly': None,
+            'recon_coarse_zonly': None,
         }
 
         if enc['h_fine'].numel() > 0:
@@ -66,6 +73,10 @@ class GVAE(nn.Module):
                 p_gt=enc['p_fine'],
                 r_gt=enc['r_fine'],
             )
+            if config.USE_Z_ONLY_DECODER:
+                out['recon_fine_zonly'] = self.zonly_decoder_fine.forward_at_gt(
+                    enc['z_fine'], enc['p_fine'],
+                )
 
         if enc['h_lm1'].numel() > 0:
             out['recon_mid'] = self.decoder_mid(
@@ -74,6 +85,10 @@ class GVAE(nn.Module):
                 p_gt=enc['p_lm1'],
                 r_gt=enc['r_lm1'],
             )
+            if config.USE_Z_ONLY_DECODER:
+                out['recon_mid_zonly'] = self.zonly_decoder_mid.forward_at_gt(
+                    enc['z_mid'], enc['p_lm1'],
+                )
 
         if enc['h_1'].numel() > 0:
             out['recon_coarse'] = self.decoder_coarse(
@@ -82,5 +97,9 @@ class GVAE(nn.Module):
                 p_gt=enc['p_1'],
                 r_gt=enc['r_1'],
             )
+            if config.USE_Z_ONLY_DECODER:
+                out['recon_coarse_zonly'] = self.zonly_decoder_coarse.forward_at_gt(
+                    enc['z_coarse'], enc['p_1'],
+                )
 
         return out

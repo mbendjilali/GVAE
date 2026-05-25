@@ -408,6 +408,12 @@ def main(ckpt_dir):
         f"{term.paint('occ', Style.DIM)} "
         f"grid λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
     )
+    if config.USE_Z_ONLY_DECODER:
+        banner_lines.append(
+            f"{term.paint('zonly', Style.DIM)} "
+            f"λ h/z = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY} "
+            f"jitter={config.Z_ONLY_QUERY_JITTER}"
+        )
     if (
         config.SPLAT_TRUNCATION_SIGMA_FINE != config.SPLAT_TRUNCATION_SIGMA
         or config.SPLAT_FINE_VOXEL_CAP
@@ -464,6 +470,22 @@ def _parse_args():
         "--splat-sigma-fine", type=float, default=None,
         help="Override SPLAT_TRUNCATION_SIGMA_FINE",
     )
+    parser.add_argument(
+        "--lambda-recon-zonly", type=float, default=None,
+        help="Override LAMBDA_RECON_ZONLY",
+    )
+    parser.add_argument(
+        "--lambda-recon-h", type=float, default=None,
+        help="Override LAMBDA_RECON_H",
+    )
+    parser.add_argument(
+        "--no-zonly-decoder", action="store_true",
+        help="Disable Z-only decode path (USE_Z_ONLY_DECODER=False)",
+    )
+    parser.add_argument(
+        "--zonly-jitter", type=float, default=None,
+        help="Override Z_ONLY_QUERY_JITTER",
+    )
     return parser.parse_args()
 
 
@@ -478,6 +500,14 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_OCC_GRID_COARSE = args.lambda_occ_grid_coarse
     if args.splat_sigma_fine is not None:
         config.SPLAT_TRUNCATION_SIGMA_FINE = args.splat_sigma_fine
+    if args.lambda_recon_zonly is not None:
+        config.LAMBDA_RECON_ZONLY = args.lambda_recon_zonly
+    if args.lambda_recon_h is not None:
+        config.LAMBDA_RECON_H = args.lambda_recon_h
+    if args.no_zonly_decoder:
+        config.USE_Z_ONLY_DECODER = False
+    if args.zonly_jitter is not None:
+        config.Z_ONLY_QUERY_JITTER = args.zonly_jitter
 
 
 if __name__ == "__main__":

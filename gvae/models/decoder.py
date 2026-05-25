@@ -1,7 +1,6 @@
 # gvae/models/decoder.py
-# Deformable cross-attention readout + MLP heads (s, p, r).
-# Sampling locations: h → (p_anchor, r_anchor) grid; Z is read at those points.
-# GT p,r are only used when DECODER_GT_ANCHOR_MIX > 0 (probe ablations).
+# h+Z deformable readout (SceneGraphDecoder) and Z-only point readout (ZOnlyDecoder).
+# GT p,r in SceneGraphDecoder only when DECODER_GT_ANCHOR_MIX > 0 (probe ablations).
 
 import torch
 import torch.nn as nn
@@ -80,3 +79,46 @@ class SceneGraphDecoder(nn.Module):
             'p': torch.tanh(self.mlp_p(z_pred)),
             'r': self.softplus(self.mlp_r(z_pred)),
         }
+
+
+def zonly_query_points(p_gt: torch.Tensor, *, training: bool) -> torch.Tensor:
+    """Sample locations for Z-only readout; jitter during training for localisation pressure."""
+    if not training or config.Z_ONLY_QUERY_JITTER <= 0:
+        return p_gt
+    noise = torch.randn_like(p_gt) * config.Z_ONLY_QUERY_JITTER
+    return (p_gt + noise).clamp(-1.0, 1.0)
+
+
+class ZOnlyDecoder(nn.Module):
+    """Read s, p, r from bilinear Z samples at query points — no h or cross-attention."""
+
+    def __init__(self, d: int):
+        super().__init__()
+        self.readout = nn.Sequential(
+            nn.Linear(d, d),
+            nn.ReLU(),
+        )
+        self.mlp_s = nn.Linear(d, config.NUM_CLASSES)
+        self.mlp_p = nn.Linear(d, 3)
+        self.mlp_r = nn.Linear(d, 3)
+        self.softplus = nn.Softplus()
+
+    def forward(self, Z: torch.Tensor, p_query: torch.Tensor) -> dict[str, torch.Tensor]:
+        z = sample_volume(Z, p_query.unsqueeze(1)).reshape(p_query.shape[0], -1)
+        z = self.readout(z)
+        return {
+            's': torch.softmax(self.mlp_s(z), dim=1),
+            'p': torch.tanh(self.mlp_p(z)),
+            'r': self.softplus(self.mlp_r(z)),
+        }
+
+    def forward_at_gt(
+        self,
+        Z: torch.Tensor,
+        p_gt: torch.Tensor,
+        *,
+        training: bool | None = None,
+    ) -> dict[str, torch.Tensor]:
+        if training is None:
+            training = self.training
+        return self.forward(Z, zonly_query_points(p_gt, training=training))

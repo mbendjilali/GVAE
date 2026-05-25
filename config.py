@@ -93,8 +93,14 @@ UNET_CHANNELS_LAST = True       # channels_last_3d for cudnn conv (avoids layout
 # ─── Deformable cross-attention decoder ───────────────────────────────────────
 NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 
+# ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
+USE_Z_ONLY_DECODER = True
+LAMBDA_RECON_H = 1.0           # h+Z deformable decoder reconstruction
+LAMBDA_RECON_ZONLY = 1.0       # Z-only point readout reconstruction
+Z_ONLY_QUERY_JITTER = 0.05     # uniform noise on query points in train (0 = sample at p_gt)
+
 # ─── Loss weights ─────────────────────────────────────────────────────────────
-# Total per branch: L_recon + λ_KL * L_KL + λ_occ_grid * L_occ_grid
+# Total per branch: λ_h·L_recon_h + λ_z·L_recon_zonly + λ_KL·L_KL + λ_occ·L_occ
 LAMBDA_KL_MAX   = 1e-3         # β — maximum KL weight after annealing ramp
 
 # Voxel-aligned occupancy BCE on Z (OccGridHead); 0 = disabled per level

@@ -92,11 +92,15 @@ class Term:
                 f"fine pos={metrics['pos_err_fine']:.3f} "
                 f"smiou={metrics.get('soft_miou_fine', 0):.0%}"
             )
+            if "pos_err_zonly_fine" in metrics:
+                fine += f" zpos={metrics['pos_err_zonly_fine']:.3f}"
             occ_f = self._occ_iou_label(metrics, "fine")
             if occ_f:
                 fine += f" {occ_f}"
             parts.append(fine)
         mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+        if "pos_err_zonly_mid" in metrics:
+            mid += f" zpos={metrics['pos_err_zonly_mid']:.3f}"
         occ_m = self._occ_iou_label(metrics, "mid")
         if occ_m:
             mid += f" {occ_m}"

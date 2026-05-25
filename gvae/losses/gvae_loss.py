@@ -123,6 +123,7 @@ def _lambda_occ_grid(name: str) -> float:
 def _maybe_branch_loss(
     branches,
     recon,
+    recon_zonly,
     p_true,
     r_true,
     s_true,
@@ -134,17 +135,36 @@ def _maybe_branch_loss(
     name: str,
     lambda_kl: float,
 ):
-    if recon is None or p_true.numel() == 0:
+    if p_true.numel() == 0:
         return
-    L_recon = reconstruction_loss(recon, p_true, r_true, s_true)
+    has_h = recon is not None and config.LAMBDA_RECON_H > 0
+    has_z = recon_zonly is not None and config.USE_Z_ONLY_DECODER and config.LAMBDA_RECON_ZONLY > 0
+    if not has_h and not has_z:
+        return
+
+    parts: dict = {}
+    total = mu.new_zeros(())
+
+    if has_h:
+        L_recon_h = reconstruction_loss(recon, p_true, r_true, s_true)
+        parts['recon'] = L_recon_h
+        total = total + config.LAMBDA_RECON_H * L_recon_h
+
+    if has_z:
+        L_recon_z = reconstruction_loss(recon_zonly, p_true, r_true, s_true)
+        parts['recon_zonly'] = L_recon_z
+        total = total + config.LAMBDA_RECON_ZONLY * L_recon_z
+
     L_kl = KL_loss(mu, logvar)
+    parts['KL'] = L_kl
+    total = total + lambda_kl * L_kl
+
     lambda_grid = _lambda_occ_grid(name)
-    parts = {'recon': L_recon, 'KL': L_kl}
-    total = L_recon + lambda_kl * L_kl
     if lambda_grid > 0 and occ_grid_head is not None:
         L_occ = loss_occ_grid(occ_grid_head(z), occ_grid)
         parts['occ'] = L_occ
         total = total + lambda_grid * L_occ
+
     branches.append((name, total, parts))
 
 
@@ -162,6 +182,7 @@ def compute_branch_losses(outputs, graph, step):
     _maybe_branch_loss(
         branches,
         outputs.get('recon_fine'),
+        outputs.get('recon_fine_zonly'),
         outputs['p_fine'], outputs['r_fine'], outputs['s_fine'],
         outputs['mu_fine'], outputs['logvar_fine'],
         outputs['occ_grid_head_fine'],
@@ -171,6 +192,7 @@ def compute_branch_losses(outputs, graph, step):
     _maybe_branch_loss(
         branches,
         outputs.get('recon_mid'),
+        outputs.get('recon_mid_zonly'),
         outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'],
         outputs['mu_mid'], outputs['logvar_mid'],
         outputs['occ_grid_head_mid'],
@@ -180,6 +202,7 @@ def compute_branch_losses(outputs, graph, step):
     _maybe_branch_loss(
         branches,
         outputs.get('recon_coarse'),
+        outputs.get('recon_coarse_zonly'),
         outputs['p_1'], outputs['r_1'], outputs['s_1'],
         outputs['mu_coarse'], outputs['logvar_coarse'],
         outputs['occ_grid_head_coarse'],
@@ -198,12 +221,13 @@ def compute_loss(outputs, graph, step):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
-    L_recon = L_KL = L_occ = zero
+    L_recon = L_recon_zonly = L_KL = L_occ = zero
     L_pool = zero
     pool_extras = {}
 
     for _, _, parts in branches:
         L_recon = L_recon + parts.get('recon', zero)
+        L_recon_zonly = L_recon_zonly + parts.get('recon_zonly', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
         if 'pool' in parts:
@@ -215,7 +239,13 @@ def compute_loss(outputs, graph, step):
     else:
         total = zero
 
-    components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl}
+    components = {
+        'recon': L_recon,
+        'recon_zonly': L_recon_zonly,
+        'KL': L_KL,
+        'occ': L_occ,
+        'lambda_kl': lambda_kl,
+    }
     if pool_extras:
         components['pool'] = L_pool
         components.update(pool_extras)

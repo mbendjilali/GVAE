@@ -96,12 +96,27 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
                 )
                 metrics["occ_iou_fine"] = iou_f
 
+        recon_fine_z = outputs.get("recon_fine_zonly")
+        if recon_fine_z is not None and outputs["p_fine"].numel() > 0:
+            metrics["pos_err_zonly_fine"] = mean_position_error(
+                recon_fine_z["p"], outputs["p_fine"],
+            )
+            metrics["soft_miou_zonly_fine"] = soft_miou(
+                recon_fine_z["s"], outputs["s_fine"],
+            )
+
         if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
             metrics["pos_err_mid"] = mean_position_error(
                 outputs["recon_mid"]["p"], outputs["p_lm1"],
             )
             metrics["soft_miou_mid"] = soft_miou(
                 outputs["recon_mid"]["s"], outputs["s_lm1"],
+            )
+
+        recon_mid_z = outputs.get("recon_mid_zonly")
+        if recon_mid_z is not None and outputs["p_lm1"].numel() > 0:
+            metrics["pos_err_zonly_mid"] = mean_position_error(
+                recon_mid_z["p"], outputs["p_lm1"],
             )
 
         if outputs.get("recon_mid") is not None:

@@ -86,8 +86,9 @@ Primary val metrics (console + TensorBoard):
 
 | Metric | Good direction | Notes |
 |--------|----------------|-------|
-| `pos_err_fine` | ↓ | Fine supernode positions (after S0 coarsening) |
-| `soft_miou_fine` | ↑ | Per-supernode soft IoU on fine labels from `Z` decode (oracle = 100%) |
+| `pos_err_fine` | ↓ | h+Z deformable decoder supernode positions |
+| `pos_err_zonly_fine` | ↓ | **Z-only** readout at GT `p` (console: `zpos=`) |
+| `soft_miou_fine` | ↑ | Per-supernode soft IoU (h+Z decoder) |
 | `occ_iou_fine` | ↑ | Grid head vs LiDAR cache (`OccGridHead` on `Z_fine`) |
 | `inst_pos_err_mid` | ↓ | Instance → S0 → S1 → mid decode chain |
 | `pos_err_mid` | ↓ | Z-only mid supernode positions |
