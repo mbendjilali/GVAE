@@ -2,11 +2,9 @@
 
 A neural encoder that turns **3D outdoor scene graphs** (cars, poles, trees, …) into **three dense 3D latent volumes** — `Z_fine`, `Z_mid`, and `Z_coarse`. A downstream **diffusion model (DDM)** can then sample or edit layout using those volumes.
 
-Think of it like compressing a city block into three maps at different zoom levels: fine detail, neighborhood scale, and whole-scene envelope.
-
 ---
 
-## What you need to know first
+## Glossary
 
 | Term | Meaning |
 |------|---------|
@@ -21,12 +19,10 @@ Think of it like compressing a city block into three maps at different zoom leve
 
 ## Documentation
 
-Read in this order if you are new:
-
 | # | Doc | What it covers |
 |---|-----|----------------|
 | 1 | [docs/data.md](docs/data.md) | Input files: JSON graphs + occupancy caches |
-| 2 | [docs/architecture.md](docs/architecture.md) | How the model works (encoder, decoders, losses) |
+| 2 | [docs/architecture.md](docs/architecture.md) | Encoder, decoders, losses |
 | 3 | [docs/training.md](docs/training.md) | How to train, read metrics, run probes |
 | 4 | [TODO.md](TODO.md) | Backlog and ablation recipes |
 
