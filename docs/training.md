@@ -94,7 +94,7 @@ Primary val metrics (console + TensorBoard):
 | `pos_err_mid` | ↓ | Z-only mid supernode positions |
 | `occ_iou_mid` / `occ_grid_iou_mid` | ↑ | Query readout / grid head vs LiDAR cache |
 | `occ_precision_mid` | ↑ | Query readout precision |
-| `soft_miou_mid` | ↑ (slow) | Diagnostic only on merged supernode labels |
+| `soft_miou_mid` | ↑ | Per-supernode soft IoU on instance-mixture labels from `Z` decode (oracle = 100%) |
 
 Query occupancy BCE uses the same per-grid `pos_weight` as grid occ (neg/pos ratio) so sparse full-grid evaluation is not fighting 50/50 query sampling.
 

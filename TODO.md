@@ -35,7 +35,7 @@ Documentation: [docs/](docs/) · Architecture: [docs/architecture.md](docs/archi
 | ID | Task |
 |----|------|
 | A1 | Full-metrics eval on best checkpoint with `LOG_FULL_METRICS=True` |
-| A2 | Decompose `soft_miou` ceiling (supernode label ambiguity) |
+| A2 | ~~Fix `soft_miou` global-pool bug~~ → audit all losses & metrics (oracle checks) |
 | A3 | Occ visual sanity — pred vs cache on 2–3 scenes |
 | A4 | Save probe summary JSON next to `best.pth` on checkpoint save |
 

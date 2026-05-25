@@ -11,17 +11,18 @@ from gvae.losses.gvae_loss import soft_semantic_loss
 
 
 def soft_miou(pred_probs: torch.Tensor, true_soft: torch.Tensor) -> float:
-    """Soft mIoU: mean per-class IoU on probability mass (for soft supernode labels)."""
+    """Per-supernode soft IoU: mean_n sum_c min(p,t) / sum_c max(p,t).
+
+    Matches GT soft labels on each supernode independently; oracle = 1.0 when pred == true.
+    """
     if true_soft.numel() == 0:
         return float("nan")
     true = true_soft / true_soft.sum(dim=1, keepdim=True).clamp(min=config.SOFT_MIOU_EPS)
-    inter = (pred_probs * true).sum(dim=0)
-    union = (pred_probs + true - pred_probs * true).sum(dim=0)
-    iou = inter / union.clamp(min=config.SOFT_MIOU_EPS)
-    present = true.sum(dim=0) > config.SOFT_MIOU_EPS
-    if not present.any():
-        return float("nan")
-    return iou[present].mean().item()
+    pred = pred_probs.clamp(min=0.0)
+    pred = pred / pred.sum(dim=1, keepdim=True).clamp(min=config.SOFT_MIOU_EPS)
+    inter = torch.minimum(pred, true).sum(dim=1)
+    union = torch.maximum(pred, true).sum(dim=1)
+    return (inter / union.clamp(min=config.SOFT_MIOU_EPS)).mean().item()
 
 
 def hard_miou(pred_probs: torch.Tensor, true_onehot: torch.Tensor) -> float:

@@ -126,7 +126,7 @@ $$\mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda_{\text{KL}}(t)\,\mathcal{L}
 | `inst_pos_err_mid` | Instance position via S0 → S1 → mid recon |
 | `pos_err_mid` | Z-only mid supernode position error |
 | `occ_iou_mid` | Occupancy vs LiDAR cache |
-| `soft_miou_mid` | Diagnostic only |
+| `soft_miou_mid` | Per-supernode soft IoU on mid instance-mixture labels |
 
 Set `LOG_FULL_METRICS=True` for extended TensorBoard metrics. Use `utils/probe_latent.py` for anchor ablation and linear Z probes.
 
