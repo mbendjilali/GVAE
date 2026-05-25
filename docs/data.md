@@ -55,7 +55,7 @@ Ground truth for `L_occ` — **LiDAR voxelisation**, not bounding-box proxies.
 - `OCC_MAX_POINTS=500_000` — subsample when building caches
 - `OCC_REQUIRE_CACHE=True` — training fails fast if sidecars missing
 
-Training queries (`OCC_QUERY_POINTS=2048`, `OCC_POS_RATIO=0.5`) sample occupied vs empty voxels from these grids.
+Training supervises occupancy via full-grid BCE on `OccGridHead` logits (not query sampling). Probes may still sample query points from these grids for diagnostics.
 
 ---
 

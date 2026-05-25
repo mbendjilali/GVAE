@@ -1,61 +1,42 @@
 # gvae/losses/gvae_loss.py
-# Loss terms: recon, voxel-wise KL, occupancy + cyclical KL schedule
-
-import warnings
+# Loss terms: recon, voxel-wise KL, grid occupancy + cyclical KL schedule
 
 import torch
 import torch.nn.functional as F
 import config
 from gvae.data.graph_masks import pool_subgraph
-from gvae.data.occupancy import (
-    loss_occ_grid,
-    occ_grid_pos_weight,
-    occ_query_count,
-    sample_occupancy_queries,
-)
+from gvae.data.occupancy import loss_occ_grid
+
 
 def kl_weight(step):
-    total_steps = config.NUM_EPOCHS
+    total_steps = config.KL_TOTAL_STEPS or config.NUM_EPOCHS
     cycle_len = max(1, total_steps // config.KL_ANNEAL_CYCLES)
-    ramp_len  = int(cycle_len * config.KL_ANNEAL_RATIO)
+    ramp_len = int(cycle_len * config.KL_ANNEAL_RATIO)
     pos_in_cycle = step % cycle_len
     return config.LAMBDA_KL_MAX * min(1.0, pos_in_cycle / max(1, ramp_len))
 
 
-def soft_semantic_loss(pred_probs: torch.Tensor, true_soft: torch.Tensor) -> torch.Tensor:
-    """KL(pred || true) for soft supernode semantic targets (rows sum to 1)."""
+def soft_cross_entropy_loss(pred_probs: torch.Tensor, true_soft: torch.Tensor) -> torch.Tensor:
+    """Soft cross-entropy: -mean_n sum_c t_c log p_c (one-hot targets => standard CE)."""
     true = true_soft / true_soft.sum(dim=1, keepdim=True).clamp(min=config.SOFT_MIOU_EPS)
     log_pred = pred_probs.clamp(min=config.SOFT_MIOU_EPS).log()
-    return F.kl_div(log_pred, true, reduction='batchmean')
+    return -(true * log_pred).sum(dim=1).mean()
 
 
-def reconstruction_loss(recon, p_true, r_true, s_true, edge_index, edge_margin=None):
-    delta = edge_margin if edge_margin is not None else config.BALL_QUERY_RADIUS
+# Backward-compatible alias for metrics / diagnostics
+soft_semantic_loss = soft_cross_entropy_loss
 
-    L_sem = soft_semantic_loss(recon['s'], s_true)
 
+def reconstruction_loss(recon, p_true, r_true, s_true):
+    """Decode-from-Z reconstruction: semantics + position + footprint."""
+    L_sem = soft_cross_entropy_loss(recon['s'], s_true)
     L_pos = F.mse_loss(recon['p'], p_true)
     L_size = F.mse_loss(recon['r'], r_true)
-
-    p_pred = recon['p']
-    num_edges = edge_index.shape[1]
-    if num_edges == 0:
-        warnings.warn("reconstruction_loss: empty edge_index", stacklevel=2)
-        L_edge_pos = p_pred.new_zeros(())
-        L_edge_neg = p_pred.new_zeros(())
-    else:
-        d_pos = torch.norm(p_pred[edge_index[0]] - p_pred[edge_index[1]], dim=1)
-        L_edge_pos = torch.clamp(d_pos - delta, min=0).mean()
-        N = p_true.shape[0]
-        neg = torch.randint(0, N, (2, num_edges), device=p_pred.device)
-        d_neg = torch.norm(p_pred[neg[0]] - p_pred[neg[1]], dim=1)
-        L_edge_neg = torch.clamp(delta - d_neg, min=0).mean()
-
-    return (config.LAMBDA_SEM * L_sem
-            + config.LAMBDA_POS * L_pos
-            + config.LAMBDA_POS * L_size
-            + config.LAMBDA_EDGE * L_edge_pos
-            + config.LAMBDA_EDGE * L_edge_neg)
+    return (
+        config.LAMBDA_SEM * L_sem
+        + config.LAMBDA_POS * L_pos
+        + config.LAMBDA_POS * L_size
+    )
 
 
 def KL_loss(mu, logvar):
@@ -63,23 +44,12 @@ def KL_loss(mu, logvar):
     return kl.sum() / mu.numel()
 
 
-def loss_occupancy(occ_readout, z, occ_grid):
-    """Supervise latent z against point-voxelised occupancy (not graph bounding boxes)."""
-    n_q = occ_query_count(occ_grid)
-    q, labels = sample_occupancy_queries(occ_grid, n_queries=n_q)
-    logits = occ_readout(q, z)
-    pos_weight = logits.new_tensor([occ_grid_pos_weight(occ_grid)])
-    return F.binary_cross_entropy_with_logits(logits, labels, pos_weight=pos_weight)
-
-
 def loss_pool(S, edge_index, p, N_nodes):
     """MinCut-style pool regularisation on soft assignment S."""
     M = S.shape[1]
     num_edges = edge_index.shape[1]
     deg = torch.zeros(N_nodes, device=S.device)
-    if num_edges == 0:
-        warnings.warn("loss_pool: empty edge_index", stacklevel=2)
-    else:
+    if num_edges > 0:
         deg.scatter_add_(0, edge_index[0], torch.ones(num_edges, device=S.device))
     D_S = deg.unsqueeze(1) * S
     if num_edges > 0:
@@ -156,11 +126,8 @@ def _maybe_branch_loss(
     p_true,
     r_true,
     s_true,
-    edge_index,
-    edge_margin,
     mu,
     logvar,
-    occ_readout,
     occ_grid_head,
     z,
     occ_grid,
@@ -169,18 +136,15 @@ def _maybe_branch_loss(
 ):
     if recon is None or p_true.numel() == 0:
         return
-    L_recon = reconstruction_loss(
-        recon, p_true, r_true, s_true, edge_index, edge_margin=edge_margin,
-    )
+    L_recon = reconstruction_loss(recon, p_true, r_true, s_true)
     L_kl = KL_loss(mu, logvar)
-    L_occ = loss_occupancy(occ_readout, z, occ_grid)
     lambda_grid = _lambda_occ_grid(name)
-    parts = {'recon': L_recon, 'KL': L_kl, 'occ': L_occ}
-    total = L_recon + lambda_kl * L_kl + config.LAMBDA_OCC * L_occ
+    parts = {'recon': L_recon, 'KL': L_kl}
+    total = L_recon + lambda_kl * L_kl
     if lambda_grid > 0 and occ_grid_head is not None:
-        L_occ_grid = loss_occ_grid(occ_grid_head(z), occ_grid)
-        parts['occ_grid'] = L_occ_grid
-        total = total + lambda_grid * L_occ_grid
+        L_occ = loss_occ_grid(occ_grid_head(z), occ_grid)
+        parts['occ'] = L_occ
+        total = total + lambda_grid * L_occ
     branches.append((name, total, parts))
 
 
@@ -199,10 +163,8 @@ def compute_branch_losses(outputs, graph, step):
         branches,
         outputs.get('recon_fine'),
         outputs['p_fine'], outputs['r_fine'], outputs['s_fine'],
-        outputs['edge_index_fine'],
-        config.BALL_QUERY_RADIUS_LEVELS[0],
         outputs['mu_fine'], outputs['logvar_fine'],
-        outputs['occ_readout_fine'], outputs['occ_grid_head_fine'],
+        outputs['occ_grid_head_fine'],
         outputs['z_fine'], graph.occ_fine,
         'fine', lambda_kl,
     )
@@ -210,10 +172,8 @@ def compute_branch_losses(outputs, graph, step):
         branches,
         outputs.get('recon_mid'),
         outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'],
-        outputs['edge_index_lm1'],
-        config.BALL_QUERY_RADIUS_LEVELS[1],
         outputs['mu_mid'], outputs['logvar_mid'],
-        outputs['occ_readout_mid'], outputs['occ_grid_head_mid'],
+        outputs['occ_grid_head_mid'],
         outputs['z_mid'], graph.occ_mid,
         'mid', lambda_kl,
     )
@@ -221,10 +181,8 @@ def compute_branch_losses(outputs, graph, step):
         branches,
         outputs.get('recon_coarse'),
         outputs['p_1'], outputs['r_1'], outputs['s_1'],
-        outputs['edge_index_1'],
-        config.BALL_QUERY_RADIUS_LEVELS[2],
         outputs['mu_coarse'], outputs['logvar_coarse'],
-        outputs['occ_readout_coarse'], outputs['occ_grid_head_coarse'],
+        outputs['occ_grid_head_coarse'],
         outputs['z_coarse'], graph.occ_coarse,
         'coarse', lambda_kl,
     )
@@ -240,7 +198,7 @@ def compute_loss(outputs, graph, step):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
-    L_recon = L_KL = L_occ = L_occ_grid = zero
+    L_recon = L_KL = L_occ = zero
     L_pool = zero
     pool_extras = {}
 
@@ -248,7 +206,6 @@ def compute_loss(outputs, graph, step):
         L_recon = L_recon + parts.get('recon', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
-        L_occ_grid = L_occ_grid + parts.get('occ_grid', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
             pool_extras = {k: v for k, v in parts.items() if k.startswith('pool')}
@@ -258,7 +215,7 @@ def compute_loss(outputs, graph, step):
     else:
         total = zero
 
-    components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'occ_grid': L_occ_grid, 'lambda_kl': lambda_kl}
+    components = {'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl}
     if pool_extras:
         components['pool'] = L_pool
         components.update(pool_extras)

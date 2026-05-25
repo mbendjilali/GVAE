@@ -68,16 +68,15 @@ def _forward_loss(model, graph, step, device, use_amp: bool):
         branches, lambda_kl = compute_branch_losses(outputs, graph, step)
 
     zero = graph.p.new_zeros(())
-    L_recon = L_KL = L_occ = L_occ_grid = L_pool = zero
+    L_recon = L_KL = L_occ = L_pool = zero
     for _, _, parts in branches:
         L_recon = L_recon + parts.get('recon', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
-        L_occ_grid = L_occ_grid + parts.get('occ_grid', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
     components = {
-        'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'occ_grid': L_occ_grid, 'lambda_kl': lambda_kl,
+        'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl,
     }
     if config.USE_POOL_LOSS and config.COARSEN_ASSIGNMENT == "soft":
         components['pool'] = L_pool
@@ -383,6 +382,7 @@ def main(ckpt_dir):
 
     train_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'train'))
     val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'test'))
+    config.KL_TOTAL_STEPS = len(train_dataset) * config.NUM_EPOCHS
 
     skipped = train_dataset.skipped + val_dataset.skipped
     banner_lines = [
@@ -404,11 +404,10 @@ def main(ckpt_dir):
         config.LAMBDA_OCC_GRID_MID,
         config.LAMBDA_OCC_GRID_COARSE,
     )
-    if any(w > 0 for w in occ_grid):
-        banner_lines.append(
-            f"{term.paint('occ_grid', Style.DIM)} "
-            f"λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
-        )
+    banner_lines.append(
+        f"{term.paint('occ', Style.DIM)} "
+        f"grid λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
+    )
     if (
         config.SPLAT_TRUNCATION_SIGMA_FINE != config.SPLAT_TRUNCATION_SIGMA
         or config.SPLAT_FINE_VOXEL_CAP

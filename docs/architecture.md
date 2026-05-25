@@ -94,24 +94,23 @@ Grids are **independent fixed volumes**, not nested subdivisions.
 
 Deformable cross-attention readout:
 
-1. Anchor `(p, r)` from node embedding `h` (**Z-only** by default).
-2. 27 reference points on a 3×3×3 grid within the anchor bbox.
-3. Bilinear sample `Z`; cross-attend; MLP heads → `ŝ`, `p̂`, `r̂`.
+1. Anchor bbox `(p, r)` predicted from node embedding **`h`** (MLP heads).
+2. 27 reference points on a 3×3×3 grid within that bbox (+ learned offsets).
+3. Bilinear sample **`Z`** at those points; cross-attend; MLP heads → `ŝ`, `p̂`, `r̂`.
 
-`DECODER_GT_ANCHOR_MIX = 0.0` — no GT geometry for readout queries at train time.
+`DECODER_GT_ANCHOR_MIX = 0.0` — anchors use **predicted** geometry only (no GT `p`/`r` blend). Probe ablation: `mix=0` beats `mix=1` on fine position error. Diffusion still conditions on **`Z` only**; `h` is not exported at inference.
 
 ---
 
 ## Losses
 
-$$\mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{occ}}\,\mathcal{L}_{\text{occ}} + \sum_l \lambda_{\text{grid},l}\,\mathcal{L}_{\text{occ\_grid},l} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
+$$\mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \sum_l \lambda_{\text{grid},l}\,\mathcal{L}_{\text{occ\_grid},l} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
 
 | Term | Description |
 |------|-------------|
-| **Recon** | Soft semantic KL, MSE on `p`/`r`, proximity edge margin |
+| **Recon** | Soft cross-entropy on `s`, MSE on `p`/`r` (decode from `Z`) |
 | **KL** | Voxel-wise Gaussian KL; cyclical annealing |
-| **Occ** | BCE on query points (`OccupancyReadout`) |
-| **Occ grid** | BCE on full voxel grid (`OccGridHead`); optional per level |
+| **Occ grid** | BCE on full voxel grid (`OccGridHead` on `Z`); per level via `LAMBDA_OCC_GRID_*` |
 | **Pool** | Cut + orthogonality + spatial compactness on `S` (soft mode) |
 
 ---
@@ -121,11 +120,11 @@ $$\mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda_{\text{KL}}(t)\,\mathcal{L}
 | Metric | Meaning |
 |--------|---------|
 | `pos_err_fine` | Fine supernode position error |
-| `miou_fine` | Hard mIoU on fine supernode labels |
-| `occ_iou_fine` | Query readout vs LiDAR cache |
+| `soft_miou_fine` | Per-supernode soft IoU on fine supernode labels |
+| `occ_iou_fine` | Grid head vs LiDAR cache |
 | `inst_pos_err_mid` | Instance position via S0 → S1 → mid recon |
 | `pos_err_mid` | Z-only mid supernode position error |
-| `occ_iou_mid` | Occupancy vs LiDAR cache |
+| `occ_iou_mid` | Grid head vs LiDAR cache |
 | `soft_miou_mid` | Per-supernode soft IoU on mid instance-mixture labels |
 
 Set `LOG_FULL_METRICS=True` for extended TensorBoard metrics. Use `utils/probe_latent.py` for anchor ablation and linear Z probes.

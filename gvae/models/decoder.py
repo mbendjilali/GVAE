@@ -1,6 +1,7 @@
 # gvae/models/decoder.py
-# Deformable cross-attention readout + MLP heads (s, p, r)
-# Reference queries are anchored on h-predicted (p, r), not GT geometry.
+# Deformable cross-attention readout + MLP heads (s, p, r).
+# Sampling locations: h → (p_anchor, r_anchor) grid; Z is read at those points.
+# GT p,r are only used when DECODER_GT_ANCHOR_MIX > 0 (probe ablations).
 
 import torch
 import torch.nn as nn

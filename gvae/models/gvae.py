@@ -6,7 +6,6 @@ import torch.nn as nn
 import config
 from gvae.models.encoder import SceneGraphEncoder
 from gvae.models.decoder import SceneGraphDecoder
-from gvae.data.occupancy import OccupancyReadout
 from gvae.models.occ_grid_head import OccGridHead
 
 
@@ -17,9 +16,6 @@ class GVAE(nn.Module):
         self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
         self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
         self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
-        self.occ_readout_fine = OccupancyReadout(config.D_FINE_LATENT)
-        self.occ_readout_mid = OccupancyReadout(config.D_MID_LATENT)
-        self.occ_readout_coarse = OccupancyReadout(config.D_COARSE_LATENT)
         self.occ_grid_head_fine = OccGridHead(config.D_FINE_LATENT)
         self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
         self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
@@ -55,9 +51,6 @@ class GVAE(nn.Module):
             'S2': enc['S2'],
             'edge_index_lm1': enc['edge_index_lm1'],
             'edge_index_1': enc['edge_index_1'],
-            'occ_readout_fine': self.occ_readout_fine,
-            'occ_readout_mid': self.occ_readout_mid,
-            'occ_readout_coarse': self.occ_readout_coarse,
             'occ_grid_head_fine': self.occ_grid_head_fine,
             'occ_grid_head_mid': self.occ_grid_head_mid,
             'occ_grid_head_coarse': self.occ_grid_head_coarse,

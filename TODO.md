@@ -4,7 +4,7 @@ Documentation: [docs/](docs/) · Architecture: [docs/architecture.md](docs/archi
 
 **Reference checkpoint:** `checkpoint/20260521_163301/best.pth` (150 ep, val best 1.06).
 
-**Decision metrics for Z_fine pinning:** run `utils/probe_latent.py` after each ablation — `norm_ratio_gt_over_empty`, `linear_pos_err_val`, anchor mix pos errors, `occ_iou_fine`, `miou_fine`.
+**Decision metrics for Z_fine pinning:** run `utils/probe_latent.py` after each ablation — `norm_ratio_gt_over_empty`, `linear_pos_err_val`, anchor mix pos errors, `occ_iou_fine`, `soft_miou_fine`.
 
 ---
 

@@ -94,18 +94,19 @@ UNET_CHANNELS_LAST = True       # channels_last_3d for cudnn conv (avoids layout
 NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 
 # ─── Loss weights ─────────────────────────────────────────────────────────────
-# Total loss = L_recon + λ_KL * L_KL + λ_occ * L_occ
+# Total per branch: L_recon + λ_KL * L_KL + λ_occ_grid * L_occ_grid
 LAMBDA_KL_MAX   = 1e-3         # β — maximum KL weight after annealing ramp
-LAMBDA_OCC      = 1.0          # occupancy BCE weight (query readout)
 
-# Grid-aligned occupancy on Z voxels (OccGridHead); 0 = disabled per level
-LAMBDA_OCC_GRID_FINE   = 0.0
-LAMBDA_OCC_GRID_MID    = 0.0
-LAMBDA_OCC_GRID_COARSE = 0.0
+# Voxel-aligned occupancy BCE on Z (OccGridHead); 0 = disabled per level
+LAMBDA_OCC_GRID_FINE   = 1.0
+LAMBDA_OCC_GRID_MID    = 1.0
+LAMBDA_OCC_GRID_COARSE = 1.0
 OCC_GRID_POS_WEIGHT    = None  # None = auto (neg/pos ratio per forward); float = fixed
-LAMBDA_EDGE     = 1.0          # proximity edge margin loss weight
-LAMBDA_SEM      = 1.0          # semantic CE weight
-LAMBDA_POS      = 1.0          # position + footprint MSE weight
+LAMBDA_SEM      = 1.0          # semantic soft-CE weight (in L_recon)
+LAMBDA_POS      = 1.0          # position + footprint MSE weight (in L_recon)
+
+# Set at train startup: len(train_dataset) * NUM_EPOCHS (graph forwards)
+KL_TOTAL_STEPS = 0
 
 # ─── Cyclical KL annealing (Fu et al., 2019) ──────────────────────────────────
 KL_ANNEAL_CYCLES  = 4          # number of ramp-hold cycles over full training
@@ -130,12 +131,11 @@ SEQUENTIAL_BACKWARD     = True   # fine→mid→coarse backward separately (disa
 DATALOADER_NUM_WORKERS  = 2
 DATALOADER_PIN_MEMORY   = True
 
-# Decoder — Z-only readout (PR1): anchors from h, not GT supernode geometry
-DECODER_GT_ANCHOR_MIX = 0.0   # 0 = Z-only anchors; (0,1] blends in GT p,r for curriculum
+# Decoder — sampling anchors from h (not GT); DECODER_GT_ANCHOR_MIX>0 only for probe ablations
+DECODER_GT_ANCHOR_MIX = 0.0
 
 # Validation metrics
 METRICS_OCC_THRESHOLD = 0.5   # binarisation threshold for occupancy IoU / precision / recall
-METRICS_OCC_CHUNK = 8192      # batched occ readout for full-grid IoU (memory)
 SOFT_MIOU_EPS = 1e-6          # min soft class mass to include in soft mIoU mean
 LOG_FULL_METRICS = True      # if True, log extended debug metrics to TensorBoard
 
@@ -148,7 +148,3 @@ OCC_CACHE_SUFFIX_MID    = '_occ_mid.npy'
 OCC_CACHE_SUFFIX_COARSE = '_occ_coarse.npy'
 OCC_MAX_POINTS          = 500_000            # subsample LiDAR when building caches
 OCC_REQUIRE_CACHE       = True               # raise if caches missing at load time
-OCC_QUERY_POINTS        = 2048               # query points per scene during training
-OCC_POS_RATIO           = 0.5                # fraction sampled from occupied voxels
-OCC_READOUT_KEY_CHUNK   = 8192               # key voxels per attention chunk
-OCC_READOUT_QUERY_CHUNK = 256                # queries per attention batch

@@ -87,18 +87,15 @@ Primary val metrics (console + TensorBoard):
 | Metric | Good direction | Notes |
 |--------|----------------|-------|
 | `pos_err_fine` | ↓ | Fine supernode positions (after S0 coarsening) |
-| `miou_fine` | ↑ | Hard mIoU on fine supernode labels |
-| `occ_iou_fine` | ↑ | Query readout vs LiDAR cache (secondary when grid occ enabled) |
-| `occ_grid_iou_fine` | ↑ | Grid head vs LiDAR cache; **primary in console when `LAMBDA_OCC_GRID_FINE > 0`** |
+| `soft_miou_fine` | ↑ | Per-supernode soft IoU on fine labels from `Z` decode (oracle = 100%) |
+| `occ_iou_fine` | ↑ | Grid head vs LiDAR cache (`OccGridHead` on `Z_fine`) |
 | `inst_pos_err_mid` | ↓ | Instance → S0 → S1 → mid decode chain |
 | `pos_err_mid` | ↓ | Z-only mid supernode positions |
-| `occ_iou_mid` / `occ_grid_iou_mid` | ↑ | Query readout / grid head vs LiDAR cache |
-| `occ_precision_mid` | ↑ | Query readout precision |
+| `occ_iou_mid` | ↑ | Grid head vs LiDAR cache |
+| `occ_precision_mid` | ↑ | Grid head precision |
 | `soft_miou_mid` | ↑ | Per-supernode soft IoU on instance-mixture labels from `Z` decode (oracle = 100%) |
 
-Query occupancy BCE uses the same per-grid `pos_weight` as grid occ (neg/pos ratio) so sparse full-grid evaluation is not fighting 50/50 query sampling.
-
-When grid occ is enabled (`LAMBDA_OCC_GRID_* > 0`), the console shows `grid_occ=…` (and `q_occ=…` for the query readout).
+Occupancy is supervised and evaluated via **`OccGridHead`** only (full-grid BCE with auto `pos_weight`).
 
 Run latent probes after training:
 
@@ -114,7 +111,7 @@ python utils/probe_latent.py --checkpoint checkpoint/<run>/best.pth -o checkpoin
 |------|---------|--------|
 | `DECODER_GT_ANCHOR_MIX` | `0.0` | Z-only decoder anchors |
 | `REDUCTION_RATIO_LEVELS` | `[0.2, 0.2, 0.2]` | FPS keep ratio per coarsening step |
-| `LAMBDA_OCC_GRID_*` | `0.0` | Voxel-aligned occ BCE on Z (per level) |
+| `LAMBDA_OCC_GRID_*` | `1.0` | Voxel-aligned occ BCE on Z (per level; set `0` to disable) |
 | `SPLAT_TRUNCATION_SIGMA_FINE` | `1.0` | Sharper fine splat vs mid/coarse (2.0) |
 | `GRAD_CLIP_NORM` | `1.0` | Gradient clipping (0 = off) |
 | `NUM_EPOCHS` | `150` | Override via `--epochs` |

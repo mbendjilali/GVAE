@@ -77,31 +77,31 @@ class Term:
         self.write(f"\n{ep}  {lr_s}  train {tr}  val {va}{star}")
 
     @staticmethod
-    def _occ_iou_label(metrics: dict, level: str) -> str:
-        grid_key = f"occ_grid_iou_{level}"
-        query_key = f"occ_iou_{level}"
-        if grid_key in metrics:
-            label = f"grid_occ={metrics[grid_key]:.0%}"
-            if query_key in metrics:
-                label += f" q_occ={metrics[query_key]:.0%}"
-            return label
-        return f"occ={metrics.get(query_key, 0):.0%}"
+    def _occ_iou_label(metrics: dict, level: str) -> str | None:
+        key = f"occ_iou_{level}"
+        if key not in metrics:
+            return None
+        return f"occ={metrics[key]:.0%}"
 
     def metrics_line(self, metrics: dict) -> None:
         if not metrics:
             return
         parts = []
         if "pos_err_fine" in metrics:
-            parts.append(
+            fine = (
                 f"fine pos={metrics['pos_err_fine']:.3f} "
-                f"miou={metrics.get('miou_fine', 0):.0%} "
-                f"{self._occ_iou_label(metrics, 'fine')}"
+                f"smiou={metrics.get('soft_miou_fine', 0):.0%}"
             )
-        parts.append(
-            f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f} "
-            f"{self._occ_iou_label(metrics, 'mid')} "
-            f"smiou={metrics.get('soft_miou_mid', 0):.0%}"
-        )
+            occ_f = self._occ_iou_label(metrics, "fine")
+            if occ_f:
+                fine += f" {occ_f}"
+            parts.append(fine)
+        mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+        occ_m = self._occ_iou_label(metrics, "mid")
+        if occ_m:
+            mid += f" {occ_m}"
+        mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
+        parts.append(mid)
         line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)
         self.write(line)
 
