@@ -1,90 +1,134 @@
 # Data pipeline
 
+How raw LiDAR becomes training files the GVAE can load.
+
+---
+
 ## Overview
 
 ```
-LAZ point cloud  →  utils/build_scene_graph.py  →  scene JSON + occ caches
-                                                      ↓
-                                              SceneGraph.from_json()
-                                                      ↓
-                                              train.py / GVAE
+LAZ point cloud
+      ↓
+utils/build_scene_graph.py
+      ↓
+scene JSON  +  three occupancy .npy sidecars
+      ↓
+SceneGraph.from_json()  (in train.py)
+      ↓
+GVAE forward pass
 ```
+
+Each **scene** is one tile (typically ~500 m). Coordinates are normalised per scene to fit inside `[-1, 1]³`.
 
 ---
 
 ## Scene graph JSON
 
-Built per tile from LiDAR. Each file under `data/graphs/{train,test}/` contains:
+Built per tile from LiDAR. Files live under `data/graphs/train/` and `data/graphs/test/`.
 
-- **`instances`**: list of objects with `position`, `radius`, `label`
-- **`normalization`**: `centroid` and `scale` used to map world coords → `[-1, 1]³`
-- Optional metadata (tile id, point counts)
+### Top-level contents
 
-Node attributes loaded by `SceneGraph`:
+- **`instances`**: list of objects, each with `position`, `radius`, `label`
+- **`normalization`**: `centroid` and `scale` used for the `[-1, 1]³` mapping
+- Optional metadata (tile id, point counts, …)
+
+### Tensors loaded at training time
 
 | Tensor | Shape | Description |
 |--------|-------|-------------|
-| `p` | `(N, 3)` | Normalised centroids |
-| `r` | `(N, 3)` | Footprint semi-axes |
-| `s` | `(N, C)` | One-hot semantics |
+| `p` | `(N, 3)` | Normalised object centers |
+| `r` | `(N, 3)` | Footprint semi-axes (axis-aligned extent) |
+| `s` | `(N, C)` | One-hot semantics (`C = 15`) |
 | `label` | `(N,)` | Class index |
-| `edge_index` | `(2, E)` | Proximity edges |
-| `coarsen_mask` | `(N,)` | B policy: instantiable → coarsen |
+| `edge_index` | `(2, E)` | Undirected proximity edges |
+| `coarsen_mask` | `(N,)` | `True` = instantiable → may enter FPS coarsening |
+| `occ_fine` | `(H, W, D)` | LiDAR occupancy, fine grid |
+| `occ_mid` | `(H, W, D)` | LiDAR occupancy, mid grid |
+| `occ_coarse` | `(H, W, D)` | LiDAR occupancy, coarse grid |
+
+Edges are built in normalised space: two nodes connect if their centers are closer than `EDGE_PROXIMITY` (default `0.03`).
 
 ---
 
 ## Semantic classes (15)
 
-Defined in `config.SEMANTIC_CLASSES`: ground, vegetation, car, powerline, fence, tree, pickup, van_truck, heavy_duty, utility_pole, light_pole, traffic_pole, habitat, complex, annex.
+Defined in `config.SEMANTIC_CLASSES`:
 
-**Non-instantiable** (B policy): `ground`, `vegetation`, `fence` — present on `G_L`, excluded from FPS coarsening when `COARSEN_EXCLUDE_NON_INSTANTIABLE=True`.
+`ground`, `vegetation`, `car`, `powerline`, `fence`, `tree`, `pickup`, `van_truck`, `heavy_duty`, `utility_pole`, `light_pole`, `traffic_pole`, `habitat`, `complex`, `annex`
+
+### Non-instantiable (B policy)
+
+`ground`, `vegetation`, `fence` — large background regions.
+
+- Present on the **instance graph** for context.
+- **Excluded from coarsening** when `COARSEN_EXCLUDE_NON_INSTANTIABLE=True` (default).
+- Also filtered out of occupancy caches when `OCC_FILTER_NON_INSTANTIABLE=True` (object-centric occ GT).
 
 ---
 
 ## Occupancy caches
 
-Ground truth for `L_occ` — **LiDAR voxelisation**, not bounding-box proxies.
+Occupancy is **real LiDAR voxelisation**, not bounding-box fill.
 
-| Sidecar | Grid | Suffix |
-|---------|------|--------|
-| Mid | 16×16×8 | `{stem}_occ_mid.npy` |
-| Coarse | 8×8×4 | `{stem}_occ_coarse.npy` |
+| Level | Grid (H×W×D) | Sidecar suffix |
+|-------|----------------|----------------|
+| Fine | 64×64×8 | `{stem}_occ_fine.npy` |
+| Mid | 32×32×8 | `{stem}_occ_mid.npy` |
+| Coarse | 16×16×4 | `{stem}_occ_coarse.npy` |
 
-- Built alongside JSON by `utils/build_scene_graph.py`
-- `OCC_FILTER_NON_INSTANTIABLE=True` — object-centric voxels (no ground mass in occ GT)
-- `OCC_MAX_POINTS=500_000` — subsample when building caches
-- `OCC_REQUIRE_CACHE=True` — training fails fast if sidecars missing
+These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` and the `OccGridHead` output shapes.
 
-Training queries (`OCC_QUERY_POINTS=2048`, `OCC_POS_RATIO=0.5`) sample occupied vs empty voxels from these grids.
+### Build settings
+
+| Config | Default | Meaning |
+|--------|---------|---------|
+| `OCC_MAX_POINTS` | `500_000` | Subsample LiDAR when voxelising |
+| `OCC_REQUIRE_CACHE` | `True` | Crash early if a sidecar is missing |
+| `OCC_FILTER_NON_INSTANTIABLE` | `True` | Drop ground/vegetation/fence from occ GT |
+
+Training supervises occupancy with **full-grid BCE** on `OccGridHead` (not random query points). Probes may sample query locations from these grids for diagnostics.
 
 ---
 
 ## Building graphs from LAZ
 
 ```bash
-python utils/build_scene_graph.py --help   # see script for tile paths / args
+python utils/build_scene_graph.py --help
 ```
 
-After build, split tiles into train/test:
+Point the script at your LAZ / tile root (see script help for exact arguments). It writes JSON + the three `.npy` sidecars per scene.
+
+### Train / test split
+
+Organise outputs into:
 
 ```
-data/graphs/train/   # ~29 scenes
-data/graphs/test/    # ~11 scenes (fixed split — document tile IDs in TODO G2)
+data/graphs/train/   # training scenes
+data/graphs/test/    # held-out validation scenes
 ```
 
-Graphs with zero coarsenable instances are skipped by the dataset loader.
+The exact tile IDs for the fixed split should be documented in TODO G1. Graphs with **no coarsenable instances** are skipped by the dataset loader.
 
 ---
 
 ## Normalisation
 
-Per-scene: translate to centroid, scale by longest axis to fit `[-1, 1]³`. The same transform is stored in JSON and applied when voxelising LiDAR so graph nodes and occ caches stay aligned.
+Per scene:
+
+1. Subtract the scene **centroid**.
+2. Scale by the longest axis so the scene fits in `[-1, 1]³`.
+
+The same transform is stored in JSON and reused when voxelising LiDAR, so graph nodes and occupancy voxels stay **aligned**.
 
 ---
 
-## Planned (PR2)
+## If you change grid shapes
 
-- **`Z_fine` grid** and `{stem}_occ_fine.npy` sidecars
-- Instance-only encoder path on coarsenable nodes
+If you edit `GRID_FINE`, `GRID_MID`, or `GRID_COARSE` in `config.py`, you must **rebuild all occupancy caches** (TODO G3). Old `.npy` files will have the wrong shape.
 
-See [TODO.md](../TODO.md) Layer A section.
+---
+
+## Related docs
+
+- Model use of this data: [architecture.md](architecture.md)
+- Training commands: [training.md](training.md)

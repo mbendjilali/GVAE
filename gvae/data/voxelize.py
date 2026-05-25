@@ -90,8 +90,8 @@ def voxel_centers(grid: tuple[int, int, int], device: torch.device) -> Tensor:
 
 def sample_occupancy_queries(
     occ: Tensor,
-    n_queries: int = config.OCC_QUERY_POINTS,
-    pos_ratio: float = config.OCC_POS_RATIO,
+    n_queries: int = 2048,
+    pos_ratio: float = 0.5,
 ) -> tuple[Tensor, Tensor]:
     """
     Sample query locations and binary occupancy labels from a voxel grid.

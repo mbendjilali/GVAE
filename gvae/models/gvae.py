@@ -5,25 +5,27 @@ import torch.nn as nn
 
 import config
 from gvae.models.encoder import SceneGraphEncoder
-from gvae.models.decoder import SceneGraphDecoder
-from gvae.data.occupancy import OccupancyReadout
+from gvae.models.decoder import SceneGraphDecoder, ZOnlyDecoder
+from gvae.models.occ_grid_head import OccGridHead
 
 
 class GVAE(nn.Module):
-    def __init__(self, stage: int = 2):
+    def __init__(self):
         super().__init__()
-        self.stage = stage
         self.encoder = SceneGraphEncoder()
         self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
         self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
         self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
-        self.occ_readout_fine = OccupancyReadout(config.D_FINE_LATENT)
-        self.occ_readout_mid = OccupancyReadout(config.D_MID_LATENT)
-        self.occ_readout_coarse = OccupancyReadout(config.D_COARSE_LATENT)
+        if config.USE_Z_ONLY_DECODER:
+            self.zonly_decoder_fine = ZOnlyDecoder(config.D_FINE_LATENT)
+            self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
+            self.zonly_decoder_coarse = ZOnlyDecoder(config.D_COARSE_LATENT)
+        self.occ_grid_head_fine = OccGridHead(config.D_FINE_LATENT)
+        self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
+        self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
 
-    def forward(self, graph, stage: int | None = None):
-        stage = self.stage if stage is None else stage
-        enc = self.encoder(graph, stage=stage)
+    def forward(self, graph):
+        enc = self.encoder(graph)
 
         out = {
             'mu_fine': enc['mu_fine'],
@@ -35,53 +37,69 @@ class GVAE(nn.Module):
             'z_fine': enc['z_fine'],
             'z_mid': enc['z_mid'],
             'z_coarse': enc['z_coarse'],
-            'h_inst': enc['h_inst'],
+            'h_fine': enc['h_fine'],
             'h_lm1': enc['h_lm1'],
             'h_1': enc['h_1'],
-            'p_inst': enc['p_inst'],
-            'r_inst': enc['r_inst'],
-            's_inst': enc['s_inst'],
-            'edge_index_inst': enc['edge_index_inst'],
+            'p_fine': enc['p_fine'],
+            'r_fine': enc['r_fine'],
+            's_fine': enc['s_fine'],
+            'edge_index_fine': enc['edge_index_fine'],
             'p_lm1': enc['p_lm1'],
             'r_lm1': enc['r_lm1'],
             's_lm1': enc['s_lm1'],
             'p_1': enc['p_1'],
             'r_1': enc['r_1'],
             's_1': enc['s_1'],
+            'S0': enc['S0'],
             'S1': enc['S1'],
             'S2': enc['S2'],
             'edge_index_lm1': enc['edge_index_lm1'],
             'edge_index_1': enc['edge_index_1'],
-            'occ_readout_fine': self.occ_readout_fine,
-            'occ_readout_mid': self.occ_readout_mid,
-            'occ_readout_coarse': self.occ_readout_coarse,
+            'occ_grid_head_fine': self.occ_grid_head_fine,
+            'occ_grid_head_mid': self.occ_grid_head_mid,
+            'occ_grid_head_coarse': self.occ_grid_head_coarse,
             'recon_fine': None,
             'recon_mid': None,
             'recon_coarse': None,
+            'recon_fine_zonly': None,
+            'recon_mid_zonly': None,
+            'recon_coarse_zonly': None,
         }
 
-        if stage >= 1 and enc['h_inst'].numel() > 0:
+        if enc['h_fine'].numel() > 0:
             out['recon_fine'] = self.decoder_fine(
-                h=enc['h_inst'],
+                h=enc['h_fine'],
                 Z=enc['z_fine'],
-                p_gt=enc['p_inst'],
-                r_gt=enc['r_inst'],
+                p_gt=enc['p_fine'],
+                r_gt=enc['r_fine'],
             )
+            if config.USE_Z_ONLY_DECODER:
+                out['recon_fine_zonly'] = self.zonly_decoder_fine.forward_at_gt(
+                    enc['z_fine'], enc['p_fine'],
+                )
 
-        if stage >= 1 and enc['h_lm1'].numel() > 0:
+        if enc['h_lm1'].numel() > 0:
             out['recon_mid'] = self.decoder_mid(
                 h=enc['h_lm1'],
                 Z=enc['z_mid'],
                 p_gt=enc['p_lm1'],
                 r_gt=enc['r_lm1'],
             )
+            if config.USE_Z_ONLY_DECODER:
+                out['recon_mid_zonly'] = self.zonly_decoder_mid.forward_at_gt(
+                    enc['z_mid'], enc['p_lm1'],
+                )
 
-        if stage >= 1 and enc['h_1'].numel() > 0:
+        if enc['h_1'].numel() > 0:
             out['recon_coarse'] = self.decoder_coarse(
                 h=enc['h_1'],
                 Z=enc['z_coarse'],
                 p_gt=enc['p_1'],
                 r_gt=enc['r_1'],
             )
+            if config.USE_Z_ONLY_DECODER:
+                out['recon_coarse_zonly'] = self.zonly_decoder_coarse.forward_at_gt(
+                    enc['z_coarse'], enc['p_1'],
+                )
 
         return out

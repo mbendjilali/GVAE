@@ -3,8 +3,8 @@
 Per-scene loss breakdown for NaN / val-instability debugging.
 
 Usage (repo root):
-  python utils/diagnose_nan_losses.py --split test --stage 2
-  python utils/diagnose_nan_losses.py --split test --stage 2 \\
+  python utils/diagnose_nan_losses.py --split test
+  python utils/diagnose_nan_losses.py --split test \\
       --checkpoint checkpoint/<run>/best.pth --mode eval
 """
 
@@ -62,7 +62,6 @@ def _flag_reason(bd, stats: dict[str, float], loss_total: float) -> list[str]:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", choices=("train", "test"), default="test")
-    parser.add_argument("--stage", type=int, default=1, choices=(1,), help="kept for CLI compat; always full forward")
     parser.add_argument("--limit", type=int, default=0, help="0 = all scenes")
     parser.add_argument("--checkpoint", type=str, default="")
     parser.add_argument(
@@ -90,7 +89,7 @@ def main():
     else:
         model.train()
 
-    print(f"split={args.split}  stage={args.stage}  mode={args.mode}  scenes={len(files)}  device={device}")
+    print(f"split={args.split}  mode={args.mode}  scenes={len(files)}  device={device}")
     print(f"U-Net: GroupNorm (num_groups={config.UNET_NUM_GROUPS})")
     print("-" * 88)
 
@@ -101,13 +100,10 @@ def main():
         graph = SceneGraph.from_json(path).to(device)
         with torch.no_grad():
             outputs = model(graph)
-        bd = loss_breakdown(
-            outputs, graph, step=0, stage=args.stage, path=path,
-            include_coarse_in_total=(args.stage >= 1),
-        )
-        total_tensor, components = compute_loss(outputs, graph, step=0, stage=args.stage)
+        bd = loss_breakdown(outputs, graph, step=0, path=path)
+        total_tensor, components = compute_loss(outputs, graph, step=0)
         loss_total = total_tensor.item()
-        stats = _scene_stats(outputs) if args.stage >= 1 else {"max_abs_p": 0.0, "max_abs_z": 0.0}
+        stats = _scene_stats(outputs)
         rows.append((loss_total if math.isfinite(loss_total) else float("inf"), path, {
             "components": {k: (v.item() if hasattr(v, "item") else v) for k, v in components.items()},
             "stats": stats,

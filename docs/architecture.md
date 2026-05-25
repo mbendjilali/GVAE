@@ -1,171 +1,214 @@
 # Architecture
 
-Scene Graph VAE (GVAE): encodes a 3D outdoor scene graph into KL-regularised spatial latent volumes for hierarchical diffusion conditioning.
-
-**Current outputs:** `Z_fine` (64×64×64), `Z_mid` (32×32×32), `Z_coarse` (16×16×16).
+This page explains **how the Scene Graph VAE works**, in order, without assuming you already know VAEs or scene graphs.
 
 ---
 
-## Goal
+## The big picture
 
-Compress structured layout (object positions, classes, spatial extent) into dense voxel latents the diffusion model can sample from or condition on. Finer diffusion levels beyond the graph are conditioned on the cascade of coarser diffusion outputs — the graph steps aside after the coarsest conditioned levels.
+**Input:** One outdoor scene — a list of objects (position, size, class) and which objects are near each other.
 
----
+**Output:** Three 3D latent volumes (`Z_fine`, `Z_mid`, `Z_coarse`) that encode layout at three resolutions. A diffusion model can later sample or edit scenes using these volumes.
 
-## Input
+**Training trick:** The model must not only *produce* good `Z` volumes — it must also *read them back* to reconstruct object attributes. That readout is what keeps `Z` meaningful.
 
-Each scene graph node carries:
-
-| Field | Description |
-|-------|-------------|
-| `p` | Centroid in scene-normalised `[-1, 1]³` |
-| `r` | Footprint semi-axes (axis-aligned extent) |
-| `s` | One-hot semantic vector (15 classes) |
-| `label` | Class name string |
-
-Edges: proximity (radius graph on `p`). Road edges are planned but not yet in the loss.
-
-Occupancy ground truth: LiDAR voxelised at mid/coarse resolutions (`occ_mid`, `occ_coarse`), stored as sidecar `.npy` caches.
+```
+Scene graph  →  encode  →  Z_fine, Z_mid, Z_coarse
+                              ↓
+                         decode (two paths)
+                              ↓
+                    predicted class, position, size
+                              ↓
+                         compare to ground truth → loss
+```
 
 ---
 
-## B policy (non-instantiable classes)
+## Input: scene graph + occupancy
 
-Ground, vegetation, and fence stay on the **instance graph** (`G_L`) for context but are **excluded from coarsening** (`coarsen_mask=False`). Only instantiable objects (cars, poles, trees, etc.) form supernodes and feed `Z_mid` / `Z_coarse`.
+Each training scene is a JSON file (see [data.md](data.md)). For every object (node):
 
-Config: `COARSEN_EXCLUDE_NON_INSTANTIABLE=True`, `REMOVE_NON_INSTANTIABLE=False`.
+| Field | Symbol | Meaning |
+|-------|--------|---------|
+| Position | `p` | Object center in scene-normalised coordinates `[-1, 1]³` |
+| Footprint | `r` | Semi-axes of an axis-aligned box (how big the object is) |
+| Semantics | `s` | One-hot vector over 15 classes (car, tree, pole, …) |
+| Label | — | Human-readable class name |
+
+**Edges** connect objects whose centers are within a small distance (`EDGE_PROXIMITY`).
+
+**Occupancy caches** (`occ_fine`, `occ_mid`, `occ_coarse`) are binary 3D grids from LiDAR — “was there a point here?” They supervise a separate occupancy head on each `Z` volume.
 
 ---
 
-## Encoder — three-level chain
+## B policy: background vs objects
+
+Some classes are **non-instantiable** background: ground, vegetation, fence.
+
+- They stay on the **instance graph** so nearby objects get context.
+- They are **not coarsened** — they never become supernodes or feed the splat → U-Net path.
+
+Config: `COARSEN_EXCLUDE_NON_INSTANTIABLE=True`.
+
+---
+
+## Encoder: from graph to three `Z` volumes
+
+The encoder runs a **four-level chain**. Each level has graph neural network (GNN) message passing, then (except the last) coarsening.
 
 ```mermaid
 flowchart TD
-    GL["G_L — instance graph\nR-GAT + PointROPE → h_L"]
-    C1["Coarsen 1: FPS + soft S\n→ G_{L-1}, S1"]
-    GL1["G_{L-1} — region graph\nR-GAT → h_{L-1}"]
-    C2["Coarsen 2: FPS + soft S\n→ G_1, S2"]
-    G1["G_1 — scene graph\nR-GAT + exact GPS attention"]
-    SM["Splat → U-Net → Z_mid"]
-    SC["Splat → U-Net → Z_coarse"]
-    GL --> C1 --> GL1 --> C2 --> G1
-    GL1 --> SM
-    G1 --> SC
+    GL["G_L — instance graph\none node per object"]
+    C0["Coarsen 0 → fine supernodes"]
+    GF["G_fine"]
+    C1["Coarsen 1 → mid supernodes"]
+    GM["G_mid"]
+    C2["Coarsen 2 → coarse supernodes"]
+    GC["G_coarse"]
+    ZF["Splat + U-Net → Z_fine"]
+    ZM["Splat + U-Net → Z_mid"]
+    ZC["Splat + U-Net → Z_coarse"]
+    GL --> C0 --> GF --> C1 --> GM --> C2 --> GC
+    GF --> ZF
+    GM --> ZM
+    GC --> ZC
 ```
 
-### Fine level — Instance (`G_L`, instantiable nodes)
+### Step 1 — Instance graph (`G_L`)
 
-- Shares instance R-GAT (`gps_L`) with the mid path.
-- Splat → deeper U-Net (depth 3) → `Z_fine` on coarsenable instance nodes only.
-- Instance decoder loss with one-hot labels; metrics: `pos_err_fine`, `miou_fine`.
+Every object is a node. An **R-GAT** (relational graph attention) with **PointROPE** updates node embeddings `h` using edges and 3D positions. Feature width: `D_INSTANCE = 72`.
 
-### Level 1 — Instance (`G_L`)
+### Step 2 — Coarsening (three times)
 
-- Shallow R-GAT (3 layers) with **PointROPE** on Q/K.
-- Feature dim `D_INSTANCE = 72`.
+**Coarsening** merges many nodes into fewer **supernodes** using Farthest Point Sampling (FPS):
 
-### Coarsening (`G_L → G_{L-1}` and `G_{L-1} → G_1`)
+| Step | From → To | Default keep ratio |
+|------|-----------|-------------------|
+| S0 | instances → fine | 20% (`REDUCTION_RATIO_LEVELS[0]`) |
+| S1 | fine → mid | 20% |
+| S2 | mid → coarse | 20% |
 
-- **FPS** selects supernode seeds (`REDUCTION_RATIO = 0.03`).
-- **Hard assign**: nearest seed (Voronoi); used for footprint bbox.
-- **Soft assign `S`**: MLP over normalised distances → softmax; used for pool loss and feature pooling.
-- **`S.detach()`** on the feature path (`p`, `s`, `h_pooled`) so recon gradients do not destabilise `mlp_S`; pool loss still trains `S`.
-- Supernode attrs: weighted `p`, soft-mixed `s`, AABB `r`, ball-query edges.
+Each supernode gets pooled position, mixed semantics, and a bounding-box footprint. New edges are built with **ball query** (radius grows at coarser levels).
 
-### Level 2 — Region (`G_{L-1}`)
+**Hard assignment** (default): each node belongs to exactly one supernode (Voronoi-style).
 
-- R-GAT on coarsened graph; init from pooled `h` + geometry.
-- `D_REGION = 144` → splat → deeper 3D U-Net → `Z_mid`.
+**Soft assignment** (optional): fuzzy membership + extra pool regularisation losses.
 
-### Level 3 — Scene (`G_1`)
+### Step 3 — Splatting
 
-- R-GAT + exact multi-head attention (GPS layer); ~10–30 nodes.
-- `D_SCENE = 288` → splat → shallower U-Net → `Z_coarse`.
+Each supernode’s embedding is **splatted** onto a fixed 3D voxel grid as an anisotropic Gaussian (stretched by `r`). Think of painting a soft blob of features at each object location.
 
-### Splatting + U-Net
+- Fine grid uses a **tighter** Gaussian (`SPLAT_TRUNCATION_SIGMA_FINE = 1.0` vs `2.0` on mid/coarse).
+- Fine splat can be **capped** to ~1 voxel radius (`SPLAT_FINE_VOXEL_CAP`) so peaks stay sharp.
 
-- Anisotropic Gaussian splat, truncated at ±2σ, `scatter_add` normalisation.
-- 3D U-Net with **GroupNorm** (batch=1 scenes; BatchNorm is unsuitable).
-- Variational head: `(μ, log σ²)` per voxel; sample `Z = μ + σ ⊙ ε`.
+### Step 4 — 3D U-Net → variational `Z`
 
-| Output | Grid | Voxels | Latent dim |
-|--------|------|--------|------------|
-| `Z_fine` | 64 × 64 × 64 | 262 144 | 72 |
-| `Z_mid` | 32 × 32 × 32 | 32 768 | 144 |
-| `Z_coarse` | 16 × 16 × 16 | 4 096 | 288 |
+A **3D U-Net** refines the splatted grid and outputs Gaussian parameters `μ` and `log σ²`. We sample:
 
-`Z_mid` and `Z_coarse` are **independent fixed grids**, not spatially nested subdivisions of each other.
+`Z = μ + σ ⊙ ε`   (standard VAE reparameterisation)
 
----
+| Output | Grid (H×W×D) | Channels | U-Net depth |
+|--------|----------------|----------|-------------|
+| `Z_fine` | 64×64×8 | 72 | **1** (shallow — less blur) |
+| `Z_mid` | 32×32×8 | 144 | 3 |
+| `Z_coarse` | 16×16×4 | 288 | 2 |
 
-## Decoder (training signal)
+Grids are **fixed independent volumes**, not subdivisions of each other.
 
-Deformable cross-attention readout — inverse of splatting:
-
-1. Anchor `(p, r)` predicted from node embedding `h` (**Z-only**, PR1).
-2. 27 reference points on a 3×3×3 grid within the anchor bbox, plus learned offsets.
-3. Bilinear sample `Z` at ref points; cross-attend; MLP heads → `ŝ`, `p̂`, `r̂`.
-
-`DECODER_GT_ANCHOR_MIX = 0.0` — no GT geometry for readout queries at train time.
+**GroupNorm** is used inside the U-Net (not BatchNorm) because we often train with one scene per batch element.
 
 ---
 
-## Losses
+## Two decoders (why two?)
 
-$$\mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}} + \lambda_{\text{occ}}\,\mathcal{L}_{\text{occ}}$$
+During training, two decoders reconstruct supernode attributes from `(h, Z)`. They answer different questions:
 
-| Term | Description |
-|------|-------------|
-| **Recon** | Soft semantic KL (`soft_semantic_loss`), MSE on `p`/`r`, proximity edge margin |
-| **KL** | Voxel-wise Gaussian KL; cyclical annealing (Fu et al.) |
-| **Pool** | Cut + orthogonality + spatial compactness on `S` (per coarsening step) |
-| **Occ** | BCE on query points sampled from LiDAR occupancy caches |
+| Decoder | Uses | Question it answers |
+|---------|------|---------------------|
+| **h + Z** (`SceneGraphDecoder`) | node embedding `h` **and** volume `Z` | “Given structure **and** latents, where is each object and what is it?” |
+| **Z-only** (`ZOnlyDecoder`) | volume `Z` **only** | “If DDM only has `Z` and **known layout slots**, what is at each slot?” |
 
-Weights in `config.py` (`LAMBDA_*`).
+### h + Z decoder (full readout)
 
----
+1. Predict an anchor box `(p, r)` from **`h`** (not from ground truth).
+2. Place 27 sample points on a 3×3×3 grid inside that box (+ learned offsets).
+3. Bilinear-sample **`Z`** at those points; cross-attend; predict `ŝ`, `p̂`, `r̂`.
 
-## Training stages
+`DECODER_GT_ANCHOR_MIX = 0.0` in normal training — anchors come from the model, not from labels. (Probe ablations can blend in GT anchors by raising this value.)
 
-| Stage | Active modules | Purpose |
-|-------|----------------|---------|
-| 1 | Coarsening (`mlp_S`, pool loss) | Stable supernodes |
-| 2 | + instance R-GAT, mid splat/U-Net/decoder | Mid branch |
-| 3 | + coarse branch | Joint mid + coarse in loss |
-| 4 | Full network, reduced LR | Fine-tune (best often ~ep 15; see [training.md](training.md)) |
+This path drives **`pos_err_fine`** / **`pos_err_mid`** — true **localization** metrics.
 
----
+### Z-only decoder (DDM-aligned readout)
 
-## Validation metrics (primary)
+1. Sample **`Z` at ground-truth supernode positions `p`** (with small random jitter during training).
+2. A small MLP predicts `ŝ`, `p̂`, `r̂` — **no `h`**.
 
-Logged each val epoch when stage ≥ 2:
+**Important nuance:** Using GT `p` as the *sample location* does **not** remove position from the loss — the MLP still outputs `p̂` and we penalise `‖p̂ − p‖`. What GT `p` provides is **where to look in the volume**, not the answer. This matches the DDM contract: layout slots are known; `Z` fills in appearance and local geometry at those slots.
 
-| Metric | Meaning |
-|--------|---------|
-| `pos_err_fine` | Z-only instance position error (direct) |
-| `miou_fine` | Hard mIoU on instance one-hot labels |
-| `occ_iou_fine` / `occ_precision_fine` | Occupancy vs LiDAR cache at fine grid |
-| `inst_pos_err_mid` | Instance position via `S1` → mid supernode recon |
-| `pos_err_mid` | Z-only supernode position error |
-| `occ_iou_mid` / `occ_precision_mid` | Occupancy vs LiDAR cache |
-| `soft_miou_mid` | Soft mIoU on merged supernode labels — **diagnostic only** |
+Jitter (`Z_ONLY_QUERY_JITTER = 0.05`) forces `Z` to be informative in a small neighborhood, not only at a single voxel.
 
-Set `LOG_FULL_METRICS=True` for extended TensorBoard metrics.
+This path drives **`pos_err_zonly_*`** (console: `zpos=`). For **global** localization evidence, also check h-decoder metrics and offline probes (see [training.md](training.md#latent-probes)).
 
 ---
 
-## Project layout
+## Occupancy head
+
+Each `Z` level has an **`OccGridHead`**: a small conv network that predicts occupancy logits for **every voxel** in the grid. Loss is binary cross-entropy against the LiDAR cache (with automatic class imbalance weighting).
+
+This replaces older designs that sampled random query points for occupancy.
+
+---
+
+## Loss function
+
+Total loss per branch (fine / mid / coarse) combines:
+
+$$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_{\text{recon\_zonly}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{grid}}\,\mathcal{L}_{\text{occ\_grid}} + \lambda_{\text{norm}}\,\mathcal{L}_{\text{norm\_contrast}} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
+
+| Term | Default weight | What it does |
+|------|----------------|--------------|
+| **Recon h** | `LAMBDA_RECON_H = 1.0` | Soft CE on class + MSE on `p`/`r` via h+Z decoder |
+| **Recon zonly** | `LAMBDA_RECON_ZONLY = 1.2` | Same targets via Z-only decoder (slightly favoured for DDM) |
+| **KL** | cyclical → `LAMBDA_KL_MAX = 1e-3` | Regularise `μ, σ` toward standard normal |
+| **Occ grid** | `LAMBDA_OCC_GRID_* = 1.0` | Voxel occupancy BCE (`OccGridHead`) |
+| **Norm contrast** | `0.1` fine & mid | Hinge: push `‖Z(p_gt)‖` above `‖Z(empty voxel)‖` (Probe C alignment) |
+| **Pool** | soft mode only | Keep coarsening assignments compact and separated |
+
+**Reconstruction** at each supernode uses soft cross-entropy for semantics and MSE for position and footprint (`LAMBDA_SEM`, `LAMBDA_POS`).
+
+**KL annealing** cycles over training (Fu et al., 2019) so the model repeatedly explores then regularises.
+
+---
+
+## Validation metrics (what the console shows)
+
+| Metric | Decoder | Good direction | Plain meaning |
+|--------|---------|----------------|---------------|
+| `pos_err_fine` | h + Z | lower | Fine supernode position error |
+| `zpos` (`pos_err_zonly_fine`) | Z-only | lower | Position error when reading `Z` at GT slot |
+| `soft_miou_fine` | h + Z | higher | Semantic overlap on fine supernodes |
+| `occ_iou_fine` | OccGridHead | higher | Predicted vs LiDAR occupancy (fine grid) |
+| `inst_pos_err_mid` | h + Z chain | lower | Instance position via S0→S1→mid decode |
+| `pos_err_mid` | h + Z | lower | Mid supernode position error |
+| `zpos` mid (`pos_err_zonly_mid`) | Z-only | lower | Z-only mid slot readout |
+| `soft_miou_mid` | h + Z | higher | Semantics on mid supernodes |
+| `occ_iou_mid` | OccGridHead | higher | Occupancy IoU on mid grid |
+
+Set `LOG_FULL_METRICS=True` for extra TensorBoard scalars (hard mIoU, coarse level, KL breakdown, …).
+
+---
+
+## Code layout
 
 ```
 gvae/
-├── models/       encoder, decoder, coarsening, splatting, unet3d, gps, gvae
+├── models/       encoder, decoder, coarsening, splatting, unet3d, occ_grid_head, gvae
 ├── losses/       gvae_loss, metrics, diagnostics
+├── probes/       offline latent probe library
 ├── data/         scene_graph, occupancy, voxelize, graph_masks
-train.py          stage-wise training loop
-config.py         hyperparameters
-utils/            build_scene_graph, visualize_supernodes, diagnostics
-data/graphs/      train/ and test/ JSON + occ sidecars
-checkpoint/       run outputs (stage*_best.pth, train.log)
+train.py          training loop
+config.py         all hyperparameters
+utils/            build_scene_graph, probe_latent, visualize_supernodes, diagnostics
 ```
 
 ---

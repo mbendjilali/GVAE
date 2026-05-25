@@ -76,21 +76,36 @@ class Term:
         star = self.paint("  ★ best", Style.YELLOW, Style.BOLD) if is_best else ""
         self.write(f"\n{ep}  {lr_s}  train {tr}  val {va}{star}")
 
+    @staticmethod
+    def _occ_iou_label(metrics: dict, level: str) -> str | None:
+        key = f"occ_iou_{level}"
+        if key not in metrics:
+            return None
+        return f"occ={metrics[key]:.0%}"
+
     def metrics_line(self, metrics: dict) -> None:
         if not metrics:
             return
         parts = []
         if "pos_err_fine" in metrics:
-            parts.append(
+            fine = (
                 f"fine pos={metrics['pos_err_fine']:.3f} "
-                f"miou={metrics.get('miou_fine', 0):.0%} "
-                f"occ={metrics.get('occ_iou_fine', 0):.0%}"
+                f"smiou={metrics.get('soft_miou_fine', 0):.0%}"
             )
-        parts.append(
-            f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f} "
-            f"occ={metrics.get('occ_iou_mid', 0):.0%} "
-            f"smiou={metrics.get('soft_miou_mid', 0):.0%}"
-        )
+            if "pos_err_zonly_fine" in metrics:
+                fine += f" zpos={metrics['pos_err_zonly_fine']:.3f}"
+            occ_f = self._occ_iou_label(metrics, "fine")
+            if occ_f:
+                fine += f" {occ_f}"
+            parts.append(fine)
+        mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+        if "pos_err_zonly_mid" in metrics:
+            mid += f" zpos={metrics['pos_err_zonly_mid']:.3f}"
+        occ_m = self._occ_iou_label(metrics, "mid")
+        if occ_m:
+            mid += f" {occ_m}"
+        mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
+        parts.append(mid)
         line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)
         self.write(line)
 
