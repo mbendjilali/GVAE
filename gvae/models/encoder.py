@@ -62,9 +62,9 @@ class SceneGraphEncoder(nn.Module):
         )
         self.splat_mid = GaussianSplatting(config.GRID_MID, feature_dim=d_L1)
         self.splat_coarse = GaussianSplatting(config.GRID_COARSE, feature_dim=d_1)
-        self.unet_fine = UNet3D(d_L, depth=3)
-        self.unet_mid = UNet3D(d_L1, depth=3)
-        self.unet_coarse = UNet3D(d_1, depth=2)
+        self.unet_fine = UNet3D(d_L, depth=config.UNET_DEPTH_FINE)
+        self.unet_mid = UNet3D(d_L1, depth=config.UNET_DEPTH_MID)
+        self.unet_coarse = UNet3D(d_1, depth=config.UNET_DEPTH_COARSE)
 
     def _fine_graph(self, c0):
         p0, r0, s0, edge_index_0 = c0['p'], c0['r'], c0['s'], c0['edge_index']

@@ -12,6 +12,7 @@ import config
 from gvae.losses.gvae_loss import (
     KL_loss,
     kl_weight,
+    norm_contrastive_loss,
     reconstruction_loss,
 )
 from gvae.data.occupancy import loss_occ_grid
@@ -77,6 +78,7 @@ def loss_breakdown(
     L_recon = 0.0
     L_kl = 0.0
     L_occ = 0.0
+    L_norm = 0.0
 
     if outputs.get("recon_fine") is not None and outputs["p_fine"].numel() > 0:
         _store_term(
@@ -105,6 +107,13 @@ def loss_breakdown(
             bd, "occ_fine", outputs["occ_grid_head_fine"],
             outputs["z_fine"], graph.occ_fine, config.LAMBDA_OCC_GRID_FINE,
         )
+        if config.LAMBDA_NORM_CONTRAST_FINE > 0 and graph.occ_fine.numel() > 0:
+            _store_term(
+                bd,
+                "norm_contrast_fine",
+                norm_contrastive_loss(outputs["z_fine"], outputs["p_fine"], graph.occ_fine),
+            )
+            L_norm += config.LAMBDA_NORM_CONTRAST_FINE * bd.terms["norm_contrast_fine"]
         L_recon += bd.terms["recon_fine"]
         if "recon_zonly_fine" in bd.terms:
             L_recon += bd.terms["recon_zonly_fine"]
@@ -137,6 +146,13 @@ def loss_breakdown(
             bd, "occ_mid", outputs["occ_grid_head_mid"],
             outputs["z_mid"], graph.occ_mid, config.LAMBDA_OCC_GRID_MID,
         )
+        if config.LAMBDA_NORM_CONTRAST_MID > 0 and graph.occ_mid.numel() > 0:
+            _store_term(
+                bd,
+                "norm_contrast_mid",
+                norm_contrastive_loss(outputs["z_mid"], outputs["p_lm1"], graph.occ_mid),
+            )
+            L_norm += config.LAMBDA_NORM_CONTRAST_MID * bd.terms["norm_contrast_mid"]
         L_recon += bd.terms["recon_mid"]
         if "recon_zonly_mid" in bd.terms:
             L_recon += bd.terms["recon_zonly_mid"]
@@ -161,9 +177,11 @@ def loss_breakdown(
         L_recon += bd.terms["recon_coarse"]
         L_kl += bd.terms["KL_coarse"]
 
-    bd.total = L_recon + lam_kl * L_kl + L_occ
+    bd.total = L_recon + lam_kl * L_kl + L_occ + L_norm
     if L_occ > 0:
         bd.terms["occ_total"] = L_occ
+    if L_norm > 0:
+        bd.terms["norm_contrast_total"] = L_norm
     if not math.isfinite(bd.total):
         if "total" not in bd.nan_terms:
             bd.nan_terms.append("total")

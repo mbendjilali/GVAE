@@ -89,6 +89,9 @@ SPLAT_NODE_CHUNK      = 64          # nodes per chunk in chunked-dense path (lar
 UNET_USE_CHECKPOINT = False     # gradient checkpoint on large grids (≥ UNET_CHECKPOINT_MIN_SIDE)
 UNET_CHECKPOINT_MIN_SIDE = 32
 UNET_CHANNELS_LAST = True       # channels_last_3d for cudnn conv (avoids layout copies)
+UNET_DEPTH_FINE = 1             # shallow fine U-Net (less spatial blur); mid/coarse stay deep
+UNET_DEPTH_MID = 3
+UNET_DEPTH_COARSE = 2
 
 # ─── Deformable cross-attention decoder ───────────────────────────────────────
 NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
@@ -96,8 +99,14 @@ NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 # ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
 USE_Z_ONLY_DECODER = True
 LAMBDA_RECON_H = 1.0           # h+Z deformable decoder reconstruction
-LAMBDA_RECON_ZONLY = 1.0       # Z-only point readout reconstruction
+LAMBDA_RECON_ZONLY = 1.2       # Z-only point readout (slightly favoured for DDM)
 Z_ONLY_QUERY_JITTER = 0.05     # uniform noise on query points in train (0 = sample at p_gt)
+
+# ─── Z norm contrastive (Probe C: ||Z(p_gt)|| > ||Z(empty)||) ─────────────────
+LAMBDA_NORM_CONTRAST_FINE = 0.1
+LAMBDA_NORM_CONTRAST_MID = 0.1
+NORM_CONTRAST_MARGIN = 0.0     # hinge: relu(||Z_empty|| - ||Z_gt|| + margin)
+NORM_CONTRAST_EMPTY_POINTS = 256
 
 # ─── Loss weights ─────────────────────────────────────────────────────────────
 # Total per branch: λ_h·L_recon_h + λ_z·L_recon_zonly + λ_KL·L_KL + λ_occ·L_occ

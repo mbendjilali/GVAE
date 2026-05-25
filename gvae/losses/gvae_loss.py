@@ -44,6 +44,45 @@ def KL_loss(mu, logvar):
     return kl.sum() / mu.numel()
 
 
+def _lambda_norm_contrast(name: str) -> float:
+    return {
+        'fine': config.LAMBDA_NORM_CONTRAST_FINE,
+        'mid': config.LAMBDA_NORM_CONTRAST_MID,
+        'coarse': 0.0,
+    }[name]
+
+
+def norm_contrastive_loss(
+    z: torch.Tensor,
+    p_gt: torch.Tensor,
+    occ_grid: torch.Tensor,
+) -> torch.Tensor:
+    """Hinge loss pushing ||Z(p_gt)|| above ||Z(empty occ)|| (Probe C alignment)."""
+    from gvae.models.decoder import sample_volume
+    from gvae.data.voxelize import sample_occupancy_queries
+
+    if p_gt.numel() == 0:
+        return z.new_zeros(())
+
+    z_gt = sample_volume(z, p_gt.unsqueeze(1)).reshape(p_gt.shape[0], -1)
+    norm_gt = z_gt.norm(dim=1)
+
+    n_query = config.NORM_CONTRAST_EMPTY_POINTS
+    q, labels = sample_occupancy_queries(occ_grid, n_queries=n_query, pos_ratio=0.0)
+    empty_pts = q[labels < 0.5]
+    if empty_pts.numel() == 0:
+        return z.new_zeros(())
+
+    if empty_pts.shape[0] > n_query:
+        pick = torch.randint(0, empty_pts.shape[0], (n_query,), device=z.device)
+        empty_pts = empty_pts[pick]
+
+    z_empty = sample_volume(z, empty_pts.unsqueeze(1)).reshape(empty_pts.shape[0], -1)
+    norm_empty = z_empty.norm(dim=1)
+    margin = config.NORM_CONTRAST_MARGIN
+    return F.relu(norm_empty.unsqueeze(0) - norm_gt.unsqueeze(1) + margin).mean()
+
+
 def loss_pool(S, edge_index, p, N_nodes):
     """MinCut-style pool regularisation on soft assignment S."""
     M = S.shape[1]
@@ -165,6 +204,12 @@ def _maybe_branch_loss(
         parts['occ'] = L_occ
         total = total + lambda_grid * L_occ
 
+    lambda_norm = _lambda_norm_contrast(name)
+    if lambda_norm > 0 and occ_grid.numel() > 0:
+        L_norm = norm_contrastive_loss(z, p_true, occ_grid)
+        parts['norm_contrast'] = L_norm
+        total = total + lambda_norm * L_norm
+
     branches.append((name, total, parts))
 
 
@@ -221,7 +266,7 @@ def compute_loss(outputs, graph, step):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
-    L_recon = L_recon_zonly = L_KL = L_occ = zero
+    L_recon = L_recon_zonly = L_KL = L_occ = L_norm = zero
     L_pool = zero
     pool_extras = {}
 
@@ -230,6 +275,7 @@ def compute_loss(outputs, graph, step):
         L_recon_zonly = L_recon_zonly + parts.get('recon_zonly', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
+        L_norm = L_norm + parts.get('norm_contrast', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
             pool_extras = {k: v for k, v in parts.items() if k.startswith('pool')}
@@ -244,6 +290,7 @@ def compute_loss(outputs, graph, step):
         'recon_zonly': L_recon_zonly,
         'KL': L_KL,
         'occ': L_occ,
+        'norm_contrast': L_norm,
         'lambda_kl': lambda_kl,
     }
     if pool_extras:

@@ -394,7 +394,9 @@ def main(ckpt_dir):
         f"{config.NUM_EPOCHS} ep · lr {config.LEARNING_RATE:.0e}→{config.LEARNING_RATE_LATE:.0e} "
         f"@ ep {config.LR_DECAY_EPOCH + 1} · batch {config.BATCH_SIZE}",
         f"{term.paint('grid', Style.DIM)}     "
-        f"fine {config.GRID_FINE} · mid {config.GRID_MID} · coarse {config.GRID_COARSE}",
+        f"fine {config.GRID_FINE} · mid {config.GRID_MID} · coarse {config.GRID_COARSE} · "
+        f"unet depth fine/mid/coarse = "
+        f"{config.UNET_DEPTH_FINE}/{config.UNET_DEPTH_MID}/{config.UNET_DEPTH_COARSE}",
         f"{term.paint('coarsen', Style.DIM)}  "
         f"{config.COARSEN_ASSIGNMENT} · ratios {config.REDUCTION_RATIO_LEVELS}"
         + (f" · pool λ={config.LAMBDA_POOL}" if config.USE_POOL_LOSS else ""),
@@ -413,6 +415,13 @@ def main(ckpt_dir):
             f"{term.paint('zonly', Style.DIM)} "
             f"λ h/z = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY} "
             f"jitter={config.Z_ONLY_QUERY_JITTER}"
+        )
+    if config.LAMBDA_NORM_CONTRAST_FINE > 0 or config.LAMBDA_NORM_CONTRAST_MID > 0:
+        banner_lines.append(
+            f"{term.paint('norm', Style.DIM)} "
+            f"contrast λ fine/mid = "
+            f"{config.LAMBDA_NORM_CONTRAST_FINE}/{config.LAMBDA_NORM_CONTRAST_MID} "
+            f"margin={config.NORM_CONTRAST_MARGIN}"
         )
     if (
         config.SPLAT_TRUNCATION_SIGMA_FINE != config.SPLAT_TRUNCATION_SIGMA
@@ -486,6 +495,18 @@ def _parse_args():
         "--zonly-jitter", type=float, default=None,
         help="Override Z_ONLY_QUERY_JITTER",
     )
+    parser.add_argument(
+        "--unet-depth-fine", type=int, default=None,
+        help="Override UNET_DEPTH_FINE",
+    )
+    parser.add_argument(
+        "--lambda-norm-contrast-fine", type=float, default=None,
+        help="Override LAMBDA_NORM_CONTRAST_FINE",
+    )
+    parser.add_argument(
+        "--lambda-norm-contrast-mid", type=float, default=None,
+        help="Override LAMBDA_NORM_CONTRAST_MID",
+    )
     return parser.parse_args()
 
 
@@ -508,6 +529,12 @@ def _apply_config_overrides(args) -> None:
         config.USE_Z_ONLY_DECODER = False
     if args.zonly_jitter is not None:
         config.Z_ONLY_QUERY_JITTER = args.zonly_jitter
+    if args.unet_depth_fine is not None:
+        config.UNET_DEPTH_FINE = args.unet_depth_fine
+    if args.lambda_norm_contrast_fine is not None:
+        config.LAMBDA_NORM_CONTRAST_FINE = args.lambda_norm_contrast_fine
+    if args.lambda_norm_contrast_mid is not None:
+        config.LAMBDA_NORM_CONTRAST_MID = args.lambda_norm_contrast_mid
 
 
 if __name__ == "__main__":
