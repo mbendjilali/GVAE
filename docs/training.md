@@ -88,13 +88,17 @@ Primary val metrics (console + TensorBoard):
 |--------|----------------|-------|
 | `pos_err_fine` | ↓ | Fine supernode positions (after S0 coarsening) |
 | `miou_fine` | ↑ | Hard mIoU on fine supernode labels |
-| `occ_iou_fine` | ↑ | Query readout vs LiDAR cache |
+| `occ_iou_fine` | ↑ | Query readout vs LiDAR cache (secondary when grid occ enabled) |
+| `occ_grid_iou_fine` | ↑ | Grid head vs LiDAR cache; **primary in console when `LAMBDA_OCC_GRID_FINE > 0`** |
 | `inst_pos_err_mid` | ↓ | Instance → S0 → S1 → mid decode chain |
 | `pos_err_mid` | ↓ | Z-only mid supernode positions |
-| `occ_iou_mid` / `occ_precision_mid` | ↑ | Occupancy vs LiDAR cache |
+| `occ_iou_mid` / `occ_grid_iou_mid` | ↑ | Query readout / grid head vs LiDAR cache |
+| `occ_precision_mid` | ↑ | Query readout precision |
 | `soft_miou_mid` | ↑ (slow) | Diagnostic only on merged supernode labels |
 
-When grid occ is enabled (`LAMBDA_OCC_GRID_* > 0`), also watch `occ_grid_iou_*`.
+Query occupancy BCE uses the same per-grid `pos_weight` as grid occ (neg/pos ratio) so sparse full-grid evaluation is not fighting 50/50 query sampling.
+
+When grid occ is enabled (`LAMBDA_OCC_GRID_* > 0`), the console shows `grid_occ=…` (and `q_occ=…` for the query readout).
 
 Run latent probes after training:
 

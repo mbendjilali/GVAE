@@ -76,6 +76,17 @@ class Term:
         star = self.paint("  ★ best", Style.YELLOW, Style.BOLD) if is_best else ""
         self.write(f"\n{ep}  {lr_s}  train {tr}  val {va}{star}")
 
+    @staticmethod
+    def _occ_iou_label(metrics: dict, level: str) -> str:
+        grid_key = f"occ_grid_iou_{level}"
+        query_key = f"occ_iou_{level}"
+        if grid_key in metrics:
+            label = f"grid_occ={metrics[grid_key]:.0%}"
+            if query_key in metrics:
+                label += f" q_occ={metrics[query_key]:.0%}"
+            return label
+        return f"occ={metrics.get(query_key, 0):.0%}"
+
     def metrics_line(self, metrics: dict) -> None:
         if not metrics:
             return
@@ -84,11 +95,11 @@ class Term:
             parts.append(
                 f"fine pos={metrics['pos_err_fine']:.3f} "
                 f"miou={metrics.get('miou_fine', 0):.0%} "
-                f"occ={metrics.get('occ_iou_fine', 0):.0%}"
+                f"{self._occ_iou_label(metrics, 'fine')}"
             )
         parts.append(
             f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f} "
-            f"occ={metrics.get('occ_iou_mid', 0):.0%} "
+            f"{self._occ_iou_label(metrics, 'mid')} "
             f"smiou={metrics.get('soft_miou_mid', 0):.0%}"
         )
         line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)

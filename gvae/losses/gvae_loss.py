@@ -7,7 +7,12 @@ import torch
 import torch.nn.functional as F
 import config
 from gvae.data.graph_masks import pool_subgraph
-from gvae.data.occupancy import loss_occ_grid, occ_query_count, sample_occupancy_queries
+from gvae.data.occupancy import (
+    loss_occ_grid,
+    occ_grid_pos_weight,
+    occ_query_count,
+    sample_occupancy_queries,
+)
 
 def kl_weight(step):
     total_steps = config.NUM_EPOCHS
@@ -63,7 +68,8 @@ def loss_occupancy(occ_readout, z, occ_grid):
     n_q = occ_query_count(occ_grid)
     q, labels = sample_occupancy_queries(occ_grid, n_queries=n_q)
     logits = occ_readout(q, z)
-    return F.binary_cross_entropy_with_logits(logits, labels)
+    pos_weight = logits.new_tensor([occ_grid_pos_weight(occ_grid)])
+    return F.binary_cross_entropy_with_logits(logits, labels, pos_weight=pos_weight)
 
 
 def loss_pool(S, edge_index, p, N_nodes):
