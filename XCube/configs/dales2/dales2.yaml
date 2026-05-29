@@ -1,0 +1,29 @@
+_dales2_path: "../data/dales2"
+
+train_dataset: Dales2Dataset
+train_val_num_workers: 8
+train_kwargs:
+  base_path: ${_dales2_path}
+  resolution: ${resolution}
+  custom_name: ${_custom_name}
+  split: "train"
+  random_seed: 0
+
+val_dataset: Dales2Dataset
+val_kwargs:
+  base_path: ${_dales2_path}
+  resolution: ${resolution}
+  custom_name: ${_custom_name}
+  split: "test"
+  random_seed: "fixed"
+
+test_dataset: Dales2Dataset
+test_num_workers: 4
+test_kwargs:
+  base_path: ${_dales2_path}
+  resolution: ${resolution}
+  custom_name: ${_custom_name}
+  split: "test"
+  random_seed: "fixed"
+
+_custom_name: "dales2"

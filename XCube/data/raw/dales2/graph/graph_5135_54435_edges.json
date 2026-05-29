@@ -1,0 +1,8726 @@
+{
+  "edges": [
+    {
+      "id": 0,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "conductor",
+      "b_id": 1480,
+      "class": "extension"
+    },
+    {
+      "id": 1,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "conductor",
+      "b_id": 1484,
+      "class": "extension"
+    },
+    {
+      "id": 2,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "conductor",
+      "b_id": 1474,
+      "class": "extension"
+    },
+    {
+      "id": 3,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "conductor",
+      "b_id": 1474,
+      "class": "extension"
+    },
+    {
+      "id": 4,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "conductor",
+      "b_id": 197,
+      "class": "extension"
+    },
+    {
+      "id": 5,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "conductor",
+      "b_id": 196,
+      "class": "extension"
+    },
+    {
+      "id": 6,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "conductor",
+      "b_id": 1481,
+      "class": "extension"
+    },
+    {
+      "id": 7,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "conductor",
+      "b_id": 1483,
+      "class": "extension"
+    },
+    {
+      "id": 8,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "conductor",
+      "b_id": 199,
+      "class": "extension"
+    },
+    {
+      "id": 9,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "conductor",
+      "b_id": 194,
+      "class": "extension"
+    },
+    {
+      "id": 10,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "conductor",
+      "b_id": 1482,
+      "class": "extension"
+    },
+    {
+      "id": 11,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "conductor",
+      "b_id": 1485,
+      "class": "extension"
+    },
+    {
+      "id": 12,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "conductor",
+      "b_id": 206,
+      "class": "extension"
+    },
+    {
+      "id": 13,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "conductor",
+      "b_id": 206,
+      "class": "extension"
+    },
+    {
+      "id": 14,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "conductor",
+      "b_id": 1489,
+      "class": "extension"
+    },
+    {
+      "id": 15,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "conductor",
+      "b_id": 1486,
+      "class": "extension"
+    },
+    {
+      "id": 16,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "conductor",
+      "b_id": 207,
+      "class": "extension"
+    },
+    {
+      "id": 17,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "conductor",
+      "b_id": 207,
+      "class": "extension"
+    },
+    {
+      "id": 18,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "conductor",
+      "b_id": 1490,
+      "class": "extension"
+    },
+    {
+      "id": 19,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "conductor",
+      "b_id": 1487,
+      "class": "extension"
+    },
+    {
+      "id": 20,
+      "a_type": "conductor",
+      "a_id": 205,
+      "b_type": "conductor",
+      "b_id": 208,
+      "class": "extension"
+    },
+    {
+      "id": 21,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "conductor",
+      "b_id": 208,
+      "class": "extension"
+    },
+    {
+      "id": 22,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "conductor",
+      "b_id": 1491,
+      "class": "extension"
+    },
+    {
+      "id": 23,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "conductor",
+      "b_id": 1488,
+      "class": "extension"
+    },
+    {
+      "id": 24,
+      "a_type": "conductor",
+      "a_id": 209,
+      "b_type": "conductor",
+      "b_id": 213,
+      "class": "extension"
+    },
+    {
+      "id": 25,
+      "a_type": "conductor",
+      "a_id": 1492,
+      "b_type": "conductor",
+      "b_id": 1495,
+      "class": "extension"
+    },
+    {
+      "id": 26,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "conductor",
+      "b_id": 214,
+      "class": "extension"
+    },
+    {
+      "id": 27,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "conductor",
+      "b_id": 1496,
+      "class": "extension"
+    },
+    {
+      "id": 28,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "conductor",
+      "b_id": 212,
+      "class": "extension"
+    },
+    {
+      "id": 29,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "conductor",
+      "b_id": 1497,
+      "class": "extension"
+    },
+    {
+      "id": 30,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 31,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 32,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 33,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 34,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 35,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 36,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 37,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 38,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 39,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 40,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 41,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 42,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 43,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 44,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 45,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 46,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 47,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 48,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 49,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 50,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 51,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 52,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 53,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 54,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 55,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "pole",
+      "b_id": 1503,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 56,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 57,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "pole",
+      "b_id": 1503,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 58,
+      "a_type": "conductor",
+      "a_id": 197,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 59,
+      "a_type": "conductor",
+      "a_id": 197,
+      "b_type": "pole",
+      "b_id": 1503,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 60,
+      "a_type": "conductor",
+      "a_id": 1481,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 61,
+      "a_type": "conductor",
+      "a_id": 1481,
+      "b_type": "pole",
+      "b_id": 1503,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 62,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 63,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "pole",
+      "b_id": 1503,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 64,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "pole",
+      "b_id": 1388,
+      "class": "support"
+    },
+    {
+      "id": 65,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "pole",
+      "b_id": 1503,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 66,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 67,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "pole",
+      "b_id": 1498,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 68,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 69,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "pole",
+      "b_id": 1498,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 70,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 71,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "pole",
+      "b_id": 1498,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 72,
+      "a_type": "conductor",
+      "a_id": 1484,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 73,
+      "a_type": "conductor",
+      "a_id": 1484,
+      "b_type": "pole",
+      "b_id": 1498,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 74,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 75,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "pole",
+      "b_id": 1498,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 76,
+      "a_type": "conductor",
+      "a_id": 1485,
+      "b_type": "pole",
+      "b_id": 1393,
+      "class": "support"
+    },
+    {
+      "id": 77,
+      "a_type": "conductor",
+      "a_id": 1485,
+      "b_type": "pole",
+      "b_id": 1498,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 78,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 79,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "pole",
+      "b_id": 1502,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 80,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 81,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "pole",
+      "b_id": 1502,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 82,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 83,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "pole",
+      "b_id": 1502,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 84,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 85,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "pole",
+      "b_id": 1502,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 86,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 87,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "pole",
+      "b_id": 1502,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 88,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "pole",
+      "b_id": 1391,
+      "class": "support"
+    },
+    {
+      "id": 89,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "pole",
+      "b_id": 1502,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 90,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 91,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "pole",
+      "b_id": 1499,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 92,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 93,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "pole",
+      "b_id": 1499,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 94,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 95,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "pole",
+      "b_id": 1499,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 96,
+      "a_type": "conductor",
+      "a_id": 1490,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 97,
+      "a_type": "conductor",
+      "a_id": 1490,
+      "b_type": "pole",
+      "b_id": 1499,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 98,
+      "a_type": "conductor",
+      "a_id": 205,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 99,
+      "a_type": "conductor",
+      "a_id": 205,
+      "b_type": "pole",
+      "b_id": 1499,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 100,
+      "a_type": "conductor",
+      "a_id": 1491,
+      "b_type": "pole",
+      "b_id": 1389,
+      "class": "support"
+    },
+    {
+      "id": 101,
+      "a_type": "conductor",
+      "a_id": 1491,
+      "b_type": "pole",
+      "b_id": 1499,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 102,
+      "a_type": "conductor",
+      "a_id": 209,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 103,
+      "a_type": "conductor",
+      "a_id": 209,
+      "b_type": "pole",
+      "b_id": 1500,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 104,
+      "a_type": "conductor",
+      "a_id": 1492,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 105,
+      "a_type": "conductor",
+      "a_id": 1492,
+      "b_type": "pole",
+      "b_id": 1500,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 106,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 107,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "pole",
+      "b_id": 1500,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 108,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 109,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "pole",
+      "b_id": 1500,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 110,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 111,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "pole",
+      "b_id": 1500,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 112,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 113,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "pole",
+      "b_id": 1500,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 114,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 115,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "pole",
+      "b_id": 1501,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 116,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 117,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "pole",
+      "b_id": 1501,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 118,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 119,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "pole",
+      "b_id": 1501,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 120,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 121,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "pole",
+      "b_id": 1501,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 122,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 123,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "pole",
+      "b_id": 1501,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 124,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "pole",
+      "b_id": 1504,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 125,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "pole",
+      "b_id": 1501,
+      "class": "support",
+      "virtual_pole": true
+    },
+    {
+      "id": 126,
+      "a_type": "building",
+      "a_id": 1411,
+      "b_type": "building",
+      "b_id": 1427,
+      "class": "near"
+    },
+    {
+      "id": 127,
+      "a_type": "building",
+      "a_id": 1407,
+      "b_type": "building",
+      "b_id": 1414,
+      "class": "near"
+    },
+    {
+      "id": 128,
+      "a_type": "building",
+      "a_id": 1411,
+      "b_type": "building",
+      "b_id": 1436,
+      "class": "near"
+    },
+    {
+      "id": 129,
+      "a_type": "building",
+      "a_id": 1419,
+      "b_type": "building",
+      "b_id": 1443,
+      "class": "near"
+    },
+    {
+      "id": 130,
+      "a_type": "building",
+      "a_id": 1443,
+      "b_type": "building",
+      "b_id": 1446,
+      "class": "near"
+    },
+    {
+      "id": 131,
+      "a_type": "building",
+      "a_id": 1419,
+      "b_type": "building",
+      "b_id": 1446,
+      "class": "near"
+    },
+    {
+      "id": 132,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "building",
+      "b_id": 1436,
+      "class": "near"
+    },
+    {
+      "id": 133,
+      "a_type": "building",
+      "a_id": 1411,
+      "b_type": "building",
+      "b_id": 1460,
+      "class": "adjacent"
+    },
+    {
+      "id": 134,
+      "a_type": "building",
+      "a_id": 1407,
+      "b_type": "building",
+      "b_id": 1444,
+      "class": "near"
+    },
+    {
+      "id": 135,
+      "a_type": "building",
+      "a_id": 1413,
+      "b_type": "building",
+      "b_id": 1414,
+      "class": "near"
+    },
+    {
+      "id": 136,
+      "a_type": "building",
+      "a_id": 1411,
+      "b_type": "building",
+      "b_id": 1423,
+      "class": "near"
+    },
+    {
+      "id": 137,
+      "a_type": "building",
+      "a_id": 1411,
+      "b_type": "building",
+      "b_id": 1417,
+      "class": "near"
+    },
+    {
+      "id": 138,
+      "a_type": "building",
+      "a_id": 1413,
+      "b_type": "building",
+      "b_id": 1417,
+      "class": "near"
+    },
+    {
+      "id": 139,
+      "a_type": "building",
+      "a_id": 1413,
+      "b_type": "building",
+      "b_id": 1423,
+      "class": "adjacent"
+    },
+    {
+      "id": 140,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "building",
+      "b_id": 1460,
+      "class": "near"
+    },
+    {
+      "id": 141,
+      "a_type": "building",
+      "a_id": 1407,
+      "b_type": "building",
+      "b_id": 1413,
+      "class": "near"
+    },
+    {
+      "id": 142,
+      "a_type": "building",
+      "a_id": 1407,
+      "b_type": "building",
+      "b_id": 1419,
+      "class": "near"
+    },
+    {
+      "id": 143,
+      "a_type": "building",
+      "a_id": 1413,
+      "b_type": "building",
+      "b_id": 1444,
+      "class": "adjacent"
+    },
+    {
+      "id": 144,
+      "a_type": "building",
+      "a_id": 1423,
+      "b_type": "building",
+      "b_id": 1427,
+      "class": "near"
+    },
+    {
+      "id": 145,
+      "a_type": "building",
+      "a_id": 1411,
+      "b_type": "building",
+      "b_id": 1413,
+      "class": "near"
+    },
+    {
+      "id": 146,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "building",
+      "b_id": 1436,
+      "class": "near"
+    },
+    {
+      "id": 147,
+      "a_type": "building",
+      "a_id": 1419,
+      "b_type": "building",
+      "b_id": 1444,
+      "class": "near"
+    },
+    {
+      "id": 148,
+      "a_type": "building",
+      "a_id": 1443,
+      "b_type": "building",
+      "b_id": 1444,
+      "class": "adjacent"
+    },
+    {
+      "id": 149,
+      "a_type": "building",
+      "a_id": 1436,
+      "b_type": "building",
+      "b_id": 1460,
+      "class": "adjacent"
+    },
+    {
+      "id": 150,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "building",
+      "b_id": 1417,
+      "class": "near"
+    },
+    {
+      "id": 151,
+      "a_type": "building",
+      "a_id": 1423,
+      "b_type": "building",
+      "b_id": 1444,
+      "class": "near"
+    },
+    {
+      "id": 152,
+      "a_type": "building",
+      "a_id": 1438,
+      "b_type": "building",
+      "b_id": 1462,
+      "class": "adjacent"
+    },
+    {
+      "id": 153,
+      "a_type": "building",
+      "a_id": 1438,
+      "b_type": "building",
+      "b_id": 1453,
+      "class": "near"
+    },
+    {
+      "id": 154,
+      "a_type": "building",
+      "a_id": 1453,
+      "b_type": "building",
+      "b_id": 1462,
+      "class": "near"
+    },
+    {
+      "id": 155,
+      "a_type": "building",
+      "a_id": 1401,
+      "b_type": "building",
+      "b_id": 1402,
+      "class": "near"
+    },
+    {
+      "id": 156,
+      "a_type": "building",
+      "a_id": 1401,
+      "b_type": "building",
+      "b_id": 1431,
+      "class": "near"
+    },
+    {
+      "id": 157,
+      "a_type": "building",
+      "a_id": 1402,
+      "b_type": "building",
+      "b_id": 1431,
+      "class": "near"
+    },
+    {
+      "id": 158,
+      "a_type": "building",
+      "a_id": 1416,
+      "b_type": "building",
+      "b_id": 1445,
+      "class": "near"
+    },
+    {
+      "id": 159,
+      "a_type": "building",
+      "a_id": 1409,
+      "b_type": "building",
+      "b_id": 1416,
+      "class": "near"
+    },
+    {
+      "id": 160,
+      "a_type": "building",
+      "a_id": 1410,
+      "b_type": "building",
+      "b_id": 1416,
+      "class": "adjacent"
+    },
+    {
+      "id": 161,
+      "a_type": "building",
+      "a_id": 1410,
+      "b_type": "building",
+      "b_id": 1445,
+      "class": "near"
+    },
+    {
+      "id": 162,
+      "a_type": "building",
+      "a_id": 1416,
+      "b_type": "building",
+      "b_id": 1418,
+      "class": "adjacent"
+    },
+    {
+      "id": 163,
+      "a_type": "building",
+      "a_id": 1409,
+      "b_type": "building",
+      "b_id": 1418,
+      "class": "near"
+    },
+    {
+      "id": 164,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "building",
+      "b_id": 1447,
+      "class": "near"
+    },
+    {
+      "id": 165,
+      "a_type": "building",
+      "a_id": 1405,
+      "b_type": "building",
+      "b_id": 1473,
+      "class": "near"
+    },
+    {
+      "id": 166,
+      "a_type": "building",
+      "a_id": 1472,
+      "b_type": "building",
+      "b_id": 1473,
+      "class": "adjacent"
+    },
+    {
+      "id": 167,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "building",
+      "b_id": 1424,
+      "class": "near"
+    },
+    {
+      "id": 168,
+      "a_type": "building",
+      "a_id": 1424,
+      "b_type": "building",
+      "b_id": 1472,
+      "class": "near"
+    },
+    {
+      "id": 169,
+      "a_type": "building",
+      "a_id": 1471,
+      "b_type": "building",
+      "b_id": 1472,
+      "class": "adjacent"
+    },
+    {
+      "id": 170,
+      "a_type": "building",
+      "a_id": 1405,
+      "b_type": "building",
+      "b_id": 1424,
+      "class": "near"
+    },
+    {
+      "id": 171,
+      "a_type": "building",
+      "a_id": 1447,
+      "b_type": "building",
+      "b_id": 1472,
+      "class": "near"
+    },
+    {
+      "id": 172,
+      "a_type": "building",
+      "a_id": 1424,
+      "b_type": "building",
+      "b_id": 1471,
+      "class": "near"
+    },
+    {
+      "id": 173,
+      "a_type": "building",
+      "a_id": 1405,
+      "b_type": "building",
+      "b_id": 1472,
+      "class": "near"
+    },
+    {
+      "id": 174,
+      "a_type": "building",
+      "a_id": 1447,
+      "b_type": "building",
+      "b_id": 1471,
+      "class": "near"
+    },
+    {
+      "id": 175,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "building",
+      "b_id": 1471,
+      "class": "near"
+    },
+    {
+      "id": 176,
+      "a_type": "building",
+      "a_id": 1447,
+      "b_type": "building",
+      "b_id": 1473,
+      "class": "near"
+    },
+    {
+      "id": 177,
+      "a_type": "building",
+      "a_id": 1426,
+      "b_type": "building",
+      "b_id": 1429,
+      "class": "near"
+    },
+    {
+      "id": 178,
+      "a_type": "building",
+      "a_id": 1426,
+      "b_type": "building",
+      "b_id": 1428,
+      "class": "adjacent"
+    },
+    {
+      "id": 179,
+      "a_type": "building",
+      "a_id": 1437,
+      "b_type": "building",
+      "b_id": 1461,
+      "class": "adjacent"
+    },
+    {
+      "id": 180,
+      "a_type": "building",
+      "a_id": 1408,
+      "b_type": "building",
+      "b_id": 1430,
+      "class": "near"
+    },
+    {
+      "id": 181,
+      "a_type": "building",
+      "a_id": 1441,
+      "b_type": "building",
+      "b_id": 1464,
+      "class": "adjacent"
+    },
+    {
+      "id": 182,
+      "a_type": "building",
+      "a_id": 1408,
+      "b_type": "building",
+      "b_id": 1439,
+      "class": "near"
+    },
+    {
+      "id": 183,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "building",
+      "b_id": 1432,
+      "class": "near"
+    },
+    {
+      "id": 184,
+      "a_type": "building",
+      "a_id": 1440,
+      "b_type": "building",
+      "b_id": 1441,
+      "class": "adjacent"
+    },
+    {
+      "id": 185,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "building",
+      "b_id": 1425,
+      "class": "adjacent"
+    },
+    {
+      "id": 186,
+      "a_type": "building",
+      "a_id": 1399,
+      "b_type": "building",
+      "b_id": 1437,
+      "class": "near"
+    },
+    {
+      "id": 187,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "building",
+      "b_id": 1435,
+      "class": "near"
+    },
+    {
+      "id": 188,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "building",
+      "b_id": 1435,
+      "class": "near"
+    },
+    {
+      "id": 189,
+      "a_type": "building",
+      "a_id": 1406,
+      "b_type": "building",
+      "b_id": 1433,
+      "class": "near"
+    },
+    {
+      "id": 190,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "building",
+      "b_id": 1441,
+      "class": "near"
+    },
+    {
+      "id": 191,
+      "a_type": "building",
+      "a_id": 1408,
+      "b_type": "building",
+      "b_id": 1463,
+      "class": "near"
+    },
+    {
+      "id": 192,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "building",
+      "b_id": 1461,
+      "class": "near"
+    },
+    {
+      "id": 193,
+      "a_type": "building",
+      "a_id": 1421,
+      "b_type": "building",
+      "b_id": 1433,
+      "class": "near"
+    },
+    {
+      "id": 194,
+      "a_type": "building",
+      "a_id": 1399,
+      "b_type": "building",
+      "b_id": 1461,
+      "class": "near"
+    },
+    {
+      "id": 195,
+      "a_type": "building",
+      "a_id": 1399,
+      "b_type": "building",
+      "b_id": 1412,
+      "class": "near"
+    },
+    {
+      "id": 196,
+      "a_type": "building",
+      "a_id": 1399,
+      "b_type": "building",
+      "b_id": 1421,
+      "class": "near"
+    },
+    {
+      "id": 197,
+      "a_type": "building",
+      "a_id": 1439,
+      "b_type": "building",
+      "b_id": 1463,
+      "class": "adjacent"
+    },
+    {
+      "id": 198,
+      "a_type": "building",
+      "a_id": 1403,
+      "b_type": "building",
+      "b_id": 1406,
+      "class": "near"
+    },
+    {
+      "id": 199,
+      "a_type": "building",
+      "a_id": 1430,
+      "b_type": "building",
+      "b_id": 1463,
+      "class": "near"
+    },
+    {
+      "id": 200,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "building",
+      "b_id": 1421,
+      "class": "near"
+    },
+    {
+      "id": 201,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "building",
+      "b_id": 1425,
+      "class": "adjacent"
+    },
+    {
+      "id": 202,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "building",
+      "b_id": 1422,
+      "class": "near"
+    },
+    {
+      "id": 203,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "building",
+      "b_id": 1437,
+      "class": "near"
+    },
+    {
+      "id": 204,
+      "a_type": "building",
+      "a_id": 1432,
+      "b_type": "building",
+      "b_id": 1439,
+      "class": "near"
+    },
+    {
+      "id": 205,
+      "a_type": "building",
+      "a_id": 1425,
+      "b_type": "building",
+      "b_id": 1433,
+      "class": "near"
+    },
+    {
+      "id": 206,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "building",
+      "b_id": 1440,
+      "class": "near"
+    },
+    {
+      "id": 207,
+      "a_type": "building",
+      "a_id": 1403,
+      "b_type": "building",
+      "b_id": 1433,
+      "class": "near"
+    },
+    {
+      "id": 208,
+      "a_type": "building",
+      "a_id": 1406,
+      "b_type": "building",
+      "b_id": 1432,
+      "class": "near"
+    },
+    {
+      "id": 209,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "building",
+      "b_id": 1461,
+      "class": "near"
+    },
+    {
+      "id": 210,
+      "a_type": "building",
+      "a_id": 1432,
+      "b_type": "building",
+      "b_id": 1463,
+      "class": "near"
+    },
+    {
+      "id": 211,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "building",
+      "b_id": 1464,
+      "class": "near"
+    },
+    {
+      "id": 212,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "building",
+      "b_id": 1412,
+      "class": "near"
+    },
+    {
+      "id": 213,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "building",
+      "b_id": 1440,
+      "class": "near"
+    },
+    {
+      "id": 214,
+      "a_type": "building",
+      "a_id": 1415,
+      "b_type": "building",
+      "b_id": 1437,
+      "class": "near"
+    },
+    {
+      "id": 215,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "building",
+      "b_id": 1430,
+      "class": "near"
+    },
+    {
+      "id": 216,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "building",
+      "b_id": 1415,
+      "class": "near"
+    },
+    {
+      "id": 217,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "building",
+      "b_id": 1435,
+      "class": "adjacent"
+    },
+    {
+      "id": 218,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "building",
+      "b_id": 1461,
+      "class": "adjacent"
+    },
+    {
+      "id": 219,
+      "a_type": "building",
+      "a_id": 1406,
+      "b_type": "building",
+      "b_id": 1425,
+      "class": "near"
+    },
+    {
+      "id": 220,
+      "a_type": "building",
+      "a_id": 1425,
+      "b_type": "building",
+      "b_id": 1432,
+      "class": "near"
+    },
+    {
+      "id": 221,
+      "a_type": "building",
+      "a_id": 1421,
+      "b_type": "building",
+      "b_id": 1425,
+      "class": "near"
+    },
+    {
+      "id": 222,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "building",
+      "b_id": 1463,
+      "class": "near"
+    },
+    {
+      "id": 223,
+      "a_type": "building",
+      "a_id": 1467,
+      "b_type": "building",
+      "b_id": 1470,
+      "class": "near"
+    },
+    {
+      "id": 224,
+      "a_type": "building",
+      "a_id": 1404,
+      "b_type": "building",
+      "b_id": 1469,
+      "class": "near"
+    },
+    {
+      "id": 225,
+      "a_type": "building",
+      "a_id": 1469,
+      "b_type": "building",
+      "b_id": 1470,
+      "class": "adjacent"
+    },
+    {
+      "id": 226,
+      "a_type": "building",
+      "a_id": 1404,
+      "b_type": "building",
+      "b_id": 1468,
+      "class": "near"
+    },
+    {
+      "id": 227,
+      "a_type": "building",
+      "a_id": 1468,
+      "b_type": "building",
+      "b_id": 1470,
+      "class": "adjacent"
+    },
+    {
+      "id": 228,
+      "a_type": "building",
+      "a_id": 1467,
+      "b_type": "building",
+      "b_id": 1468,
+      "class": "adjacent"
+    },
+    {
+      "id": 229,
+      "a_type": "building",
+      "a_id": 1404,
+      "b_type": "building",
+      "b_id": 1470,
+      "class": "near"
+    },
+    {
+      "id": 230,
+      "a_type": "building",
+      "a_id": 1404,
+      "b_type": "building",
+      "b_id": 1467,
+      "class": "near"
+    },
+    {
+      "id": 231,
+      "a_type": "vehicle",
+      "a_id": 1336,
+      "b_type": "vehicle",
+      "b_id": 1363,
+      "class": "near"
+    },
+    {
+      "id": 232,
+      "a_type": "vehicle",
+      "a_id": 1340,
+      "b_type": "vehicle",
+      "b_id": 1385,
+      "class": "near"
+    },
+    {
+      "id": 233,
+      "a_type": "vehicle",
+      "a_id": 1336,
+      "b_type": "vehicle",
+      "b_id": 1381,
+      "class": "adjacent"
+    },
+    {
+      "id": 234,
+      "a_type": "vehicle",
+      "a_id": 1363,
+      "b_type": "vehicle",
+      "b_id": 1385,
+      "class": "near"
+    },
+    {
+      "id": 235,
+      "a_type": "vehicle",
+      "a_id": 1363,
+      "b_type": "vehicle",
+      "b_id": 1381,
+      "class": "near"
+    },
+    {
+      "id": 236,
+      "a_type": "vehicle",
+      "a_id": 1340,
+      "b_type": "vehicle",
+      "b_id": 1363,
+      "class": "near"
+    },
+    {
+      "id": 237,
+      "a_type": "vehicle",
+      "a_id": 1350,
+      "b_type": "vehicle",
+      "b_id": 1351,
+      "class": "near"
+    },
+    {
+      "id": 238,
+      "a_type": "vehicle",
+      "a_id": 155,
+      "b_type": "vehicle",
+      "b_id": 1335,
+      "class": "adjacent"
+    },
+    {
+      "id": 239,
+      "a_type": "vehicle",
+      "a_id": 1335,
+      "b_type": "vehicle",
+      "b_id": 1337,
+      "class": "near"
+    },
+    {
+      "id": 240,
+      "a_type": "vehicle",
+      "a_id": 1335,
+      "b_type": "vehicle",
+      "b_id": 1350,
+      "class": "near"
+    },
+    {
+      "id": 241,
+      "a_type": "vehicle",
+      "a_id": 1350,
+      "b_type": "vehicle",
+      "b_id": 1360,
+      "class": "near"
+    },
+    {
+      "id": 242,
+      "a_type": "vehicle",
+      "a_id": 1349,
+      "b_type": "vehicle",
+      "b_id": 1372,
+      "class": "near"
+    },
+    {
+      "id": 243,
+      "a_type": "vehicle",
+      "a_id": 1351,
+      "b_type": "vehicle",
+      "b_id": 1360,
+      "class": "adjacent"
+    },
+    {
+      "id": 244,
+      "a_type": "vehicle",
+      "a_id": 1335,
+      "b_type": "vehicle",
+      "b_id": 1349,
+      "class": "near"
+    },
+    {
+      "id": 245,
+      "a_type": "vehicle",
+      "a_id": 155,
+      "b_type": "vehicle",
+      "b_id": 1337,
+      "class": "near"
+    },
+    {
+      "id": 246,
+      "a_type": "vehicle",
+      "a_id": 155,
+      "b_type": "vehicle",
+      "b_id": 1372,
+      "class": "adjacent"
+    },
+    {
+      "id": 247,
+      "a_type": "vehicle",
+      "a_id": 1349,
+      "b_type": "vehicle",
+      "b_id": 1351,
+      "class": "near"
+    },
+    {
+      "id": 248,
+      "a_type": "vehicle",
+      "a_id": 155,
+      "b_type": "vehicle",
+      "b_id": 1349,
+      "class": "near"
+    },
+    {
+      "id": 249,
+      "a_type": "vehicle",
+      "a_id": 1337,
+      "b_type": "vehicle",
+      "b_id": 1372,
+      "class": "near"
+    },
+    {
+      "id": 250,
+      "a_type": "vehicle",
+      "a_id": 1349,
+      "b_type": "vehicle",
+      "b_id": 1350,
+      "class": "adjacent"
+    },
+    {
+      "id": 251,
+      "a_type": "vehicle",
+      "a_id": 166,
+      "b_type": "vehicle",
+      "b_id": 168,
+      "class": "near"
+    },
+    {
+      "id": 252,
+      "a_type": "vehicle",
+      "a_id": 167,
+      "b_type": "vehicle",
+      "b_id": 168,
+      "class": "near"
+    },
+    {
+      "id": 253,
+      "a_type": "vehicle",
+      "a_id": 166,
+      "b_type": "vehicle",
+      "b_id": 167,
+      "class": "adjacent"
+    },
+    {
+      "id": 254,
+      "a_type": "vehicle",
+      "a_id": 166,
+      "b_type": "vehicle",
+      "b_id": 169,
+      "class": "near"
+    },
+    {
+      "id": 255,
+      "a_type": "vehicle",
+      "a_id": 168,
+      "b_type": "vehicle",
+      "b_id": 169,
+      "class": "adjacent"
+    },
+    {
+      "id": 256,
+      "a_type": "vehicle",
+      "a_id": 57,
+      "b_type": "vehicle",
+      "b_id": 148,
+      "class": "near"
+    },
+    {
+      "id": 257,
+      "a_type": "vehicle",
+      "a_id": 31,
+      "b_type": "vehicle",
+      "b_id": 148,
+      "class": "near"
+    },
+    {
+      "id": 258,
+      "a_type": "vehicle",
+      "a_id": 2,
+      "b_type": "vehicle",
+      "b_id": 148,
+      "class": "near"
+    },
+    {
+      "id": 259,
+      "a_type": "vehicle",
+      "a_id": 2,
+      "b_type": "vehicle",
+      "b_id": 31,
+      "class": "near"
+    },
+    {
+      "id": 260,
+      "a_type": "vehicle",
+      "a_id": 31,
+      "b_type": "vehicle",
+      "b_id": 57,
+      "class": "near"
+    },
+    {
+      "id": 261,
+      "a_type": "vehicle",
+      "a_id": 123,
+      "b_type": "vehicle",
+      "b_id": 175,
+      "class": "near"
+    },
+    {
+      "id": 262,
+      "a_type": "vehicle",
+      "a_id": 175,
+      "b_type": "vehicle",
+      "b_id": 176,
+      "class": "adjacent"
+    },
+    {
+      "id": 263,
+      "a_type": "vehicle",
+      "a_id": 74,
+      "b_type": "vehicle",
+      "b_id": 165,
+      "class": "near"
+    },
+    {
+      "id": 264,
+      "a_type": "vehicle",
+      "a_id": 164,
+      "b_type": "vehicle",
+      "b_id": 1377,
+      "class": "adjacent"
+    },
+    {
+      "id": 265,
+      "a_type": "vehicle",
+      "a_id": 164,
+      "b_type": "vehicle",
+      "b_id": 165,
+      "class": "adjacent"
+    },
+    {
+      "id": 266,
+      "a_type": "vehicle",
+      "a_id": 121,
+      "b_type": "vehicle",
+      "b_id": 164,
+      "class": "near"
+    },
+    {
+      "id": 267,
+      "a_type": "vehicle",
+      "a_id": 74,
+      "b_type": "vehicle",
+      "b_id": 121,
+      "class": "near"
+    },
+    {
+      "id": 268,
+      "a_type": "vehicle",
+      "a_id": 121,
+      "b_type": "vehicle",
+      "b_id": 165,
+      "class": "near"
+    },
+    {
+      "id": 269,
+      "a_type": "vehicle",
+      "a_id": 165,
+      "b_type": "vehicle",
+      "b_id": 1377,
+      "class": "adjacent"
+    },
+    {
+      "id": 270,
+      "a_type": "vehicle",
+      "a_id": 13,
+      "b_type": "vehicle",
+      "b_id": 53,
+      "class": "near"
+    },
+    {
+      "id": 271,
+      "a_type": "vehicle",
+      "a_id": 52,
+      "b_type": "vehicle",
+      "b_id": 53,
+      "class": "near"
+    },
+    {
+      "id": 272,
+      "a_type": "vehicle",
+      "a_id": 52,
+      "b_type": "vehicle",
+      "b_id": 184,
+      "class": "near"
+    },
+    {
+      "id": 273,
+      "a_type": "vehicle",
+      "a_id": 184,
+      "b_type": "vehicle",
+      "b_id": 186,
+      "class": "adjacent"
+    },
+    {
+      "id": 274,
+      "a_type": "vehicle",
+      "a_id": 87,
+      "b_type": "vehicle",
+      "b_id": 90,
+      "class": "near"
+    },
+    {
+      "id": 275,
+      "a_type": "vehicle",
+      "a_id": 53,
+      "b_type": "vehicle",
+      "b_id": 184,
+      "class": "near"
+    },
+    {
+      "id": 276,
+      "a_type": "vehicle",
+      "a_id": 117,
+      "b_type": "vehicle",
+      "b_id": 184,
+      "class": "near"
+    },
+    {
+      "id": 277,
+      "a_type": "vehicle",
+      "a_id": 52,
+      "b_type": "vehicle",
+      "b_id": 87,
+      "class": "near"
+    },
+    {
+      "id": 278,
+      "a_type": "vehicle",
+      "a_id": 52,
+      "b_type": "vehicle",
+      "b_id": 90,
+      "class": "near"
+    },
+    {
+      "id": 279,
+      "a_type": "vehicle",
+      "a_id": 117,
+      "b_type": "vehicle",
+      "b_id": 186,
+      "class": "near"
+    },
+    {
+      "id": 280,
+      "a_type": "vehicle",
+      "a_id": 53,
+      "b_type": "vehicle",
+      "b_id": 90,
+      "class": "near"
+    },
+    {
+      "id": 281,
+      "a_type": "vehicle",
+      "a_id": 53,
+      "b_type": "vehicle",
+      "b_id": 186,
+      "class": "near"
+    },
+    {
+      "id": 282,
+      "a_type": "vehicle",
+      "a_id": 13,
+      "b_type": "vehicle",
+      "b_id": 186,
+      "class": "near"
+    },
+    {
+      "id": 283,
+      "a_type": "vehicle",
+      "a_id": 185,
+      "b_type": "vehicle",
+      "b_id": 186,
+      "class": "adjacent"
+    },
+    {
+      "id": 284,
+      "a_type": "vehicle",
+      "a_id": 13,
+      "b_type": "vehicle",
+      "b_id": 185,
+      "class": "near"
+    },
+    {
+      "id": 285,
+      "a_type": "vehicle",
+      "a_id": 117,
+      "b_type": "vehicle",
+      "b_id": 185,
+      "class": "near"
+    },
+    {
+      "id": 286,
+      "a_type": "vehicle",
+      "a_id": 84,
+      "b_type": "vehicle",
+      "b_id": 1368,
+      "class": "near"
+    },
+    {
+      "id": 287,
+      "a_type": "vehicle",
+      "a_id": 70,
+      "b_type": "vehicle",
+      "b_id": 84,
+      "class": "near"
+    },
+    {
+      "id": 288,
+      "a_type": "vehicle",
+      "a_id": 26,
+      "b_type": "vehicle",
+      "b_id": 85,
+      "class": "near"
+    },
+    {
+      "id": 289,
+      "a_type": "vehicle",
+      "a_id": 11,
+      "b_type": "vehicle",
+      "b_id": 26,
+      "class": "near"
+    },
+    {
+      "id": 290,
+      "a_type": "vehicle",
+      "a_id": 11,
+      "b_type": "vehicle",
+      "b_id": 65,
+      "class": "near"
+    },
+    {
+      "id": 291,
+      "a_type": "vehicle",
+      "a_id": 26,
+      "b_type": "vehicle",
+      "b_id": 65,
+      "class": "near"
+    },
+    {
+      "id": 292,
+      "a_type": "vehicle",
+      "a_id": 75,
+      "b_type": "vehicle",
+      "b_id": 157,
+      "class": "near"
+    },
+    {
+      "id": 293,
+      "a_type": "vehicle",
+      "a_id": 75,
+      "b_type": "vehicle",
+      "b_id": 141,
+      "class": "near"
+    },
+    {
+      "id": 294,
+      "a_type": "vehicle",
+      "a_id": 56,
+      "b_type": "vehicle",
+      "b_id": 111,
+      "class": "near"
+    },
+    {
+      "id": 295,
+      "a_type": "vehicle",
+      "a_id": 36,
+      "b_type": "vehicle",
+      "b_id": 1386,
+      "class": "near"
+    },
+    {
+      "id": 296,
+      "a_type": "vehicle",
+      "a_id": 125,
+      "b_type": "vehicle",
+      "b_id": 183,
+      "class": "near"
+    },
+    {
+      "id": 297,
+      "a_type": "vehicle",
+      "a_id": 56,
+      "b_type": "vehicle",
+      "b_id": 1343,
+      "class": "near"
+    },
+    {
+      "id": 298,
+      "a_type": "vehicle",
+      "a_id": 111,
+      "b_type": "vehicle",
+      "b_id": 1343,
+      "class": "near"
+    },
+    {
+      "id": 299,
+      "a_type": "vehicle",
+      "a_id": 36,
+      "b_type": "vehicle",
+      "b_id": 1343,
+      "class": "near"
+    },
+    {
+      "id": 300,
+      "a_type": "vehicle",
+      "a_id": 1343,
+      "b_type": "vehicle",
+      "b_id": 1386,
+      "class": "near"
+    },
+    {
+      "id": 301,
+      "a_type": "vehicle",
+      "a_id": 161,
+      "b_type": "vehicle",
+      "b_id": 1386,
+      "class": "adjacent"
+    },
+    {
+      "id": 302,
+      "a_type": "vehicle",
+      "a_id": 183,
+      "b_type": "vehicle",
+      "b_id": 1386,
+      "class": "adjacent"
+    },
+    {
+      "id": 303,
+      "a_type": "vehicle",
+      "a_id": 125,
+      "b_type": "vehicle",
+      "b_id": 161,
+      "class": "adjacent"
+    },
+    {
+      "id": 304,
+      "a_type": "vehicle",
+      "a_id": 139,
+      "b_type": "vehicle",
+      "b_id": 1343,
+      "class": "near"
+    },
+    {
+      "id": 305,
+      "a_type": "vehicle",
+      "a_id": 1378,
+      "b_type": "vehicle",
+      "b_id": 1386,
+      "class": "adjacent"
+    },
+    {
+      "id": 306,
+      "a_type": "vehicle",
+      "a_id": 111,
+      "b_type": "vehicle",
+      "b_id": 161,
+      "class": "near"
+    },
+    {
+      "id": 307,
+      "a_type": "vehicle",
+      "a_id": 32,
+      "b_type": "vehicle",
+      "b_id": 139,
+      "class": "near"
+    },
+    {
+      "id": 308,
+      "a_type": "vehicle",
+      "a_id": 36,
+      "b_type": "vehicle",
+      "b_id": 161,
+      "class": "near"
+    },
+    {
+      "id": 309,
+      "a_type": "vehicle",
+      "a_id": 56,
+      "b_type": "vehicle",
+      "b_id": 139,
+      "class": "adjacent"
+    },
+    {
+      "id": 310,
+      "a_type": "vehicle",
+      "a_id": 125,
+      "b_type": "vehicle",
+      "b_id": 1386,
+      "class": "near"
+    },
+    {
+      "id": 311,
+      "a_type": "vehicle",
+      "a_id": 32,
+      "b_type": "vehicle",
+      "b_id": 56,
+      "class": "near"
+    },
+    {
+      "id": 312,
+      "a_type": "vehicle",
+      "a_id": 183,
+      "b_type": "vehicle",
+      "b_id": 1378,
+      "class": "adjacent"
+    },
+    {
+      "id": 313,
+      "a_type": "vehicle",
+      "a_id": 36,
+      "b_type": "vehicle",
+      "b_id": 111,
+      "class": "near"
+    },
+    {
+      "id": 314,
+      "a_type": "vehicle",
+      "a_id": 41,
+      "b_type": "vehicle",
+      "b_id": 159,
+      "class": "near"
+    },
+    {
+      "id": 315,
+      "a_type": "vehicle",
+      "a_id": 41,
+      "b_type": "vehicle",
+      "b_id": 94,
+      "class": "near"
+    },
+    {
+      "id": 316,
+      "a_type": "vehicle",
+      "a_id": 50,
+      "b_type": "vehicle",
+      "b_id": 171,
+      "class": "near"
+    },
+    {
+      "id": 317,
+      "a_type": "vehicle",
+      "a_id": 29,
+      "b_type": "vehicle",
+      "b_id": 171,
+      "class": "near"
+    },
+    {
+      "id": 318,
+      "a_type": "vehicle",
+      "a_id": 50,
+      "b_type": "vehicle",
+      "b_id": 170,
+      "class": "adjacent"
+    },
+    {
+      "id": 319,
+      "a_type": "vehicle",
+      "a_id": 29,
+      "b_type": "vehicle",
+      "b_id": 170,
+      "class": "near"
+    },
+    {
+      "id": 320,
+      "a_type": "vehicle",
+      "a_id": 29,
+      "b_type": "vehicle",
+      "b_id": 50,
+      "class": "near"
+    },
+    {
+      "id": 321,
+      "a_type": "vehicle",
+      "a_id": 170,
+      "b_type": "vehicle",
+      "b_id": 171,
+      "class": "adjacent"
+    },
+    {
+      "id": 322,
+      "a_type": "vehicle",
+      "a_id": 89,
+      "b_type": "vehicle",
+      "b_id": 1353,
+      "class": "adjacent"
+    },
+    {
+      "id": 323,
+      "a_type": "vehicle",
+      "a_id": 46,
+      "b_type": "vehicle",
+      "b_id": 1353,
+      "class": "near"
+    },
+    {
+      "id": 324,
+      "a_type": "vehicle",
+      "a_id": 46,
+      "b_type": "vehicle",
+      "b_id": 89,
+      "class": "near"
+    },
+    {
+      "id": 325,
+      "a_type": "vehicle",
+      "a_id": 23,
+      "b_type": "vehicle",
+      "b_id": 34,
+      "class": "adjacent"
+    },
+    {
+      "id": 326,
+      "a_type": "vehicle",
+      "a_id": 23,
+      "b_type": "vehicle",
+      "b_id": 114,
+      "class": "near"
+    },
+    {
+      "id": 327,
+      "a_type": "vehicle",
+      "a_id": 34,
+      "b_type": "vehicle",
+      "b_id": 114,
+      "class": "near"
+    },
+    {
+      "id": 328,
+      "a_type": "vehicle",
+      "a_id": 40,
+      "b_type": "vehicle",
+      "b_id": 149,
+      "class": "near"
+    },
+    {
+      "id": 329,
+      "a_type": "vehicle",
+      "a_id": 27,
+      "b_type": "vehicle",
+      "b_id": 92,
+      "class": "near"
+    },
+    {
+      "id": 330,
+      "a_type": "vehicle",
+      "a_id": 37,
+      "b_type": "vehicle",
+      "b_id": 177,
+      "class": "near"
+    },
+    {
+      "id": 331,
+      "a_type": "vehicle",
+      "a_id": 27,
+      "b_type": "vehicle",
+      "b_id": 40,
+      "class": "near"
+    },
+    {
+      "id": 332,
+      "a_type": "vehicle",
+      "a_id": 37,
+      "b_type": "vehicle",
+      "b_id": 118,
+      "class": "near"
+    },
+    {
+      "id": 333,
+      "a_type": "vehicle",
+      "a_id": 92,
+      "b_type": "vehicle",
+      "b_id": 118,
+      "class": "near"
+    },
+    {
+      "id": 334,
+      "a_type": "vehicle",
+      "a_id": 177,
+      "b_type": "vehicle",
+      "b_id": 178,
+      "class": "adjacent"
+    },
+    {
+      "id": 335,
+      "a_type": "vehicle",
+      "a_id": 37,
+      "b_type": "vehicle",
+      "b_id": 178,
+      "class": "near"
+    },
+    {
+      "id": 336,
+      "a_type": "vehicle",
+      "a_id": 9,
+      "b_type": "vehicle",
+      "b_id": 100,
+      "class": "near"
+    },
+    {
+      "id": 337,
+      "a_type": "vehicle",
+      "a_id": 9,
+      "b_type": "vehicle",
+      "b_id": 93,
+      "class": "near"
+    },
+    {
+      "id": 338,
+      "a_type": "vehicle",
+      "a_id": 4,
+      "b_type": "vehicle",
+      "b_id": 93,
+      "class": "near"
+    },
+    {
+      "id": 339,
+      "a_type": "vehicle",
+      "a_id": 93,
+      "b_type": "vehicle",
+      "b_id": 146,
+      "class": "near"
+    },
+    {
+      "id": 340,
+      "a_type": "vehicle",
+      "a_id": 4,
+      "b_type": "vehicle",
+      "b_id": 9,
+      "class": "near"
+    },
+    {
+      "id": 341,
+      "a_type": "vehicle",
+      "a_id": 146,
+      "b_type": "vehicle",
+      "b_id": 147,
+      "class": "near"
+    },
+    {
+      "id": 342,
+      "a_type": "vehicle",
+      "a_id": 93,
+      "b_type": "vehicle",
+      "b_id": 100,
+      "class": "near"
+    },
+    {
+      "id": 343,
+      "a_type": "vehicle",
+      "a_id": 4,
+      "b_type": "vehicle",
+      "b_id": 146,
+      "class": "near"
+    },
+    {
+      "id": 344,
+      "a_type": "vehicle",
+      "a_id": 187,
+      "b_type": "vehicle",
+      "b_id": 1338,
+      "class": "near"
+    },
+    {
+      "id": 345,
+      "a_type": "vehicle",
+      "a_id": 1338,
+      "b_type": "vehicle",
+      "b_id": 1379,
+      "class": "near"
+    },
+    {
+      "id": 346,
+      "a_type": "vehicle",
+      "a_id": 187,
+      "b_type": "vehicle",
+      "b_id": 1379,
+      "class": "adjacent"
+    },
+    {
+      "id": 347,
+      "a_type": "vehicle",
+      "a_id": 1338,
+      "b_type": "vehicle",
+      "b_id": 1339,
+      "class": "adjacent"
+    },
+    {
+      "id": 348,
+      "a_type": "vehicle",
+      "a_id": 187,
+      "b_type": "vehicle",
+      "b_id": 1339,
+      "class": "near"
+    },
+    {
+      "id": 349,
+      "a_type": "vehicle",
+      "a_id": 51,
+      "b_type": "vehicle",
+      "b_id": 60,
+      "class": "near"
+    },
+    {
+      "id": 350,
+      "a_type": "vehicle",
+      "a_id": 60,
+      "b_type": "vehicle",
+      "b_id": 140,
+      "class": "adjacent"
+    },
+    {
+      "id": 351,
+      "a_type": "vehicle",
+      "a_id": 25,
+      "b_type": "vehicle",
+      "b_id": 51,
+      "class": "near"
+    },
+    {
+      "id": 352,
+      "a_type": "vehicle",
+      "a_id": 25,
+      "b_type": "vehicle",
+      "b_id": 153,
+      "class": "near"
+    },
+    {
+      "id": 353,
+      "a_type": "vehicle",
+      "a_id": 140,
+      "b_type": "vehicle",
+      "b_id": 1346,
+      "class": "near"
+    },
+    {
+      "id": 354,
+      "a_type": "vehicle",
+      "a_id": 60,
+      "b_type": "vehicle",
+      "b_id": 1346,
+      "class": "near"
+    },
+    {
+      "id": 355,
+      "a_type": "vehicle",
+      "a_id": 163,
+      "b_type": "vehicle",
+      "b_id": 1382,
+      "class": "near"
+    },
+    {
+      "id": 356,
+      "a_type": "vehicle",
+      "a_id": 1380,
+      "b_type": "vehicle",
+      "b_id": 1382,
+      "class": "adjacent"
+    },
+    {
+      "id": 357,
+      "a_type": "vehicle",
+      "a_id": 163,
+      "b_type": "vehicle",
+      "b_id": 1384,
+      "class": "adjacent"
+    },
+    {
+      "id": 358,
+      "a_type": "vehicle",
+      "a_id": 1380,
+      "b_type": "vehicle",
+      "b_id": 1384,
+      "class": "adjacent"
+    },
+    {
+      "id": 359,
+      "a_type": "vehicle",
+      "a_id": 1382,
+      "b_type": "vehicle",
+      "b_id": 1384,
+      "class": "near"
+    },
+    {
+      "id": 360,
+      "a_type": "vehicle",
+      "a_id": 1380,
+      "b_type": "vehicle",
+      "b_id": 1383,
+      "class": "near"
+    },
+    {
+      "id": 361,
+      "a_type": "vehicle",
+      "a_id": 163,
+      "b_type": "vehicle",
+      "b_id": 1380,
+      "class": "near"
+    },
+    {
+      "id": 362,
+      "a_type": "vehicle",
+      "a_id": 1382,
+      "b_type": "vehicle",
+      "b_id": 1383,
+      "class": "near"
+    },
+    {
+      "id": 363,
+      "a_type": "vehicle",
+      "a_id": 43,
+      "b_type": "vehicle",
+      "b_id": 162,
+      "class": "adjacent"
+    },
+    {
+      "id": 364,
+      "a_type": "vehicle",
+      "a_id": 43,
+      "b_type": "vehicle",
+      "b_id": 91,
+      "class": "adjacent"
+    },
+    {
+      "id": 365,
+      "a_type": "vehicle",
+      "a_id": 10,
+      "b_type": "vehicle",
+      "b_id": 43,
+      "class": "near"
+    },
+    {
+      "id": 366,
+      "a_type": "vehicle",
+      "a_id": 10,
+      "b_type": "vehicle",
+      "b_id": 91,
+      "class": "near"
+    },
+    {
+      "id": 367,
+      "a_type": "vehicle",
+      "a_id": 24,
+      "b_type": "vehicle",
+      "b_id": 1355,
+      "class": "near"
+    },
+    {
+      "id": 368,
+      "a_type": "vehicle",
+      "a_id": 24,
+      "b_type": "vehicle",
+      "b_id": 1356,
+      "class": "near"
+    },
+    {
+      "id": 369,
+      "a_type": "vehicle",
+      "a_id": 1355,
+      "b_type": "vehicle",
+      "b_id": 1356,
+      "class": "adjacent"
+    },
+    {
+      "id": 370,
+      "a_type": "vehicle",
+      "a_id": 71,
+      "b_type": "vehicle",
+      "b_id": 190,
+      "class": "near"
+    },
+    {
+      "id": 371,
+      "a_type": "vehicle",
+      "a_id": 18,
+      "b_type": "vehicle",
+      "b_id": 71,
+      "class": "near"
+    },
+    {
+      "id": 372,
+      "a_type": "vehicle",
+      "a_id": 189,
+      "b_type": "vehicle",
+      "b_id": 190,
+      "class": "adjacent"
+    },
+    {
+      "id": 373,
+      "a_type": "vehicle",
+      "a_id": 16,
+      "b_type": "vehicle",
+      "b_id": 189,
+      "class": "near"
+    },
+    {
+      "id": 374,
+      "a_type": "vehicle",
+      "a_id": 16,
+      "b_type": "vehicle",
+      "b_id": 22,
+      "class": "near"
+    },
+    {
+      "id": 375,
+      "a_type": "vehicle",
+      "a_id": 71,
+      "b_type": "vehicle",
+      "b_id": 189,
+      "class": "near"
+    },
+    {
+      "id": 376,
+      "a_type": "vehicle",
+      "a_id": 18,
+      "b_type": "vehicle",
+      "b_id": 189,
+      "class": "near"
+    },
+    {
+      "id": 377,
+      "a_type": "vehicle",
+      "a_id": 18,
+      "b_type": "vehicle",
+      "b_id": 22,
+      "class": "near"
+    },
+    {
+      "id": 378,
+      "a_type": "vehicle",
+      "a_id": 16,
+      "b_type": "vehicle",
+      "b_id": 18,
+      "class": "near"
+    },
+    {
+      "id": 379,
+      "a_type": "vehicle",
+      "a_id": 101,
+      "b_type": "vehicle",
+      "b_id": 1348,
+      "class": "near"
+    },
+    {
+      "id": 380,
+      "a_type": "vehicle",
+      "a_id": 101,
+      "b_type": "vehicle",
+      "b_id": 106,
+      "class": "near"
+    },
+    {
+      "id": 381,
+      "a_type": "vehicle",
+      "a_id": 172,
+      "b_type": "vehicle",
+      "b_id": 174,
+      "class": "near"
+    },
+    {
+      "id": 382,
+      "a_type": "vehicle",
+      "a_id": 173,
+      "b_type": "vehicle",
+      "b_id": 174,
+      "class": "adjacent"
+    },
+    {
+      "id": 383,
+      "a_type": "vehicle",
+      "a_id": 172,
+      "b_type": "vehicle",
+      "b_id": 173,
+      "class": "adjacent"
+    },
+    {
+      "id": 384,
+      "a_type": "vehicle",
+      "a_id": 77,
+      "b_type": "vehicle",
+      "b_id": 174,
+      "class": "near"
+    },
+    {
+      "id": 385,
+      "a_type": "vehicle",
+      "a_id": 77,
+      "b_type": "vehicle",
+      "b_id": 173,
+      "class": "near"
+    },
+    {
+      "id": 386,
+      "a_type": "vehicle",
+      "a_id": 76,
+      "b_type": "vehicle",
+      "b_id": 188,
+      "class": "near"
+    },
+    {
+      "id": 387,
+      "a_type": "vehicle",
+      "a_id": 127,
+      "b_type": "vehicle",
+      "b_id": 1357,
+      "class": "near"
+    },
+    {
+      "id": 388,
+      "a_type": "vehicle",
+      "a_id": 188,
+      "b_type": "vehicle",
+      "b_id": 1357,
+      "class": "adjacent"
+    },
+    {
+      "id": 389,
+      "a_type": "vehicle",
+      "a_id": 76,
+      "b_type": "vehicle",
+      "b_id": 1357,
+      "class": "near"
+    },
+    {
+      "id": 390,
+      "a_type": "vehicle",
+      "a_id": 20,
+      "b_type": "vehicle",
+      "b_id": 1344,
+      "class": "near"
+    },
+    {
+      "id": 391,
+      "a_type": "vehicle",
+      "a_id": 20,
+      "b_type": "vehicle",
+      "b_id": 119,
+      "class": "near"
+    },
+    {
+      "id": 392,
+      "a_type": "vehicle",
+      "a_id": 1,
+      "b_type": "vehicle",
+      "b_id": 150,
+      "class": "near"
+    },
+    {
+      "id": 393,
+      "a_type": "vehicle",
+      "a_id": 138,
+      "b_type": "vehicle",
+      "b_id": 150,
+      "class": "near"
+    },
+    {
+      "id": 394,
+      "a_type": "vehicle",
+      "a_id": 1,
+      "b_type": "vehicle",
+      "b_id": 138,
+      "class": "adjacent"
+    },
+    {
+      "id": 395,
+      "a_type": "vehicle",
+      "a_id": 131,
+      "b_type": "vehicle",
+      "b_id": 150,
+      "class": "near"
+    },
+    {
+      "id": 396,
+      "a_type": "vehicle",
+      "a_id": 12,
+      "b_type": "vehicle",
+      "b_id": 113,
+      "class": "near"
+    },
+    {
+      "id": 397,
+      "a_type": "vehicle",
+      "a_id": 88,
+      "b_type": "vehicle",
+      "b_id": 113,
+      "class": "adjacent"
+    },
+    {
+      "id": 398,
+      "a_type": "vehicle",
+      "a_id": 12,
+      "b_type": "vehicle",
+      "b_id": 88,
+      "class": "near"
+    },
+    {
+      "id": 399,
+      "a_type": "vehicle",
+      "a_id": 72,
+      "b_type": "vehicle",
+      "b_id": 152,
+      "class": "near"
+    },
+    {
+      "id": 400,
+      "a_type": "vehicle",
+      "a_id": 108,
+      "b_type": "vehicle",
+      "b_id": 152,
+      "class": "near"
+    },
+    {
+      "id": 401,
+      "a_type": "vehicle",
+      "a_id": 42,
+      "b_type": "vehicle",
+      "b_id": 142,
+      "class": "near"
+    },
+    {
+      "id": 402,
+      "a_type": "vehicle",
+      "a_id": 62,
+      "b_type": "vehicle",
+      "b_id": 142,
+      "class": "near"
+    },
+    {
+      "id": 403,
+      "a_type": "vehicle",
+      "a_id": 17,
+      "b_type": "vehicle",
+      "b_id": 1371,
+      "class": "near"
+    },
+    {
+      "id": 404,
+      "a_type": "vehicle",
+      "a_id": 115,
+      "b_type": "vehicle",
+      "b_id": 1371,
+      "class": "near"
+    },
+    {
+      "id": 405,
+      "a_type": "vehicle",
+      "a_id": 8,
+      "b_type": "vehicle",
+      "b_id": 78,
+      "class": "near"
+    },
+    {
+      "id": 406,
+      "a_type": "vehicle",
+      "a_id": 78,
+      "b_type": "vehicle",
+      "b_id": 122,
+      "class": "near"
+    },
+    {
+      "id": 407,
+      "a_type": "vehicle",
+      "a_id": 7,
+      "b_type": "vehicle",
+      "b_id": 154,
+      "class": "near"
+    },
+    {
+      "id": 408,
+      "a_type": "vehicle",
+      "a_id": 122,
+      "b_type": "vehicle",
+      "b_id": 126,
+      "class": "near"
+    },
+    {
+      "id": 409,
+      "a_type": "vehicle",
+      "a_id": 126,
+      "b_type": "vehicle",
+      "b_id": 154,
+      "class": "near"
+    },
+    {
+      "id": 410,
+      "a_type": "vehicle",
+      "a_id": 67,
+      "b_type": "vehicle",
+      "b_id": 82,
+      "class": "near"
+    },
+    {
+      "id": 411,
+      "a_type": "vehicle",
+      "a_id": 55,
+      "b_type": "vehicle",
+      "b_id": 82,
+      "class": "near"
+    },
+    {
+      "id": 412,
+      "a_type": "vehicle",
+      "a_id": 55,
+      "b_type": "vehicle",
+      "b_id": 67,
+      "class": "near"
+    },
+    {
+      "id": 413,
+      "a_type": "building",
+      "a_id": 1473,
+      "b_type": "tree",
+      "b_id": 215,
+      "class": "near"
+    },
+    {
+      "id": 414,
+      "a_type": "building",
+      "a_id": 1472,
+      "b_type": "tree",
+      "b_id": 215,
+      "class": "near"
+    },
+    {
+      "id": 415,
+      "a_type": "building",
+      "a_id": 1473,
+      "b_type": "tree",
+      "b_id": 222,
+      "class": "adjacent"
+    },
+    {
+      "id": 416,
+      "a_type": "building",
+      "a_id": 1453,
+      "b_type": "tree",
+      "b_id": 223,
+      "class": "adjacent"
+    },
+    {
+      "id": 417,
+      "a_type": "tree",
+      "a_id": 224,
+      "b_type": "vehicle",
+      "b_id": 42,
+      "class": "near"
+    },
+    {
+      "id": 418,
+      "a_type": "tree",
+      "a_id": 224,
+      "b_type": "vehicle",
+      "b_id": 142,
+      "class": "adjacent"
+    },
+    {
+      "id": 419,
+      "a_type": "tree",
+      "a_id": 224,
+      "b_type": "vehicle",
+      "b_id": 62,
+      "class": "adjacent"
+    },
+    {
+      "id": 420,
+      "a_type": "building",
+      "a_id": 1462,
+      "b_type": "tree",
+      "b_id": 229,
+      "class": "near"
+    },
+    {
+      "id": 421,
+      "a_type": "tree",
+      "a_id": 229,
+      "b_type": "vehicle",
+      "b_id": 62,
+      "class": "near"
+    },
+    {
+      "id": 422,
+      "a_type": "building",
+      "a_id": 1462,
+      "b_type": "tree",
+      "b_id": 230,
+      "class": "near"
+    },
+    {
+      "id": 423,
+      "a_type": "building",
+      "a_id": 1431,
+      "b_type": "tree",
+      "b_id": 231,
+      "class": "adjacent"
+    },
+    {
+      "id": 424,
+      "a_type": "tree",
+      "a_id": 231,
+      "b_type": "vehicle",
+      "b_id": 50,
+      "class": "near"
+    },
+    {
+      "id": 425,
+      "a_type": "tree",
+      "a_id": 231,
+      "b_type": "vehicle",
+      "b_id": 29,
+      "class": "adjacent"
+    },
+    {
+      "id": 426,
+      "a_type": "building",
+      "a_id": 1462,
+      "b_type": "tree",
+      "b_id": 233,
+      "class": "near"
+    },
+    {
+      "id": 427,
+      "a_type": "building",
+      "a_id": 1438,
+      "b_type": "tree",
+      "b_id": 233,
+      "class": "adjacent"
+    },
+    {
+      "id": 428,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 236,
+      "class": "adjacent"
+    },
+    {
+      "id": 429,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 238,
+      "class": "adjacent"
+    },
+    {
+      "id": 430,
+      "a_type": "building",
+      "a_id": 1424,
+      "b_type": "tree",
+      "b_id": 238,
+      "class": "near"
+    },
+    {
+      "id": 431,
+      "a_type": "building",
+      "a_id": 1447,
+      "b_type": "tree",
+      "b_id": 241,
+      "class": "near"
+    },
+    {
+      "id": 432,
+      "a_type": "building",
+      "a_id": 1447,
+      "b_type": "tree",
+      "b_id": 242,
+      "class": "adjacent"
+    },
+    {
+      "id": 433,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 242,
+      "class": "adjacent"
+    },
+    {
+      "id": 434,
+      "a_type": "building",
+      "a_id": 1473,
+      "b_type": "tree",
+      "b_id": 244,
+      "class": "adjacent"
+    },
+    {
+      "id": 435,
+      "a_type": "building",
+      "a_id": 1405,
+      "b_type": "tree",
+      "b_id": 244,
+      "class": "near"
+    },
+    {
+      "id": 436,
+      "a_type": "building",
+      "a_id": 1472,
+      "b_type": "tree",
+      "b_id": 244,
+      "class": "near"
+    },
+    {
+      "id": 437,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 245,
+      "class": "adjacent"
+    },
+    {
+      "id": 438,
+      "a_type": "building",
+      "a_id": 1424,
+      "b_type": "tree",
+      "b_id": 245,
+      "class": "near"
+    },
+    {
+      "id": 439,
+      "a_type": "tree",
+      "a_id": 245,
+      "b_type": "vehicle",
+      "b_id": 136,
+      "class": "near"
+    },
+    {
+      "id": 440,
+      "a_type": "tree",
+      "a_id": 245,
+      "b_type": "vehicle",
+      "b_id": 73,
+      "class": "near"
+    },
+    {
+      "id": 441,
+      "a_type": "building",
+      "a_id": 1471,
+      "b_type": "tree",
+      "b_id": 247,
+      "class": "adjacent"
+    },
+    {
+      "id": 442,
+      "a_type": "building",
+      "a_id": 1473,
+      "b_type": "tree",
+      "b_id": 247,
+      "class": "adjacent"
+    },
+    {
+      "id": 443,
+      "a_type": "building",
+      "a_id": 1472,
+      "b_type": "tree",
+      "b_id": 247,
+      "class": "adjacent"
+    },
+    {
+      "id": 444,
+      "a_type": "tree",
+      "a_id": 250,
+      "b_type": "vehicle",
+      "b_id": 62,
+      "class": "adjacent"
+    },
+    {
+      "id": 445,
+      "a_type": "tree",
+      "a_id": 251,
+      "b_type": "vehicle",
+      "b_id": 142,
+      "class": "near"
+    },
+    {
+      "id": 446,
+      "a_type": "tree",
+      "a_id": 251,
+      "b_type": "vehicle",
+      "b_id": 62,
+      "class": "near"
+    },
+    {
+      "id": 447,
+      "a_type": "tree",
+      "a_id": 252,
+      "b_type": "vehicle",
+      "b_id": 42,
+      "class": "adjacent"
+    },
+    {
+      "id": 448,
+      "a_type": "tree",
+      "a_id": 252,
+      "b_type": "vehicle",
+      "b_id": 142,
+      "class": "adjacent"
+    },
+    {
+      "id": 449,
+      "a_type": "tree",
+      "a_id": 253,
+      "b_type": "vehicle",
+      "b_id": 42,
+      "class": "near"
+    },
+    {
+      "id": 450,
+      "a_type": "tree",
+      "a_id": 254,
+      "b_type": "vehicle",
+      "b_id": 1348,
+      "class": "near"
+    },
+    {
+      "id": 451,
+      "a_type": "tree",
+      "a_id": 254,
+      "b_type": "vehicle",
+      "b_id": 101,
+      "class": "near"
+    },
+    {
+      "id": 452,
+      "a_type": "tree",
+      "a_id": 255,
+      "b_type": "vehicle",
+      "b_id": 106,
+      "class": "near"
+    },
+    {
+      "id": 453,
+      "a_type": "tree",
+      "a_id": 257,
+      "b_type": "vehicle",
+      "b_id": 106,
+      "class": "near"
+    },
+    {
+      "id": 454,
+      "a_type": "tree",
+      "a_id": 257,
+      "b_type": "vehicle",
+      "b_id": 101,
+      "class": "adjacent"
+    },
+    {
+      "id": 455,
+      "a_type": "tree",
+      "a_id": 258,
+      "b_type": "vehicle",
+      "b_id": 1348,
+      "class": "near"
+    },
+    {
+      "id": 456,
+      "a_type": "tree",
+      "a_id": 259,
+      "b_type": "vehicle",
+      "b_id": 159,
+      "class": "adjacent"
+    },
+    {
+      "id": 457,
+      "a_type": "building",
+      "a_id": 1401,
+      "b_type": "tree",
+      "b_id": 261,
+      "class": "near"
+    },
+    {
+      "id": 458,
+      "a_type": "tree",
+      "a_id": 261,
+      "b_type": "vehicle",
+      "b_id": 38,
+      "class": "adjacent"
+    },
+    {
+      "id": 459,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 269,
+      "class": "near"
+    },
+    {
+      "id": 460,
+      "a_type": "tree",
+      "a_id": 269,
+      "b_type": "vehicle",
+      "b_id": 1355,
+      "class": "adjacent"
+    },
+    {
+      "id": 461,
+      "a_type": "tree",
+      "a_id": 269,
+      "b_type": "vehicle",
+      "b_id": 24,
+      "class": "adjacent"
+    },
+    {
+      "id": 462,
+      "a_type": "tree",
+      "a_id": 269,
+      "b_type": "vehicle",
+      "b_id": 1356,
+      "class": "adjacent"
+    },
+    {
+      "id": 463,
+      "a_type": "pole",
+      "a_id": 1507,
+      "b_type": "tree",
+      "b_id": 269,
+      "class": "near",
+      "virtual_pole": true
+    },
+    {
+      "id": 464,
+      "a_type": "building",
+      "a_id": 1427,
+      "b_type": "tree",
+      "b_id": 272,
+      "class": "near"
+    },
+    {
+      "id": 465,
+      "a_type": "tree",
+      "a_id": 274,
+      "b_type": "vehicle",
+      "b_id": 15,
+      "class": "adjacent"
+    },
+    {
+      "id": 466,
+      "a_type": "building",
+      "a_id": 1441,
+      "b_type": "tree",
+      "b_id": 275,
+      "class": "near"
+    },
+    {
+      "id": 467,
+      "a_type": "tree",
+      "a_id": 275,
+      "b_type": "vehicle",
+      "b_id": 54,
+      "class": "adjacent"
+    },
+    {
+      "id": 468,
+      "a_type": "tree",
+      "a_id": 276,
+      "b_type": "vehicle",
+      "b_id": 1348,
+      "class": "adjacent"
+    },
+    {
+      "id": 469,
+      "a_type": "tree",
+      "a_id": 277,
+      "b_type": "vehicle",
+      "b_id": 182,
+      "class": "near"
+    },
+    {
+      "id": 470,
+      "a_type": "tree",
+      "a_id": 277,
+      "b_type": "vehicle",
+      "b_id": 181,
+      "class": "adjacent"
+    },
+    {
+      "id": 471,
+      "a_type": "tree",
+      "a_id": 280,
+      "b_type": "vehicle",
+      "b_id": 176,
+      "class": "adjacent"
+    },
+    {
+      "id": 472,
+      "a_type": "tree",
+      "a_id": 280,
+      "b_type": "vehicle",
+      "b_id": 175,
+      "class": "near"
+    },
+    {
+      "id": 473,
+      "a_type": "building",
+      "a_id": 1436,
+      "b_type": "tree",
+      "b_id": 282,
+      "class": "near"
+    },
+    {
+      "id": 474,
+      "a_type": "tree",
+      "a_id": 286,
+      "b_type": "vehicle",
+      "b_id": 135,
+      "class": "adjacent"
+    },
+    {
+      "id": 475,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 287,
+      "class": "adjacent"
+    },
+    {
+      "id": 476,
+      "a_type": "building",
+      "a_id": 1424,
+      "b_type": "tree",
+      "b_id": 287,
+      "class": "near"
+    },
+    {
+      "id": 477,
+      "a_type": "tree",
+      "a_id": 287,
+      "b_type": "vehicle",
+      "b_id": 45,
+      "class": "near"
+    },
+    {
+      "id": 478,
+      "a_type": "tree",
+      "a_id": 288,
+      "b_type": "vehicle",
+      "b_id": 123,
+      "class": "adjacent"
+    },
+    {
+      "id": 479,
+      "a_type": "tree",
+      "a_id": 291,
+      "b_type": "vehicle",
+      "b_id": 145,
+      "class": "adjacent"
+    },
+    {
+      "id": 480,
+      "a_type": "tree",
+      "a_id": 292,
+      "b_type": "vehicle",
+      "b_id": 26,
+      "class": "near"
+    },
+    {
+      "id": 481,
+      "a_type": "tree",
+      "a_id": 292,
+      "b_type": "vehicle",
+      "b_id": 85,
+      "class": "adjacent"
+    },
+    {
+      "id": 482,
+      "a_type": "building",
+      "a_id": 1436,
+      "b_type": "tree",
+      "b_id": 308,
+      "class": "near"
+    },
+    {
+      "id": 483,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "tree",
+      "b_id": 308,
+      "class": "adjacent"
+    },
+    {
+      "id": 484,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "tree",
+      "b_id": 316,
+      "class": "near"
+    },
+    {
+      "id": 485,
+      "a_type": "tree",
+      "a_id": 316,
+      "b_type": "vehicle",
+      "b_id": 21,
+      "class": "adjacent"
+    },
+    {
+      "id": 486,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "tree",
+      "b_id": 317,
+      "class": "adjacent"
+    },
+    {
+      "id": 487,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "tree",
+      "b_id": 318,
+      "class": "near"
+    },
+    {
+      "id": 488,
+      "a_type": "tree",
+      "a_id": 318,
+      "b_type": "vehicle",
+      "b_id": 179,
+      "class": "near"
+    },
+    {
+      "id": 489,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "tree",
+      "b_id": 322,
+      "class": "adjacent"
+    },
+    {
+      "id": 490,
+      "a_type": "building",
+      "a_id": 1415,
+      "b_type": "tree",
+      "b_id": 322,
+      "class": "adjacent"
+    },
+    {
+      "id": 491,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "tree",
+      "b_id": 323,
+      "class": "near"
+    },
+    {
+      "id": 492,
+      "a_type": "tree",
+      "a_id": 323,
+      "b_type": "vehicle",
+      "b_id": 61,
+      "class": "near"
+    },
+    {
+      "id": 493,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "tree",
+      "b_id": 325,
+      "class": "near"
+    },
+    {
+      "id": 494,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "tree",
+      "b_id": 326,
+      "class": "adjacent"
+    },
+    {
+      "id": 495,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "tree",
+      "b_id": 340,
+      "class": "adjacent"
+    },
+    {
+      "id": 496,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "tree",
+      "b_id": 340,
+      "class": "near"
+    },
+    {
+      "id": 497,
+      "a_type": "building",
+      "a_id": 1423,
+      "b_type": "tree",
+      "b_id": 342,
+      "class": "adjacent"
+    },
+    {
+      "id": 498,
+      "a_type": "building",
+      "a_id": 1413,
+      "b_type": "tree",
+      "b_id": 342,
+      "class": "near"
+    },
+    {
+      "id": 499,
+      "a_type": "tree",
+      "a_id": 342,
+      "b_type": "vehicle",
+      "b_id": 162,
+      "class": "near"
+    },
+    {
+      "id": 500,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "tree",
+      "b_id": 343,
+      "class": "near"
+    },
+    {
+      "id": 501,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "tree",
+      "b_id": 344,
+      "class": "near"
+    },
+    {
+      "id": 502,
+      "a_type": "building",
+      "a_id": 1413,
+      "b_type": "tree",
+      "b_id": 344,
+      "class": "near"
+    },
+    {
+      "id": 503,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "tree",
+      "b_id": 345,
+      "class": "near"
+    },
+    {
+      "id": 504,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "tree",
+      "b_id": 345,
+      "class": "near"
+    },
+    {
+      "id": 505,
+      "a_type": "building",
+      "a_id": 1414,
+      "b_type": "tree",
+      "b_id": 346,
+      "class": "near"
+    },
+    {
+      "id": 506,
+      "a_type": "building",
+      "a_id": 1417,
+      "b_type": "tree",
+      "b_id": 346,
+      "class": "near"
+    },
+    {
+      "id": 507,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "tree",
+      "b_id": 347,
+      "class": "adjacent"
+    },
+    {
+      "id": 508,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 349,
+      "class": "near"
+    },
+    {
+      "id": 509,
+      "a_type": "tree",
+      "a_id": 350,
+      "b_type": "vehicle",
+      "b_id": 131,
+      "class": "near"
+    },
+    {
+      "id": 510,
+      "a_type": "tree",
+      "a_id": 351,
+      "b_type": "vehicle",
+      "b_id": 131,
+      "class": "near"
+    },
+    {
+      "id": 511,
+      "a_type": "building",
+      "a_id": 1437,
+      "b_type": "tree",
+      "b_id": 352,
+      "class": "adjacent"
+    },
+    {
+      "id": 512,
+      "a_type": "building",
+      "a_id": 1415,
+      "b_type": "tree",
+      "b_id": 352,
+      "class": "adjacent"
+    },
+    {
+      "id": 513,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 354,
+      "class": "adjacent"
+    },
+    {
+      "id": 514,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 355,
+      "class": "adjacent"
+    },
+    {
+      "id": 515,
+      "a_type": "tree",
+      "a_id": 355,
+      "b_type": "vehicle",
+      "b_id": 150,
+      "class": "near"
+    },
+    {
+      "id": 516,
+      "a_type": "tree",
+      "a_id": 357,
+      "b_type": "vehicle",
+      "b_id": 143,
+      "class": "adjacent"
+    },
+    {
+      "id": 517,
+      "a_type": "tree",
+      "a_id": 357,
+      "b_type": "vehicle",
+      "b_id": 1347,
+      "class": "adjacent"
+    },
+    {
+      "id": 518,
+      "a_type": "tree",
+      "a_id": 358,
+      "b_type": "vehicle",
+      "b_id": 131,
+      "class": "near"
+    },
+    {
+      "id": 519,
+      "a_type": "building",
+      "a_id": 1440,
+      "b_type": "tree",
+      "b_id": 359,
+      "class": "near"
+    },
+    {
+      "id": 520,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "tree",
+      "b_id": 387,
+      "class": "near"
+    },
+    {
+      "id": 521,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 387,
+      "class": "adjacent"
+    },
+    {
+      "id": 522,
+      "a_type": "tree",
+      "a_id": 388,
+      "b_type": "vehicle",
+      "b_id": 10,
+      "class": "near"
+    },
+    {
+      "id": 523,
+      "a_type": "tree",
+      "a_id": 388,
+      "b_type": "vehicle",
+      "b_id": 71,
+      "class": "near"
+    },
+    {
+      "id": 524,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "tree",
+      "b_id": 389,
+      "class": "near"
+    },
+    {
+      "id": 525,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 389,
+      "class": "adjacent"
+    },
+    {
+      "id": 526,
+      "a_type": "tree",
+      "a_id": 389,
+      "b_type": "vehicle",
+      "b_id": 1,
+      "class": "near"
+    },
+    {
+      "id": 527,
+      "a_type": "tree",
+      "a_id": 389,
+      "b_type": "vehicle",
+      "b_id": 14,
+      "class": "near"
+    },
+    {
+      "id": 528,
+      "a_type": "building",
+      "a_id": 1444,
+      "b_type": "tree",
+      "b_id": 390,
+      "class": "adjacent"
+    },
+    {
+      "id": 529,
+      "a_type": "building",
+      "a_id": 1443,
+      "b_type": "tree",
+      "b_id": 390,
+      "class": "adjacent"
+    },
+    {
+      "id": 530,
+      "a_type": "tree",
+      "a_id": 391,
+      "b_type": "vehicle",
+      "b_id": 66,
+      "class": "adjacent"
+    },
+    {
+      "id": 531,
+      "a_type": "building",
+      "a_id": 1444,
+      "b_type": "tree",
+      "b_id": 393,
+      "class": "near"
+    },
+    {
+      "id": 532,
+      "a_type": "tree",
+      "a_id": 393,
+      "b_type": "vehicle",
+      "b_id": 10,
+      "class": "near"
+    },
+    {
+      "id": 533,
+      "a_type": "tree",
+      "a_id": 393,
+      "b_type": "vehicle",
+      "b_id": 71,
+      "class": "adjacent"
+    },
+    {
+      "id": 534,
+      "a_type": "tree",
+      "a_id": 393,
+      "b_type": "vehicle",
+      "b_id": 190,
+      "class": "near"
+    },
+    {
+      "id": 535,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "tree",
+      "b_id": 394,
+      "class": "near"
+    },
+    {
+      "id": 536,
+      "a_type": "tree",
+      "a_id": 394,
+      "b_type": "vehicle",
+      "b_id": 112,
+      "class": "adjacent"
+    },
+    {
+      "id": 537,
+      "a_type": "tree",
+      "a_id": 394,
+      "b_type": "vehicle",
+      "b_id": 105,
+      "class": "near"
+    },
+    {
+      "id": 538,
+      "a_type": "tree",
+      "a_id": 394,
+      "b_type": "vehicle",
+      "b_id": 99,
+      "class": "adjacent"
+    },
+    {
+      "id": 539,
+      "a_type": "tree",
+      "a_id": 394,
+      "b_type": "vehicle",
+      "b_id": 14,
+      "class": "near"
+    },
+    {
+      "id": 540,
+      "a_type": "tree",
+      "a_id": 395,
+      "b_type": "vehicle",
+      "b_id": 75,
+      "class": "near"
+    },
+    {
+      "id": 541,
+      "a_type": "tree",
+      "a_id": 395,
+      "b_type": "vehicle",
+      "b_id": 157,
+      "class": "adjacent"
+    },
+    {
+      "id": 542,
+      "a_type": "building",
+      "a_id": 1415,
+      "b_type": "tree",
+      "b_id": 398,
+      "class": "near"
+    },
+    {
+      "id": 543,
+      "a_type": "building",
+      "a_id": 1437,
+      "b_type": "tree",
+      "b_id": 401,
+      "class": "adjacent"
+    },
+    {
+      "id": 544,
+      "a_type": "building",
+      "a_id": 1437,
+      "b_type": "tree",
+      "b_id": 402,
+      "class": "near"
+    },
+    {
+      "id": 545,
+      "a_type": "building",
+      "a_id": 1461,
+      "b_type": "tree",
+      "b_id": 402,
+      "class": "adjacent"
+    },
+    {
+      "id": 546,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 402,
+      "class": "adjacent"
+    },
+    {
+      "id": 547,
+      "a_type": "building",
+      "a_id": 1437,
+      "b_type": "tree",
+      "b_id": 403,
+      "class": "near"
+    },
+    {
+      "id": 548,
+      "a_type": "tree",
+      "a_id": 403,
+      "b_type": "vehicle",
+      "b_id": 114,
+      "class": "adjacent"
+    },
+    {
+      "id": 549,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 405,
+      "class": "adjacent"
+    },
+    {
+      "id": 550,
+      "a_type": "building",
+      "a_id": 1443,
+      "b_type": "tree",
+      "b_id": 409,
+      "class": "near"
+    },
+    {
+      "id": 551,
+      "a_type": "tree",
+      "a_id": 410,
+      "b_type": "vehicle",
+      "b_id": 75,
+      "class": "adjacent"
+    },
+    {
+      "id": 552,
+      "a_type": "tree",
+      "a_id": 410,
+      "b_type": "vehicle",
+      "b_id": 141,
+      "class": "adjacent"
+    },
+    {
+      "id": 553,
+      "a_type": "building",
+      "a_id": 1419,
+      "b_type": "tree",
+      "b_id": 411,
+      "class": "near"
+    },
+    {
+      "id": 554,
+      "a_type": "tree",
+      "a_id": 412,
+      "b_type": "vehicle",
+      "b_id": 1374,
+      "class": "near"
+    },
+    {
+      "id": 555,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "tree",
+      "b_id": 413,
+      "class": "adjacent"
+    },
+    {
+      "id": 556,
+      "a_type": "building",
+      "a_id": 1425,
+      "b_type": "tree",
+      "b_id": 413,
+      "class": "adjacent"
+    },
+    {
+      "id": 557,
+      "a_type": "tree",
+      "a_id": 413,
+      "b_type": "vehicle",
+      "b_id": 105,
+      "class": "near"
+    },
+    {
+      "id": 558,
+      "a_type": "building",
+      "a_id": 1430,
+      "b_type": "tree",
+      "b_id": 414,
+      "class": "adjacent"
+    },
+    {
+      "id": 559,
+      "a_type": "building",
+      "a_id": 1430,
+      "b_type": "tree",
+      "b_id": 416,
+      "class": "adjacent"
+    },
+    {
+      "id": 560,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "tree",
+      "b_id": 417,
+      "class": "adjacent"
+    },
+    {
+      "id": 561,
+      "a_type": "building",
+      "a_id": 1425,
+      "b_type": "tree",
+      "b_id": 417,
+      "class": "adjacent"
+    },
+    {
+      "id": 562,
+      "a_type": "tree",
+      "a_id": 417,
+      "b_type": "vehicle",
+      "b_id": 116,
+      "class": "near"
+    },
+    {
+      "id": 563,
+      "a_type": "tree",
+      "a_id": 418,
+      "b_type": "vehicle",
+      "b_id": 173,
+      "class": "adjacent"
+    },
+    {
+      "id": 564,
+      "a_type": "tree",
+      "a_id": 418,
+      "b_type": "vehicle",
+      "b_id": 77,
+      "class": "adjacent"
+    },
+    {
+      "id": 565,
+      "a_type": "tree",
+      "a_id": 418,
+      "b_type": "vehicle",
+      "b_id": 174,
+      "class": "adjacent"
+    },
+    {
+      "id": 566,
+      "a_type": "tree",
+      "a_id": 419,
+      "b_type": "vehicle",
+      "b_id": 173,
+      "class": "near"
+    },
+    {
+      "id": 567,
+      "a_type": "tree",
+      "a_id": 419,
+      "b_type": "vehicle",
+      "b_id": 172,
+      "class": "adjacent"
+    },
+    {
+      "id": 568,
+      "a_type": "building",
+      "a_id": 1419,
+      "b_type": "tree",
+      "b_id": 420,
+      "class": "near"
+    },
+    {
+      "id": 569,
+      "a_type": "tree",
+      "a_id": 423,
+      "b_type": "vehicle",
+      "b_id": 40,
+      "class": "near"
+    },
+    {
+      "id": 570,
+      "a_type": "tree",
+      "a_id": 423,
+      "b_type": "vehicle",
+      "b_id": 149,
+      "class": "near"
+    },
+    {
+      "id": 571,
+      "a_type": "building",
+      "a_id": 1446,
+      "b_type": "tree",
+      "b_id": 424,
+      "class": "near"
+    },
+    {
+      "id": 572,
+      "a_type": "tree",
+      "a_id": 425,
+      "b_type": "vehicle",
+      "b_id": 27,
+      "class": "near"
+    },
+    {
+      "id": 573,
+      "a_type": "tree",
+      "a_id": 425,
+      "b_type": "vehicle",
+      "b_id": 92,
+      "class": "adjacent"
+    },
+    {
+      "id": 574,
+      "a_type": "building",
+      "a_id": 1445,
+      "b_type": "tree",
+      "b_id": 426,
+      "class": "adjacent"
+    },
+    {
+      "id": 575,
+      "a_type": "building",
+      "a_id": 1445,
+      "b_type": "tree",
+      "b_id": 427,
+      "class": "adjacent"
+    },
+    {
+      "id": 576,
+      "a_type": "tree",
+      "a_id": 427,
+      "b_type": "vehicle",
+      "b_id": 27,
+      "class": "adjacent"
+    },
+    {
+      "id": 577,
+      "a_type": "tree",
+      "a_id": 427,
+      "b_type": "vehicle",
+      "b_id": 40,
+      "class": "near"
+    },
+    {
+      "id": 578,
+      "a_type": "building",
+      "a_id": 1421,
+      "b_type": "tree",
+      "b_id": 428,
+      "class": "adjacent"
+    },
+    {
+      "id": 579,
+      "a_type": "building",
+      "a_id": 1433,
+      "b_type": "tree",
+      "b_id": 428,
+      "class": "near"
+    },
+    {
+      "id": 580,
+      "a_type": "tree",
+      "a_id": 428,
+      "b_type": "vehicle",
+      "b_id": 1373,
+      "class": "near"
+    },
+    {
+      "id": 581,
+      "a_type": "building",
+      "a_id": 1408,
+      "b_type": "tree",
+      "b_id": 429,
+      "class": "near"
+    },
+    {
+      "id": 582,
+      "a_type": "building",
+      "a_id": 1421,
+      "b_type": "tree",
+      "b_id": 433,
+      "class": "adjacent"
+    },
+    {
+      "id": 583,
+      "a_type": "building",
+      "a_id": 1433,
+      "b_type": "tree",
+      "b_id": 433,
+      "class": "near"
+    },
+    {
+      "id": 584,
+      "a_type": "tree",
+      "a_id": 435,
+      "b_type": "vehicle",
+      "b_id": 120,
+      "class": "adjacent"
+    },
+    {
+      "id": 585,
+      "a_type": "tree",
+      "a_id": 435,
+      "b_type": "vehicle",
+      "b_id": 1354,
+      "class": "adjacent"
+    },
+    {
+      "id": 586,
+      "a_type": "building",
+      "a_id": 1421,
+      "b_type": "tree",
+      "b_id": 436,
+      "class": "near"
+    },
+    {
+      "id": 587,
+      "a_type": "building",
+      "a_id": 1433,
+      "b_type": "tree",
+      "b_id": 436,
+      "class": "adjacent"
+    },
+    {
+      "id": 588,
+      "a_type": "tree",
+      "a_id": 437,
+      "b_type": "vehicle",
+      "b_id": 1371,
+      "class": "near"
+    },
+    {
+      "id": 589,
+      "a_type": "tree",
+      "a_id": 437,
+      "b_type": "vehicle",
+      "b_id": 115,
+      "class": "adjacent"
+    },
+    {
+      "id": 590,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "tree",
+      "b_id": 438,
+      "class": "near"
+    },
+    {
+      "id": 591,
+      "a_type": "building",
+      "a_id": 1398,
+      "b_type": "tree",
+      "b_id": 440,
+      "class": "adjacent"
+    },
+    {
+      "id": 592,
+      "a_type": "building",
+      "a_id": 1463,
+      "b_type": "tree",
+      "b_id": 440,
+      "class": "adjacent"
+    },
+    {
+      "id": 593,
+      "a_type": "tree",
+      "a_id": 442,
+      "b_type": "vehicle",
+      "b_id": 178,
+      "class": "adjacent"
+    },
+    {
+      "id": 594,
+      "a_type": "tree",
+      "a_id": 442,
+      "b_type": "vehicle",
+      "b_id": 177,
+      "class": "adjacent"
+    },
+    {
+      "id": 595,
+      "a_type": "tree",
+      "a_id": 442,
+      "b_type": "vehicle",
+      "b_id": 37,
+      "class": "near"
+    },
+    {
+      "id": 596,
+      "a_type": "building",
+      "a_id": 1410,
+      "b_type": "tree",
+      "b_id": 443,
+      "class": "adjacent"
+    },
+    {
+      "id": 597,
+      "a_type": "building",
+      "a_id": 1445,
+      "b_type": "tree",
+      "b_id": 444,
+      "class": "adjacent"
+    },
+    {
+      "id": 598,
+      "a_type": "tree",
+      "a_id": 446,
+      "b_type": "vehicle",
+      "b_id": 88,
+      "class": "near"
+    },
+    {
+      "id": 599,
+      "a_type": "tree",
+      "a_id": 447,
+      "b_type": "vehicle",
+      "b_id": 118,
+      "class": "near"
+    },
+    {
+      "id": 600,
+      "a_type": "tree",
+      "a_id": 447,
+      "b_type": "vehicle",
+      "b_id": 37,
+      "class": "near"
+    },
+    {
+      "id": 601,
+      "a_type": "tree",
+      "a_id": 450,
+      "b_type": "vehicle",
+      "b_id": 20,
+      "class": "adjacent"
+    },
+    {
+      "id": 602,
+      "a_type": "tree",
+      "a_id": 450,
+      "b_type": "vehicle",
+      "b_id": 1344,
+      "class": "near"
+    },
+    {
+      "id": 603,
+      "a_type": "tree",
+      "a_id": 450,
+      "b_type": "vehicle",
+      "b_id": 119,
+      "class": "near"
+    },
+    {
+      "id": 604,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 451,
+      "class": "adjacent"
+    },
+    {
+      "id": 605,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 451,
+      "class": "adjacent"
+    },
+    {
+      "id": 606,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 452,
+      "class": "adjacent"
+    },
+    {
+      "id": 607,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 452,
+      "class": "adjacent"
+    },
+    {
+      "id": 608,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 453,
+      "class": "adjacent"
+    },
+    {
+      "id": 609,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 453,
+      "class": "adjacent"
+    },
+    {
+      "id": 610,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 454,
+      "class": "adjacent"
+    },
+    {
+      "id": 611,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 454,
+      "class": "adjacent"
+    },
+    {
+      "id": 612,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 455,
+      "class": "adjacent"
+    },
+    {
+      "id": 613,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 455,
+      "class": "adjacent"
+    },
+    {
+      "id": 614,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 455,
+      "class": "near"
+    },
+    {
+      "id": 615,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 456,
+      "class": "near"
+    },
+    {
+      "id": 616,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 456,
+      "class": "near"
+    },
+    {
+      "id": 617,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 456,
+      "class": "near"
+    },
+    {
+      "id": 618,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 457,
+      "class": "adjacent"
+    },
+    {
+      "id": 619,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 457,
+      "class": "adjacent"
+    },
+    {
+      "id": 620,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 457,
+      "class": "adjacent"
+    },
+    {
+      "id": 621,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 457,
+      "class": "adjacent"
+    },
+    {
+      "id": 622,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 458,
+      "class": "adjacent"
+    },
+    {
+      "id": 623,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 458,
+      "class": "near"
+    },
+    {
+      "id": 624,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 459,
+      "class": "adjacent"
+    },
+    {
+      "id": 625,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 459,
+      "class": "near"
+    },
+    {
+      "id": 626,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 461,
+      "class": "adjacent"
+    },
+    {
+      "id": 627,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 461,
+      "class": "adjacent"
+    },
+    {
+      "id": 628,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 461,
+      "class": "adjacent"
+    },
+    {
+      "id": 629,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 461,
+      "class": "adjacent"
+    },
+    {
+      "id": 630,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 462,
+      "class": "adjacent"
+    },
+    {
+      "id": 631,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 462,
+      "class": "adjacent"
+    },
+    {
+      "id": 632,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 463,
+      "class": "adjacent"
+    },
+    {
+      "id": 633,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 463,
+      "class": "adjacent"
+    },
+    {
+      "id": 634,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 464,
+      "class": "adjacent"
+    },
+    {
+      "id": 635,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 464,
+      "class": "adjacent"
+    },
+    {
+      "id": 636,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 465,
+      "class": "adjacent"
+    },
+    {
+      "id": 637,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 465,
+      "class": "adjacent"
+    },
+    {
+      "id": 638,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "tree",
+      "b_id": 465,
+      "class": "adjacent"
+    },
+    {
+      "id": 639,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "tree",
+      "b_id": 465,
+      "class": "adjacent"
+    },
+    {
+      "id": 640,
+      "a_type": "building",
+      "a_id": 1432,
+      "b_type": "tree",
+      "b_id": 467,
+      "class": "adjacent"
+    },
+    {
+      "id": 641,
+      "a_type": "building",
+      "a_id": 1416,
+      "b_type": "tree",
+      "b_id": 469,
+      "class": "adjacent"
+    },
+    {
+      "id": 642,
+      "a_type": "tree",
+      "a_id": 469,
+      "b_type": "vehicle",
+      "b_id": 103,
+      "class": "near"
+    },
+    {
+      "id": 643,
+      "a_type": "building",
+      "a_id": 1428,
+      "b_type": "tree",
+      "b_id": 470,
+      "class": "near"
+    },
+    {
+      "id": 644,
+      "a_type": "tree",
+      "a_id": 471,
+      "b_type": "vehicle",
+      "b_id": 169,
+      "class": "near"
+    },
+    {
+      "id": 645,
+      "a_type": "tree",
+      "a_id": 471,
+      "b_type": "vehicle",
+      "b_id": 110,
+      "class": "adjacent"
+    },
+    {
+      "id": 646,
+      "a_type": "tree",
+      "a_id": 472,
+      "b_type": "vehicle",
+      "b_id": 28,
+      "class": "adjacent"
+    },
+    {
+      "id": 647,
+      "a_type": "building",
+      "a_id": 1428,
+      "b_type": "tree",
+      "b_id": 473,
+      "class": "adjacent"
+    },
+    {
+      "id": 648,
+      "a_type": "tree",
+      "a_id": 473,
+      "b_type": "vehicle",
+      "b_id": 127,
+      "class": "adjacent"
+    },
+    {
+      "id": 649,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 474,
+      "class": "near"
+    },
+    {
+      "id": 650,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 474,
+      "class": "adjacent"
+    },
+    {
+      "id": 651,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 474,
+      "class": "adjacent"
+    },
+    {
+      "id": 652,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 477,
+      "class": "adjacent"
+    },
+    {
+      "id": 653,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 477,
+      "class": "adjacent"
+    },
+    {
+      "id": 654,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 478,
+      "class": "adjacent"
+    },
+    {
+      "id": 655,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 478,
+      "class": "adjacent"
+    },
+    {
+      "id": 656,
+      "a_type": "building",
+      "a_id": 1450,
+      "b_type": "tree",
+      "b_id": 479,
+      "class": "adjacent"
+    },
+    {
+      "id": 657,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 479,
+      "class": "near"
+    },
+    {
+      "id": 658,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 479,
+      "class": "near"
+    },
+    {
+      "id": 659,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 479,
+      "class": "adjacent"
+    },
+    {
+      "id": 660,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 479,
+      "class": "adjacent"
+    },
+    {
+      "id": 661,
+      "a_type": "building",
+      "a_id": 1426,
+      "b_type": "tree",
+      "b_id": 480,
+      "class": "adjacent"
+    },
+    {
+      "id": 662,
+      "a_type": "tree",
+      "a_id": 480,
+      "b_type": "vehicle",
+      "b_id": 58,
+      "class": "near"
+    },
+    {
+      "id": 663,
+      "a_type": "building",
+      "a_id": 1410,
+      "b_type": "tree",
+      "b_id": 481,
+      "class": "near"
+    },
+    {
+      "id": 664,
+      "a_type": "building",
+      "a_id": 1426,
+      "b_type": "tree",
+      "b_id": 483,
+      "class": "near"
+    },
+    {
+      "id": 665,
+      "a_type": "tree",
+      "a_id": 484,
+      "b_type": "vehicle",
+      "b_id": 1357,
+      "class": "near"
+    },
+    {
+      "id": 666,
+      "a_type": "tree",
+      "a_id": 484,
+      "b_type": "vehicle",
+      "b_id": 76,
+      "class": "adjacent"
+    },
+    {
+      "id": 667,
+      "a_type": "tree",
+      "a_id": 484,
+      "b_type": "vehicle",
+      "b_id": 188,
+      "class": "adjacent"
+    },
+    {
+      "id": 668,
+      "a_type": "building",
+      "a_id": 1409,
+      "b_type": "tree",
+      "b_id": 486,
+      "class": "adjacent"
+    },
+    {
+      "id": 669,
+      "a_type": "tree",
+      "a_id": 486,
+      "b_type": "vehicle",
+      "b_id": 100,
+      "class": "adjacent"
+    },
+    {
+      "id": 670,
+      "a_type": "tree",
+      "a_id": 486,
+      "b_type": "vehicle",
+      "b_id": 9,
+      "class": "near"
+    },
+    {
+      "id": 671,
+      "a_type": "building",
+      "a_id": 1449,
+      "b_type": "tree",
+      "b_id": 487,
+      "class": "adjacent"
+    },
+    {
+      "id": 672,
+      "a_type": "tree",
+      "a_id": 487,
+      "b_type": "vehicle",
+      "b_id": 100,
+      "class": "adjacent"
+    },
+    {
+      "id": 673,
+      "a_type": "tree",
+      "a_id": 487,
+      "b_type": "vehicle",
+      "b_id": 1367,
+      "class": "near"
+    },
+    {
+      "id": 674,
+      "a_type": "tree",
+      "a_id": 487,
+      "b_type": "vehicle",
+      "b_id": 9,
+      "class": "near"
+    },
+    {
+      "id": 675,
+      "a_type": "tree",
+      "a_id": 488,
+      "b_type": "vehicle",
+      "b_id": 166,
+      "class": "near"
+    },
+    {
+      "id": 676,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 489,
+      "class": "near"
+    },
+    {
+      "id": 677,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 489,
+      "class": "adjacent"
+    },
+    {
+      "id": 678,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 489,
+      "class": "adjacent"
+    },
+    {
+      "id": 679,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "tree",
+      "b_id": 490,
+      "class": "near"
+    },
+    {
+      "id": 680,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "tree",
+      "b_id": 490,
+      "class": "adjacent"
+    },
+    {
+      "id": 681,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "tree",
+      "b_id": 491,
+      "class": "adjacent"
+    },
+    {
+      "id": 682,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "tree",
+      "b_id": 491,
+      "class": "adjacent"
+    },
+    {
+      "id": 683,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 492,
+      "class": "adjacent"
+    },
+    {
+      "id": 684,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 492,
+      "class": "adjacent"
+    },
+    {
+      "id": 685,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "tree",
+      "b_id": 493,
+      "class": "adjacent"
+    },
+    {
+      "id": 686,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "tree",
+      "b_id": 493,
+      "class": "adjacent"
+    },
+    {
+      "id": 687,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "tree",
+      "b_id": 493,
+      "class": "adjacent"
+    },
+    {
+      "id": 688,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "tree",
+      "b_id": 493,
+      "class": "adjacent"
+    },
+    {
+      "id": 689,
+      "a_type": "tree",
+      "a_id": 497,
+      "b_type": "vehicle",
+      "b_id": 1367,
+      "class": "near"
+    },
+    {
+      "id": 690,
+      "a_type": "tree",
+      "a_id": 498,
+      "b_type": "vehicle",
+      "b_id": 108,
+      "class": "near"
+    },
+    {
+      "id": 691,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 499,
+      "class": "adjacent"
+    },
+    {
+      "id": 692,
+      "a_type": "tree",
+      "a_id": 500,
+      "b_type": "vehicle",
+      "b_id": 48,
+      "class": "adjacent"
+    },
+    {
+      "id": 693,
+      "a_type": "tree",
+      "a_id": 500,
+      "b_type": "vehicle",
+      "b_id": 63,
+      "class": "near"
+    },
+    {
+      "id": 694,
+      "a_type": "building",
+      "a_id": 1449,
+      "b_type": "tree",
+      "b_id": 502,
+      "class": "adjacent"
+    },
+    {
+      "id": 695,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 502,
+      "class": "adjacent"
+    },
+    {
+      "id": 696,
+      "a_type": "tree",
+      "a_id": 502,
+      "b_type": "vehicle",
+      "b_id": 1367,
+      "class": "adjacent"
+    },
+    {
+      "id": 697,
+      "a_type": "tree",
+      "a_id": 502,
+      "b_type": "vehicle",
+      "b_id": 1333,
+      "class": "adjacent"
+    },
+    {
+      "id": 698,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 503,
+      "class": "near"
+    },
+    {
+      "id": 699,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 504,
+      "class": "adjacent"
+    },
+    {
+      "id": 700,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 504,
+      "class": "near"
+    },
+    {
+      "id": 701,
+      "a_type": "building",
+      "a_id": 1449,
+      "b_type": "tree",
+      "b_id": 505,
+      "class": "near"
+    },
+    {
+      "id": 702,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 505,
+      "class": "near"
+    },
+    {
+      "id": 703,
+      "a_type": "tree",
+      "a_id": 505,
+      "b_type": "vehicle",
+      "b_id": 1367,
+      "class": "near"
+    },
+    {
+      "id": 704,
+      "a_type": "tree",
+      "a_id": 505,
+      "b_type": "vehicle",
+      "b_id": 1333,
+      "class": "adjacent"
+    },
+    {
+      "id": 705,
+      "a_type": "building",
+      "a_id": 1429,
+      "b_type": "tree",
+      "b_id": 507,
+      "class": "near"
+    },
+    {
+      "id": 706,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "tree",
+      "b_id": 509,
+      "class": "adjacent"
+    },
+    {
+      "id": 707,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "tree",
+      "b_id": 509,
+      "class": "adjacent"
+    },
+    {
+      "id": 708,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 511,
+      "class": "adjacent"
+    },
+    {
+      "id": 709,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 511,
+      "class": "near"
+    },
+    {
+      "id": 710,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 511,
+      "class": "adjacent"
+    },
+    {
+      "id": 711,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 511,
+      "class": "adjacent"
+    },
+    {
+      "id": 712,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 513,
+      "class": "near"
+    },
+    {
+      "id": 713,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 513,
+      "class": "near"
+    },
+    {
+      "id": 714,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 514,
+      "class": "adjacent"
+    },
+    {
+      "id": 715,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 514,
+      "class": "adjacent"
+    },
+    {
+      "id": 716,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "tree",
+      "b_id": 515,
+      "class": "adjacent"
+    },
+    {
+      "id": 717,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "tree",
+      "b_id": 515,
+      "class": "adjacent"
+    },
+    {
+      "id": 718,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 516,
+      "class": "adjacent"
+    },
+    {
+      "id": 719,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 516,
+      "class": "adjacent"
+    },
+    {
+      "id": 720,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 517,
+      "class": "adjacent"
+    },
+    {
+      "id": 721,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 517,
+      "class": "adjacent"
+    },
+    {
+      "id": 722,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 518,
+      "class": "adjacent"
+    },
+    {
+      "id": 723,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 518,
+      "class": "adjacent"
+    },
+    {
+      "id": 724,
+      "a_type": "building",
+      "a_id": 1452,
+      "b_type": "tree",
+      "b_id": 521,
+      "class": "adjacent"
+    },
+    {
+      "id": 725,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 523,
+      "class": "adjacent"
+    },
+    {
+      "id": 726,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 524,
+      "class": "near"
+    },
+    {
+      "id": 727,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 526,
+      "class": "adjacent"
+    },
+    {
+      "id": 728,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 527,
+      "class": "adjacent"
+    },
+    {
+      "id": 729,
+      "a_type": "tree",
+      "a_id": 528,
+      "b_type": "vehicle",
+      "b_id": 1341,
+      "class": "adjacent"
+    },
+    {
+      "id": 730,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 529,
+      "class": "adjacent"
+    },
+    {
+      "id": 731,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 529,
+      "class": "adjacent"
+    },
+    {
+      "id": 732,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "tree",
+      "b_id": 529,
+      "class": "near"
+    },
+    {
+      "id": 733,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "tree",
+      "b_id": 529,
+      "class": "adjacent"
+    },
+    {
+      "id": 734,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 529,
+      "class": "near"
+    },
+    {
+      "id": 735,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 529,
+      "class": "near"
+    },
+    {
+      "id": 736,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 531,
+      "class": "adjacent"
+    },
+    {
+      "id": 737,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 531,
+      "class": "adjacent"
+    },
+    {
+      "id": 738,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 531,
+      "class": "adjacent"
+    },
+    {
+      "id": 739,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 531,
+      "class": "adjacent"
+    },
+    {
+      "id": 740,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "near"
+    },
+    {
+      "id": 741,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "near"
+    },
+    {
+      "id": 742,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "adjacent"
+    },
+    {
+      "id": 743,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "adjacent"
+    },
+    {
+      "id": 744,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "adjacent"
+    },
+    {
+      "id": 745,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "adjacent"
+    },
+    {
+      "id": 746,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "adjacent"
+    },
+    {
+      "id": 747,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "tree",
+      "b_id": 532,
+      "class": "adjacent"
+    },
+    {
+      "id": 748,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 533,
+      "class": "adjacent"
+    },
+    {
+      "id": 749,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 533,
+      "class": "adjacent"
+    },
+    {
+      "id": 750,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 536,
+      "class": "adjacent"
+    },
+    {
+      "id": 751,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 536,
+      "class": "adjacent"
+    },
+    {
+      "id": 752,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "tree",
+      "b_id": 537,
+      "class": "near"
+    },
+    {
+      "id": 753,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 537,
+      "class": "adjacent"
+    },
+    {
+      "id": 754,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 537,
+      "class": "adjacent"
+    },
+    {
+      "id": 755,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 539,
+      "class": "adjacent"
+    },
+    {
+      "id": 756,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 539,
+      "class": "adjacent"
+    },
+    {
+      "id": 757,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 540,
+      "class": "adjacent"
+    },
+    {
+      "id": 758,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 540,
+      "class": "adjacent"
+    },
+    {
+      "id": 759,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 541,
+      "class": "near"
+    },
+    {
+      "id": 760,
+      "a_type": "building",
+      "a_id": 1454,
+      "b_type": "tree",
+      "b_id": 542,
+      "class": "near"
+    },
+    {
+      "id": 761,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 542,
+      "class": "adjacent"
+    },
+    {
+      "id": 762,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 542,
+      "class": "adjacent"
+    },
+    {
+      "id": 763,
+      "a_type": "tree",
+      "a_id": 543,
+      "b_type": "vehicle",
+      "b_id": 1341,
+      "class": "near"
+    },
+    {
+      "id": 764,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "tree",
+      "b_id": 544,
+      "class": "adjacent"
+    },
+    {
+      "id": 765,
+      "a_type": "conductor",
+      "a_id": 1485,
+      "b_type": "tree",
+      "b_id": 544,
+      "class": "adjacent"
+    },
+    {
+      "id": 766,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 545,
+      "class": "adjacent"
+    },
+    {
+      "id": 767,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 545,
+      "class": "adjacent"
+    },
+    {
+      "id": 768,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 545,
+      "class": "near"
+    },
+    {
+      "id": 769,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 545,
+      "class": "near"
+    },
+    {
+      "id": 770,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 546,
+      "class": "adjacent"
+    },
+    {
+      "id": 771,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 546,
+      "class": "adjacent"
+    },
+    {
+      "id": 772,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 546,
+      "class": "adjacent"
+    },
+    {
+      "id": 773,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 546,
+      "class": "near"
+    },
+    {
+      "id": 774,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 547,
+      "class": "near"
+    },
+    {
+      "id": 775,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 547,
+      "class": "near"
+    },
+    {
+      "id": 776,
+      "a_type": "building",
+      "a_id": 1456,
+      "b_type": "tree",
+      "b_id": 548,
+      "class": "adjacent"
+    },
+    {
+      "id": 777,
+      "a_type": "tree",
+      "a_id": 548,
+      "b_type": "vehicle",
+      "b_id": 1337,
+      "class": "adjacent"
+    },
+    {
+      "id": 778,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "tree",
+      "b_id": 548,
+      "class": "adjacent"
+    },
+    {
+      "id": 779,
+      "a_type": "conductor",
+      "a_id": 1484,
+      "b_type": "tree",
+      "b_id": 548,
+      "class": "adjacent"
+    },
+    {
+      "id": 780,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "tree",
+      "b_id": 548,
+      "class": "adjacent"
+    },
+    {
+      "id": 781,
+      "a_type": "conductor",
+      "a_id": 1485,
+      "b_type": "tree",
+      "b_id": 548,
+      "class": "adjacent"
+    },
+    {
+      "id": 782,
+      "a_type": "building",
+      "a_id": 1456,
+      "b_type": "tree",
+      "b_id": 549,
+      "class": "adjacent"
+    },
+    {
+      "id": 783,
+      "a_type": "tree",
+      "a_id": 549,
+      "b_type": "vehicle",
+      "b_id": 1365,
+      "class": "near"
+    },
+    {
+      "id": 784,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 549,
+      "class": "near"
+    },
+    {
+      "id": 785,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 549,
+      "class": "near"
+    },
+    {
+      "id": 786,
+      "a_type": "building",
+      "a_id": 1456,
+      "b_type": "tree",
+      "b_id": 550,
+      "class": "adjacent"
+    },
+    {
+      "id": 787,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 550,
+      "class": "near"
+    },
+    {
+      "id": 788,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "tree",
+      "b_id": 550,
+      "class": "adjacent"
+    },
+    {
+      "id": 789,
+      "a_type": "conductor",
+      "a_id": 1484,
+      "b_type": "tree",
+      "b_id": 550,
+      "class": "adjacent"
+    },
+    {
+      "id": 790,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 551,
+      "class": "adjacent"
+    },
+    {
+      "id": 791,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 551,
+      "class": "adjacent"
+    },
+    {
+      "id": 792,
+      "a_type": "building",
+      "a_id": 1457,
+      "b_type": "tree",
+      "b_id": 552,
+      "class": "near"
+    },
+    {
+      "id": 793,
+      "a_type": "building",
+      "a_id": 1456,
+      "b_type": "tree",
+      "b_id": 552,
+      "class": "adjacent"
+    },
+    {
+      "id": 794,
+      "a_type": "tree",
+      "a_id": 552,
+      "b_type": "vehicle",
+      "b_id": 1365,
+      "class": "near"
+    },
+    {
+      "id": 795,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 552,
+      "class": "near"
+    },
+    {
+      "id": 796,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 552,
+      "class": "near"
+    },
+    {
+      "id": 797,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "tree",
+      "b_id": 552,
+      "class": "adjacent"
+    },
+    {
+      "id": 798,
+      "a_type": "conductor",
+      "a_id": 1484,
+      "b_type": "tree",
+      "b_id": 552,
+      "class": "adjacent"
+    },
+    {
+      "id": 799,
+      "a_type": "pole",
+      "a_id": 1498,
+      "b_type": "tree",
+      "b_id": 553,
+      "class": "adjacent",
+      "virtual_pole": true
+    },
+    {
+      "id": 800,
+      "a_type": "conductor",
+      "a_id": 192,
+      "b_type": "tree",
+      "b_id": 553,
+      "class": "adjacent"
+    },
+    {
+      "id": 801,
+      "a_type": "conductor",
+      "a_id": 1484,
+      "b_type": "tree",
+      "b_id": 553,
+      "class": "adjacent"
+    },
+    {
+      "id": 802,
+      "a_type": "building",
+      "a_id": 1451,
+      "b_type": "tree",
+      "b_id": 554,
+      "class": "adjacent"
+    },
+    {
+      "id": 803,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 1351,
+      "class": "near"
+    },
+    {
+      "id": 804,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 1372,
+      "class": "adjacent"
+    },
+    {
+      "id": 805,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 155,
+      "class": "near"
+    },
+    {
+      "id": 806,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 1350,
+      "class": "near"
+    },
+    {
+      "id": 807,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 1360,
+      "class": "adjacent"
+    },
+    {
+      "id": 808,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 1349,
+      "class": "near"
+    },
+    {
+      "id": 809,
+      "a_type": "tree",
+      "a_id": 554,
+      "b_type": "vehicle",
+      "b_id": 1337,
+      "class": "near"
+    },
+    {
+      "id": 810,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "tree",
+      "b_id": 554,
+      "class": "adjacent"
+    },
+    {
+      "id": 811,
+      "a_type": "conductor",
+      "a_id": 1485,
+      "b_type": "tree",
+      "b_id": 554,
+      "class": "adjacent"
+    },
+    {
+      "id": 812,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 555,
+      "class": "near"
+    },
+    {
+      "id": 813,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 555,
+      "class": "near"
+    },
+    {
+      "id": 814,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "tree",
+      "b_id": 556,
+      "class": "near"
+    },
+    {
+      "id": 815,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "tree",
+      "b_id": 556,
+      "class": "near"
+    },
+    {
+      "id": 816,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "tree",
+      "b_id": 557,
+      "class": "adjacent"
+    },
+    {
+      "id": 817,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "tree",
+      "b_id": 557,
+      "class": "adjacent"
+    },
+    {
+      "id": 818,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 557,
+      "class": "adjacent"
+    },
+    {
+      "id": 819,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 557,
+      "class": "adjacent"
+    },
+    {
+      "id": 820,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 558,
+      "class": "adjacent"
+    },
+    {
+      "id": 821,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 558,
+      "class": "adjacent"
+    },
+    {
+      "id": 822,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 560,
+      "class": "adjacent"
+    },
+    {
+      "id": 823,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 560,
+      "class": "adjacent"
+    },
+    {
+      "id": 824,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "tree",
+      "b_id": 562,
+      "class": "near"
+    },
+    {
+      "id": 825,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "tree",
+      "b_id": 562,
+      "class": "near"
+    },
+    {
+      "id": 826,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 562,
+      "class": "near"
+    },
+    {
+      "id": 827,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 562,
+      "class": "near"
+    },
+    {
+      "id": 828,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "tree",
+      "b_id": 563,
+      "class": "adjacent"
+    },
+    {
+      "id": 829,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "tree",
+      "b_id": 563,
+      "class": "adjacent"
+    },
+    {
+      "id": 830,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "tree",
+      "b_id": 564,
+      "class": "near"
+    },
+    {
+      "id": 831,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "tree",
+      "b_id": 564,
+      "class": "near"
+    },
+    {
+      "id": 832,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 565,
+      "class": "adjacent"
+    },
+    {
+      "id": 833,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 565,
+      "class": "adjacent"
+    },
+    {
+      "id": 834,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 565,
+      "class": "adjacent"
+    },
+    {
+      "id": 835,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 565,
+      "class": "adjacent"
+    },
+    {
+      "id": 836,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 566,
+      "class": "adjacent"
+    },
+    {
+      "id": 837,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 566,
+      "class": "adjacent"
+    },
+    {
+      "id": 838,
+      "a_type": "building",
+      "a_id": 1448,
+      "b_type": "tree",
+      "b_id": 567,
+      "class": "near"
+    },
+    {
+      "id": 839,
+      "a_type": "building",
+      "a_id": 1458,
+      "b_type": "tree",
+      "b_id": 567,
+      "class": "adjacent"
+    },
+    {
+      "id": 840,
+      "a_type": "building",
+      "a_id": 1448,
+      "b_type": "tree",
+      "b_id": 568,
+      "class": "adjacent"
+    },
+    {
+      "id": 841,
+      "a_type": "building",
+      "a_id": 1458,
+      "b_type": "tree",
+      "b_id": 568,
+      "class": "near"
+    },
+    {
+      "id": 842,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 568,
+      "class": "adjacent"
+    },
+    {
+      "id": 843,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 568,
+      "class": "adjacent"
+    },
+    {
+      "id": 844,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 570,
+      "class": "adjacent"
+    },
+    {
+      "id": 845,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 570,
+      "class": "adjacent"
+    },
+    {
+      "id": 846,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 570,
+      "class": "adjacent"
+    },
+    {
+      "id": 847,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 570,
+      "class": "adjacent"
+    },
+    {
+      "id": 848,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 570,
+      "class": "adjacent"
+    },
+    {
+      "id": 849,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 570,
+      "class": "adjacent"
+    },
+    {
+      "id": 850,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 571,
+      "class": "adjacent"
+    },
+    {
+      "id": 851,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 571,
+      "class": "adjacent"
+    },
+    {
+      "id": 852,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 571,
+      "class": "near"
+    },
+    {
+      "id": 853,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 571,
+      "class": "near"
+    },
+    {
+      "id": 854,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 572,
+      "class": "adjacent"
+    },
+    {
+      "id": 855,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 572,
+      "class": "adjacent"
+    },
+    {
+      "id": 856,
+      "a_type": "conductor",
+      "a_id": 209,
+      "b_type": "tree",
+      "b_id": 572,
+      "class": "adjacent"
+    },
+    {
+      "id": 857,
+      "a_type": "conductor",
+      "a_id": 1492,
+      "b_type": "tree",
+      "b_id": 572,
+      "class": "adjacent"
+    },
+    {
+      "id": 858,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 573,
+      "class": "near"
+    },
+    {
+      "id": 859,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 573,
+      "class": "near"
+    },
+    {
+      "id": 860,
+      "a_type": "conductor",
+      "a_id": 205,
+      "b_type": "tree",
+      "b_id": 573,
+      "class": "adjacent"
+    },
+    {
+      "id": 861,
+      "a_type": "conductor",
+      "a_id": 1491,
+      "b_type": "tree",
+      "b_id": 573,
+      "class": "adjacent"
+    },
+    {
+      "id": 862,
+      "a_type": "building",
+      "a_id": 1459,
+      "b_type": "tree",
+      "b_id": 574,
+      "class": "adjacent"
+    },
+    {
+      "id": 863,
+      "a_type": "conductor",
+      "a_id": 209,
+      "b_type": "tree",
+      "b_id": 574,
+      "class": "adjacent"
+    },
+    {
+      "id": 864,
+      "a_type": "conductor",
+      "a_id": 1492,
+      "b_type": "tree",
+      "b_id": 574,
+      "class": "adjacent"
+    },
+    {
+      "id": 865,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 574,
+      "class": "adjacent"
+    },
+    {
+      "id": 866,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 574,
+      "class": "adjacent"
+    },
+    {
+      "id": 867,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 575,
+      "class": "adjacent"
+    },
+    {
+      "id": 868,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 575,
+      "class": "near"
+    },
+    {
+      "id": 869,
+      "a_type": "building",
+      "a_id": 1448,
+      "b_type": "tree",
+      "b_id": 576,
+      "class": "adjacent"
+    },
+    {
+      "id": 870,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 576,
+      "class": "near"
+    },
+    {
+      "id": 871,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 576,
+      "class": "adjacent"
+    },
+    {
+      "id": 872,
+      "a_type": "building",
+      "a_id": 1459,
+      "b_type": "tree",
+      "b_id": 577,
+      "class": "near"
+    },
+    {
+      "id": 873,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 577,
+      "class": "near"
+    },
+    {
+      "id": 874,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 577,
+      "class": "near"
+    },
+    {
+      "id": 875,
+      "a_type": "conductor",
+      "a_id": 209,
+      "b_type": "tree",
+      "b_id": 577,
+      "class": "adjacent"
+    },
+    {
+      "id": 876,
+      "a_type": "conductor",
+      "a_id": 1492,
+      "b_type": "tree",
+      "b_id": 577,
+      "class": "adjacent"
+    },
+    {
+      "id": 877,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 579,
+      "class": "adjacent"
+    },
+    {
+      "id": 878,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 579,
+      "class": "adjacent"
+    },
+    {
+      "id": 879,
+      "a_type": "conductor",
+      "a_id": 205,
+      "b_type": "tree",
+      "b_id": 579,
+      "class": "adjacent"
+    },
+    {
+      "id": 880,
+      "a_type": "conductor",
+      "a_id": 1491,
+      "b_type": "tree",
+      "b_id": 579,
+      "class": "adjacent"
+    },
+    {
+      "id": 881,
+      "a_type": "building",
+      "a_id": 1455,
+      "b_type": "tree",
+      "b_id": 580,
+      "class": "near"
+    },
+    {
+      "id": 882,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 580,
+      "class": "near"
+    },
+    {
+      "id": 883,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 580,
+      "class": "near"
+    },
+    {
+      "id": 884,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "tree",
+      "b_id": 580,
+      "class": "near"
+    },
+    {
+      "id": 885,
+      "a_type": "conductor",
+      "a_id": 1490,
+      "b_type": "tree",
+      "b_id": 580,
+      "class": "near"
+    },
+    {
+      "id": 886,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "tree",
+      "b_id": 581,
+      "class": "adjacent"
+    },
+    {
+      "id": 887,
+      "a_type": "conductor",
+      "a_id": 1490,
+      "b_type": "tree",
+      "b_id": 581,
+      "class": "adjacent"
+    },
+    {
+      "id": 888,
+      "a_type": "conductor",
+      "a_id": 205,
+      "b_type": "tree",
+      "b_id": 581,
+      "class": "adjacent"
+    },
+    {
+      "id": 889,
+      "a_type": "conductor",
+      "a_id": 1491,
+      "b_type": "tree",
+      "b_id": 581,
+      "class": "adjacent"
+    },
+    {
+      "id": 890,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 584,
+      "class": "adjacent"
+    },
+    {
+      "id": 891,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 584,
+      "class": "adjacent"
+    },
+    {
+      "id": 892,
+      "a_type": "building",
+      "a_id": 1459,
+      "b_type": "tree",
+      "b_id": 588,
+      "class": "adjacent"
+    },
+    {
+      "id": 893,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 588,
+      "class": "adjacent"
+    },
+    {
+      "id": 894,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "tree",
+      "b_id": 588,
+      "class": "adjacent"
+    },
+    {
+      "id": 895,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 589,
+      "class": "adjacent"
+    },
+    {
+      "id": 896,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 589,
+      "class": "adjacent"
+    },
+    {
+      "id": 897,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 590,
+      "class": "adjacent"
+    },
+    {
+      "id": 898,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 590,
+      "class": "adjacent"
+    },
+    {
+      "id": 899,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 591,
+      "class": "adjacent"
+    },
+    {
+      "id": 900,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 591,
+      "class": "adjacent"
+    },
+    {
+      "id": 901,
+      "a_type": "tree",
+      "a_id": 599,
+      "b_type": "vehicle",
+      "b_id": 1362,
+      "class": "near"
+    },
+    {
+      "id": 902,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 599,
+      "class": "near"
+    },
+    {
+      "id": 903,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "tree",
+      "b_id": 599,
+      "class": "near"
+    },
+    {
+      "id": 904,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "tree",
+      "b_id": 599,
+      "class": "adjacent"
+    },
+    {
+      "id": 905,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 599,
+      "class": "adjacent"
+    },
+    {
+      "id": 906,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 600,
+      "class": "near"
+    },
+    {
+      "id": 907,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 600,
+      "class": "adjacent"
+    },
+    {
+      "id": 908,
+      "a_type": "building",
+      "a_id": 1465,
+      "b_type": "tree",
+      "b_id": 605,
+      "class": "adjacent"
+    },
+    {
+      "id": 909,
+      "a_type": "tree",
+      "a_id": 605,
+      "b_type": "vehicle",
+      "b_id": 1362,
+      "class": "near"
+    },
+    {
+      "id": 910,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "tree",
+      "b_id": 605,
+      "class": "adjacent"
+    },
+    {
+      "id": 911,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 605,
+      "class": "adjacent"
+    },
+    {
+      "id": 912,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "tree",
+      "b_id": 606,
+      "class": "near"
+    },
+    {
+      "id": 913,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 606,
+      "class": "adjacent"
+    },
+    {
+      "id": 914,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 606,
+      "class": "adjacent"
+    },
+    {
+      "id": 915,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 606,
+      "class": "adjacent"
+    },
+    {
+      "id": 916,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 611,
+      "class": "near"
+    },
+    {
+      "id": 917,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "tree",
+      "b_id": 617,
+      "class": "adjacent"
+    },
+    {
+      "id": 918,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 617,
+      "class": "near"
+    },
+    {
+      "id": 919,
+      "a_type": "building",
+      "a_id": 1466,
+      "b_type": "tree",
+      "b_id": 619,
+      "class": "adjacent"
+    },
+    {
+      "id": 920,
+      "a_type": "building",
+      "a_id": 1465,
+      "b_type": "tree",
+      "b_id": 619,
+      "class": "near"
+    },
+    {
+      "id": 921,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "tree",
+      "b_id": 619,
+      "class": "adjacent"
+    },
+    {
+      "id": 922,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 619,
+      "class": "adjacent"
+    },
+    {
+      "id": 923,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 625,
+      "class": "near"
+    },
+    {
+      "id": 924,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "tree",
+      "b_id": 625,
+      "class": "adjacent"
+    },
+    {
+      "id": 925,
+      "a_type": "building",
+      "a_id": 1404,
+      "b_type": "tree",
+      "b_id": 630,
+      "class": "near"
+    },
+    {
+      "id": 926,
+      "a_type": "building",
+      "a_id": 1404,
+      "b_type": "tree",
+      "b_id": 631,
+      "class": "adjacent"
+    },
+    {
+      "id": 927,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 632,
+      "class": "near"
+    },
+    {
+      "id": 928,
+      "a_type": "tree",
+      "a_id": 633,
+      "b_type": "vehicle",
+      "b_id": 1366,
+      "class": "near"
+    },
+    {
+      "id": 929,
+      "a_type": "conductor",
+      "a_id": 211,
+      "b_type": "tree",
+      "b_id": 635,
+      "class": "near"
+    },
+    {
+      "id": 930,
+      "a_type": "conductor",
+      "a_id": 1494,
+      "b_type": "tree",
+      "b_id": 635,
+      "class": "near"
+    },
+    {
+      "id": 931,
+      "a_type": "building",
+      "a_id": 1434,
+      "b_type": "tree",
+      "b_id": 666,
+      "class": "adjacent"
+    },
+    {
+      "id": 932,
+      "a_type": "tree",
+      "a_id": 666,
+      "b_type": "vehicle",
+      "b_id": 187,
+      "class": "adjacent"
+    },
+    {
+      "id": 933,
+      "a_type": "tree",
+      "a_id": 666,
+      "b_type": "vehicle",
+      "b_id": 1379,
+      "class": "near"
+    },
+    {
+      "id": 934,
+      "a_type": "tree",
+      "a_id": 666,
+      "b_type": "vehicle",
+      "b_id": 1359,
+      "class": "adjacent"
+    },
+    {
+      "id": 935,
+      "a_type": "building",
+      "a_id": 1434,
+      "b_type": "tree",
+      "b_id": 668,
+      "class": "adjacent"
+    },
+    {
+      "id": 936,
+      "a_type": "tree",
+      "a_id": 672,
+      "b_type": "vehicle",
+      "b_id": 1359,
+      "class": "adjacent"
+    },
+    {
+      "id": 937,
+      "a_type": "building",
+      "a_id": 1442,
+      "b_type": "tree",
+      "b_id": 701,
+      "class": "near"
+    },
+    {
+      "id": 938,
+      "a_type": "building",
+      "a_id": 1468,
+      "b_type": "tree",
+      "b_id": 749,
+      "class": "adjacent"
+    },
+    {
+      "id": 939,
+      "a_type": "building",
+      "a_id": 1470,
+      "b_type": "tree",
+      "b_id": 749,
+      "class": "adjacent"
+    },
+    {
+      "id": 940,
+      "a_type": "building",
+      "a_id": 1467,
+      "b_type": "tree",
+      "b_id": 749,
+      "class": "near"
+    },
+    {
+      "id": 941,
+      "a_type": "building",
+      "a_id": 1469,
+      "b_type": "tree",
+      "b_id": 749,
+      "class": "adjacent"
+    },
+    {
+      "id": 942,
+      "a_type": "tree",
+      "a_id": 749,
+      "b_type": "vehicle",
+      "b_id": 86,
+      "class": "near"
+    },
+    {
+      "id": 943,
+      "a_type": "building",
+      "a_id": 1434,
+      "b_type": "tree",
+      "b_id": 766,
+      "class": "adjacent"
+    },
+    {
+      "id": 944,
+      "a_type": "building",
+      "a_id": 1467,
+      "b_type": "tree",
+      "b_id": 766,
+      "class": "adjacent"
+    },
+    {
+      "id": 945,
+      "a_type": "tree",
+      "a_id": 766,
+      "b_type": "vehicle",
+      "b_id": 1345,
+      "class": "adjacent"
+    },
+    {
+      "id": 946,
+      "a_type": "building",
+      "a_id": 1469,
+      "b_type": "tree",
+      "b_id": 843,
+      "class": "near"
+    },
+    {
+      "id": 947,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "tree",
+      "b_id": 1205,
+      "class": "adjacent"
+    },
+    {
+      "id": 948,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "tree",
+      "b_id": 1205,
+      "class": "adjacent"
+    },
+    {
+      "id": 949,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 1206,
+      "class": "near"
+    },
+    {
+      "id": 950,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 1206,
+      "class": "near"
+    },
+    {
+      "id": 951,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 1207,
+      "class": "near"
+    },
+    {
+      "id": 952,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 1207,
+      "class": "near"
+    },
+    {
+      "id": 953,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 1209,
+      "class": "adjacent"
+    },
+    {
+      "id": 954,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 1209,
+      "class": "adjacent"
+    },
+    {
+      "id": 955,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "tree",
+      "b_id": 1210,
+      "class": "adjacent"
+    },
+    {
+      "id": 956,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "tree",
+      "b_id": 1210,
+      "class": "adjacent"
+    },
+    {
+      "id": 957,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "tree",
+      "b_id": 1211,
+      "class": "adjacent"
+    },
+    {
+      "id": 958,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "tree",
+      "b_id": 1211,
+      "class": "adjacent"
+    },
+    {
+      "id": 959,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 1212,
+      "class": "near"
+    },
+    {
+      "id": 960,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 1212,
+      "class": "adjacent"
+    },
+    {
+      "id": 961,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "tree",
+      "b_id": 1213,
+      "class": "near"
+    },
+    {
+      "id": 962,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "tree",
+      "b_id": 1213,
+      "class": "near"
+    },
+    {
+      "id": 963,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 1216,
+      "class": "adjacent"
+    },
+    {
+      "id": 964,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 1216,
+      "class": "adjacent"
+    },
+    {
+      "id": 965,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 1217,
+      "class": "adjacent"
+    },
+    {
+      "id": 966,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 1217,
+      "class": "near"
+    },
+    {
+      "id": 967,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 1218,
+      "class": "near"
+    },
+    {
+      "id": 968,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 1218,
+      "class": "near"
+    },
+    {
+      "id": 969,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 1219,
+      "class": "adjacent"
+    },
+    {
+      "id": 970,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 1219,
+      "class": "adjacent"
+    },
+    {
+      "id": 971,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 1219,
+      "class": "near"
+    },
+    {
+      "id": 972,
+      "a_type": "conductor",
+      "a_id": 198,
+      "b_type": "tree",
+      "b_id": 1220,
+      "class": "adjacent"
+    },
+    {
+      "id": 973,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 1220,
+      "class": "adjacent"
+    },
+    {
+      "id": 974,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 1220,
+      "class": "adjacent"
+    },
+    {
+      "id": 975,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 1220,
+      "class": "near"
+    },
+    {
+      "id": 976,
+      "a_type": "conductor",
+      "a_id": 1480,
+      "b_type": "tree",
+      "b_id": 1221,
+      "class": "near"
+    },
+    {
+      "id": 977,
+      "a_type": "conductor",
+      "a_id": 199,
+      "b_type": "tree",
+      "b_id": 1221,
+      "class": "adjacent"
+    },
+    {
+      "id": 978,
+      "a_type": "conductor",
+      "a_id": 1482,
+      "b_type": "tree",
+      "b_id": 1221,
+      "class": "adjacent"
+    },
+    {
+      "id": 979,
+      "a_type": "conductor",
+      "a_id": 200,
+      "b_type": "tree",
+      "b_id": 1222,
+      "class": "adjacent"
+    },
+    {
+      "id": 980,
+      "a_type": "conductor",
+      "a_id": 1486,
+      "b_type": "tree",
+      "b_id": 1222,
+      "class": "adjacent"
+    },
+    {
+      "id": 981,
+      "a_type": "conductor",
+      "a_id": 201,
+      "b_type": "tree",
+      "b_id": 1225,
+      "class": "adjacent"
+    },
+    {
+      "id": 982,
+      "a_type": "conductor",
+      "a_id": 1487,
+      "b_type": "tree",
+      "b_id": 1225,
+      "class": "adjacent"
+    },
+    {
+      "id": 983,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 1227,
+      "class": "near"
+    },
+    {
+      "id": 984,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 1227,
+      "class": "near"
+    },
+    {
+      "id": 985,
+      "a_type": "conductor",
+      "a_id": 202,
+      "b_type": "tree",
+      "b_id": 1230,
+      "class": "near"
+    },
+    {
+      "id": 986,
+      "a_type": "conductor",
+      "a_id": 1488,
+      "b_type": "tree",
+      "b_id": 1230,
+      "class": "near"
+    },
+    {
+      "id": 987,
+      "a_type": "conductor",
+      "a_id": 208,
+      "b_type": "tree",
+      "b_id": 1232,
+      "class": "adjacent"
+    },
+    {
+      "id": 988,
+      "a_type": "conductor",
+      "a_id": 1479,
+      "b_type": "tree",
+      "b_id": 1232,
+      "class": "adjacent"
+    },
+    {
+      "id": 989,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 1233,
+      "class": "adjacent"
+    },
+    {
+      "id": 990,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 1233,
+      "class": "adjacent"
+    },
+    {
+      "id": 991,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 1233,
+      "class": "adjacent"
+    },
+    {
+      "id": 992,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 1233,
+      "class": "adjacent"
+    },
+    {
+      "id": 993,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 1234,
+      "class": "adjacent"
+    },
+    {
+      "id": 994,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 1234,
+      "class": "adjacent"
+    },
+    {
+      "id": 995,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 1234,
+      "class": "adjacent"
+    },
+    {
+      "id": 996,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 1234,
+      "class": "adjacent"
+    },
+    {
+      "id": 997,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 1235,
+      "class": "adjacent"
+    },
+    {
+      "id": 998,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 1235,
+      "class": "adjacent"
+    },
+    {
+      "id": 999,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 1236,
+      "class": "adjacent"
+    },
+    {
+      "id": 1000,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 1236,
+      "class": "adjacent"
+    },
+    {
+      "id": 1001,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 1237,
+      "class": "adjacent"
+    },
+    {
+      "id": 1002,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 1237,
+      "class": "adjacent"
+    },
+    {
+      "id": 1003,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 1237,
+      "class": "adjacent"
+    },
+    {
+      "id": 1004,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 1237,
+      "class": "adjacent"
+    },
+    {
+      "id": 1005,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "tree",
+      "b_id": 1238,
+      "class": "near"
+    },
+    {
+      "id": 1006,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "tree",
+      "b_id": 1238,
+      "class": "near"
+    },
+    {
+      "id": 1007,
+      "a_type": "conductor",
+      "a_id": 213,
+      "b_type": "tree",
+      "b_id": 1239,
+      "class": "adjacent"
+    },
+    {
+      "id": 1008,
+      "a_type": "conductor",
+      "a_id": 1495,
+      "b_type": "tree",
+      "b_id": 1239,
+      "class": "adjacent"
+    },
+    {
+      "id": 1009,
+      "a_type": "conductor",
+      "a_id": 214,
+      "b_type": "tree",
+      "b_id": 1252,
+      "class": "adjacent"
+    },
+    {
+      "id": 1010,
+      "a_type": "conductor",
+      "a_id": 1496,
+      "b_type": "tree",
+      "b_id": 1252,
+      "class": "adjacent"
+    },
+    {
+      "id": 1011,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 1252,
+      "class": "adjacent"
+    },
+    {
+      "id": 1012,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 1252,
+      "class": "adjacent"
+    },
+    {
+      "id": 1013,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 1285,
+      "class": "adjacent"
+    },
+    {
+      "id": 1014,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "tree",
+      "b_id": 1285,
+      "class": "near"
+    },
+    {
+      "id": 1015,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 1286,
+      "class": "near"
+    },
+    {
+      "id": 1016,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "tree",
+      "b_id": 1286,
+      "class": "near"
+    },
+    {
+      "id": 1017,
+      "a_type": "conductor",
+      "a_id": 210,
+      "b_type": "tree",
+      "b_id": 1287,
+      "class": "adjacent"
+    },
+    {
+      "id": 1018,
+      "a_type": "conductor",
+      "a_id": 1493,
+      "b_type": "tree",
+      "b_id": 1287,
+      "class": "adjacent"
+    },
+    {
+      "id": 1019,
+      "a_type": "conductor",
+      "a_id": 212,
+      "b_type": "tree",
+      "b_id": 1289,
+      "class": "near"
+    },
+    {
+      "id": 1020,
+      "a_type": "conductor",
+      "a_id": 1497,
+      "b_type": "tree",
+      "b_id": 1289,
+      "class": "near"
+    },
+    {
+      "id": 1021,
+      "a_type": "conductor",
+      "a_id": 207,
+      "b_type": "tree",
+      "b_id": 1290,
+      "class": "adjacent"
+    },
+    {
+      "id": 1022,
+      "a_type": "conductor",
+      "a_id": 1478,
+      "b_type": "tree",
+      "b_id": 1290,
+      "class": "adjacent"
+    },
+    {
+      "id": 1023,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 1291,
+      "class": "adjacent"
+    },
+    {
+      "id": 1024,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 1291,
+      "class": "adjacent"
+    },
+    {
+      "id": 1025,
+      "a_type": "conductor",
+      "a_id": 196,
+      "b_type": "tree",
+      "b_id": 1291,
+      "class": "adjacent"
+    },
+    {
+      "id": 1026,
+      "a_type": "conductor",
+      "a_id": 1475,
+      "b_type": "tree",
+      "b_id": 1291,
+      "class": "adjacent"
+    },
+    {
+      "id": 1027,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 1292,
+      "class": "near"
+    },
+    {
+      "id": 1028,
+      "a_type": "conductor",
+      "a_id": 191,
+      "b_type": "tree",
+      "b_id": 1293,
+      "class": "adjacent"
+    },
+    {
+      "id": 1029,
+      "a_type": "conductor",
+      "a_id": 1483,
+      "b_type": "tree",
+      "b_id": 1293,
+      "class": "adjacent"
+    },
+    {
+      "id": 1030,
+      "a_type": "conductor",
+      "a_id": 206,
+      "b_type": "tree",
+      "b_id": 1294,
+      "class": "adjacent"
+    },
+    {
+      "id": 1031,
+      "a_type": "conductor",
+      "a_id": 1477,
+      "b_type": "tree",
+      "b_id": 1294,
+      "class": "adjacent"
+    },
+    {
+      "id": 1032,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "tree",
+      "b_id": 1298,
+      "class": "adjacent"
+    },
+    {
+      "id": 1033,
+      "a_type": "conductor",
+      "a_id": 1490,
+      "b_type": "tree",
+      "b_id": 1298,
+      "class": "near"
+    },
+    {
+      "id": 1034,
+      "a_type": "building",
+      "a_id": 1448,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "near"
+    },
+    {
+      "id": 1035,
+      "a_type": "building",
+      "a_id": 1458,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "adjacent"
+    },
+    {
+      "id": 1036,
+      "a_type": "building",
+      "a_id": 1451,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "adjacent"
+    },
+    {
+      "id": 1037,
+      "a_type": "tree",
+      "a_id": 1299,
+      "b_type": "vehicle",
+      "b_id": 1351,
+      "class": "near"
+    },
+    {
+      "id": 1038,
+      "a_type": "tree",
+      "a_id": 1299,
+      "b_type": "vehicle",
+      "b_id": 1360,
+      "class": "adjacent"
+    },
+    {
+      "id": 1039,
+      "a_type": "conductor",
+      "a_id": 193,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "adjacent"
+    },
+    {
+      "id": 1040,
+      "a_type": "conductor",
+      "a_id": 1485,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "adjacent"
+    },
+    {
+      "id": 1041,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "adjacent"
+    },
+    {
+      "id": 1042,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 1299,
+      "class": "adjacent"
+    },
+    {
+      "id": 1043,
+      "a_type": "building",
+      "a_id": 1458,
+      "b_type": "tree",
+      "b_id": 1300,
+      "class": "adjacent"
+    },
+    {
+      "id": 1044,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "tree",
+      "b_id": 1300,
+      "class": "near"
+    },
+    {
+      "id": 1045,
+      "a_type": "building",
+      "a_id": 1448,
+      "b_type": "tree",
+      "b_id": 1301,
+      "class": "adjacent"
+    },
+    {
+      "id": 1046,
+      "a_type": "conductor",
+      "a_id": 204,
+      "b_type": "tree",
+      "b_id": 1301,
+      "class": "near"
+    },
+    {
+      "id": 1047,
+      "a_type": "conductor",
+      "a_id": 1490,
+      "b_type": "tree",
+      "b_id": 1301,
+      "class": "near"
+    },
+    {
+      "id": 1048,
+      "a_type": "building",
+      "a_id": 1451,
+      "b_type": "tree",
+      "b_id": 1302,
+      "class": "adjacent"
+    },
+    {
+      "id": 1049,
+      "a_type": "conductor",
+      "a_id": 203,
+      "b_type": "tree",
+      "b_id": 1302,
+      "class": "adjacent"
+    },
+    {
+      "id": 1050,
+      "a_type": "conductor",
+      "a_id": 1489,
+      "b_type": "tree",
+      "b_id": 1302,
+      "class": "adjacent"
+    },
+    {
+      "id": 1051,
+      "a_type": "building",
+      "a_id": 1454,
+      "b_type": "tree",
+      "b_id": 1303,
+      "class": "near"
+    },
+    {
+      "id": 1052,
+      "a_type": "building",
+      "a_id": 1452,
+      "b_type": "tree",
+      "b_id": 1305,
+      "class": "adjacent"
+    },
+    {
+      "id": 1053,
+      "a_type": "building",
+      "a_id": 1452,
+      "b_type": "tree",
+      "b_id": 1306,
+      "class": "adjacent"
+    },
+    {
+      "id": 1054,
+      "a_type": "building",
+      "a_id": 1397,
+      "b_type": "tree",
+      "b_id": 1309,
+      "class": "near"
+    },
+    {
+      "id": 1055,
+      "a_type": "tree",
+      "a_id": 1309,
+      "b_type": "vehicle",
+      "b_id": 152,
+      "class": "adjacent"
+    },
+    {
+      "id": 1056,
+      "a_type": "tree",
+      "a_id": 1309,
+      "b_type": "vehicle",
+      "b_id": 108,
+      "class": "near"
+    },
+    {
+      "id": 1057,
+      "a_type": "building",
+      "a_id": 1444,
+      "b_type": "tree",
+      "b_id": 1310,
+      "class": "near"
+    },
+    {
+      "id": 1058,
+      "a_type": "building",
+      "a_id": 1443,
+      "b_type": "tree",
+      "b_id": 1311,
+      "class": "near"
+    },
+    {
+      "id": 1059,
+      "a_type": "building",
+      "a_id": 1471,
+      "b_type": "tree",
+      "b_id": 1314,
+      "class": "near"
+    },
+    {
+      "id": 1060,
+      "a_type": "building",
+      "a_id": 1473,
+      "b_type": "tree",
+      "b_id": 1314,
+      "class": "near"
+    },
+    {
+      "id": 1061,
+      "a_type": "building",
+      "a_id": 1472,
+      "b_type": "tree",
+      "b_id": 1314,
+      "class": "near"
+    },
+    {
+      "id": 1062,
+      "a_type": "building",
+      "a_id": 1420,
+      "b_type": "tree",
+      "b_id": 1315,
+      "class": "near"
+    },
+    {
+      "id": 1063,
+      "a_type": "building",
+      "a_id": 1424,
+      "b_type": "tree",
+      "b_id": 1315,
+      "class": "near"
+    },
+    {
+      "id": 1064,
+      "a_type": "tree",
+      "a_id": 1315,
+      "b_type": "vehicle",
+      "b_id": 45,
+      "class": "near"
+    },
+    {
+      "id": 1065,
+      "a_type": "tree",
+      "a_id": 1315,
+      "b_type": "vehicle",
+      "b_id": 145,
+      "class": "near"
+    },
+    {
+      "id": 1066,
+      "a_type": "building",
+      "a_id": 1450,
+      "b_type": "tree",
+      "b_id": 1325,
+      "class": "adjacent"
+    },
+    {
+      "id": 1067,
+      "a_type": "conductor",
+      "a_id": 195,
+      "b_type": "tree",
+      "b_id": 1325,
+      "class": "adjacent"
+    },
+    {
+      "id": 1068,
+      "a_type": "conductor",
+      "a_id": 1474,
+      "b_type": "tree",
+      "b_id": 1325,
+      "class": "near"
+    },
+    {
+      "id": 1069,
+      "a_type": "conductor",
+      "a_id": 194,
+      "b_type": "tree",
+      "b_id": 1325,
+      "class": "adjacent"
+    },
+    {
+      "id": 1070,
+      "a_type": "conductor",
+      "a_id": 1476,
+      "b_type": "tree",
+      "b_id": 1325,
+      "class": "adjacent"
+    },
+    {
+      "id": 1071,
+      "a_type": "building",
+      "a_id": 1435,
+      "b_type": "tree",
+      "b_id": 1326,
+      "class": "near"
+    },
+    {
+      "id": 1072,
+      "a_type": "tree",
+      "a_id": 1326,
+      "b_type": "vehicle",
+      "b_id": 1,
+      "class": "adjacent"
+    },
+    {
+      "id": 1073,
+      "a_type": "tree",
+      "a_id": 1326,
+      "b_type": "vehicle",
+      "b_id": 138,
+      "class": "near"
+    },
+    {
+      "id": 1074,
+      "a_type": "building",
+      "a_id": 1400,
+      "b_type": "tree",
+      "b_id": 1327,
+      "class": "near"
+    },
+    {
+      "id": 1075,
+      "a_type": "building",
+      "a_id": 1422,
+      "b_type": "tree",
+      "b_id": 1327,
+      "class": "near"
+    },
+    {
+      "id": 1076,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "tree",
+      "b_id": 1328,
+      "class": "adjacent"
+    },
+    {
+      "id": 1077,
+      "a_type": "building",
+      "a_id": 1425,
+      "b_type": "tree",
+      "b_id": 1328,
+      "class": "near"
+    },
+    {
+      "id": 1078,
+      "a_type": "building",
+      "a_id": 1412,
+      "b_type": "tree",
+      "b_id": 1329,
+      "class": "near"
+    },
+    {
+      "id": 1079,
+      "a_type": "building",
+      "a_id": 1425,
+      "b_type": "tree",
+      "b_id": 1329,
+      "class": "near"
+    },
+    {
+      "id": 1080,
+      "a_type": "tree",
+      "a_id": 1329,
+      "b_type": "vehicle",
+      "b_id": 105,
+      "class": "adjacent"
+    },
+    {
+      "id": 1081,
+      "a_type": "building",
+      "a_id": 1399,
+      "b_type": "tree",
+      "b_id": 1330,
+      "class": "near"
+    },
+    {
+      "id": 1082,
+      "a_type": "building",
+      "a_id": 1437,
+      "b_type": "tree",
+      "b_id": 1331,
+      "class": "near"
+    },
+    {
+      "id": 1083,
+      "a_type": "building",
+      "a_id": 1399,
+      "b_type": "tree",
+      "b_id": 1331,
+      "class": "near"
+    }
+  ]
+}
