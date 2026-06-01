@@ -24,6 +24,15 @@ Then skim **[../TODO.md](../TODO.md)** for active experiments and ablation comma
 
 ---
 
+## Agent handoff (local, gitignored)
+
+| File | Purpose |
+|------|---------|
+| [agent/development-retrospective.md](agent/development-retrospective.md) | May 2026 development arc — objectives, obstacles, checkpoints |
+| [agent/next_step.md](agent/next_step.md) | Earlier probe-driven plan (partially superseded) |
+
+---
+
 ## Archive
 
 Superseded drafts are in [archive/](archive/). **Do not use them** — they describe older designs (single mid/coarse grid, query-based occupancy, etc.).

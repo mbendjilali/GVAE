@@ -2,7 +2,9 @@
 
 Documentation: [docs/](docs/) · Architecture: [docs/architecture.md](docs/architecture.md)
 
-**Reference checkpoint (combined h+Z + Z-only):** `checkpoint/20260525_145547/best.pth` (ep 141, val ~7.85).
+**Reference checkpoint:** `checkpoint/norm_depth3_150/best.pth` (ep 145, val ~8.61). Probes: `checkpoint/norm_depth3_150/probe_report.txt`.
+
+Prior reference `checkpoint/20260525_145547/best.pth` — superseded (no norm contrast; similar console metrics but Probe C fine ratio ~0.45).
 
 **Decision metrics for DDM handoff:** run `utils/probe_latent.py` after each ablation — `norm_ratio_gt_over_empty`, `linear_pos_err_val`, anchor mix pos errors, `occ_iou_fine`, `soft_miou_fine`, plus console `zpos` / `pos` from training.
 
@@ -17,7 +19,7 @@ Documentation: [docs/](docs/) · Architecture: [docs/architecture.md](docs/archi
 - [x] Fine coarsening layer (S0: instances → fine supernodes)
 - [x] Latent probe tooling (`utils/probe_latent.py`)
 - [x] Z-only decoder path + dual recon losses (`LAMBDA_RECON_H`, `LAMBDA_RECON_ZONLY`)
-- [x] Shallow fine U-Net (`UNET_DEPTH_FINE = 1`)
+- [x] Shallow fine U-Net ablation (`UNET_DEPTH_FINE=1`) — **rejected** (fine `zpos` ~0.55 vs ~0.08 at depth 3)
 - [x] Norm contrastive loss on fine/mid Z (Probe C alignment)
 - [x] Loss/metrics audit (soft mIoU, grid-only occ, oracle sanity checks)
 

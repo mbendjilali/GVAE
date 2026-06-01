@@ -66,14 +66,16 @@ def run_oracle_checks() -> list[str]:
     logits = torch.where(occ, torch.tensor(30.0), torch.tensor(-30.0))
     head = _FixedHead(logits)
     z = torch.randn(8, 4, 4, 2)
-    iou, prec = _occupancy_grid_iou(head, z, occ)
+    iou, prec, rec, pred_rate, gt_rate = _occupancy_grid_iou(head, z, occ)
     check("occ_iou oracle", abs(iou - 1.0) < 1e-5, f"got {iou}")
     check("occ_precision oracle", abs(prec - 1.0) < 1e-5, f"got {prec}")
+    check("occ_recall oracle", abs(rec - 1.0) < 1e-5, f"got {rec}")
+    check("occ_pred_rate oracle", abs(pred_rate - gt_rate) < 1e-5, f"got {pred_rate}")
 
     occ_sparse = torch.zeros(3, 3, 2, dtype=torch.bool)
     occ_sparse[0, 0, 0] = True
     head_empty = _FixedHead(torch.full((3, 3, 2), -30.0))
-    iou0, _ = _occupancy_grid_iou(head_empty, z[:8, :3, :3, :2], occ_sparse)
+    iou0, _, _, _, _ = _occupancy_grid_iou(head_empty, z[:8, :3, :3, :2], occ_sparse)
     check("occ_iou zero pred", abs(iou0) < 1e-5, f"got {iou0}")
 
     outputs = {

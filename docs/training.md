@@ -88,8 +88,10 @@ These override `config.py` without editing the file:
 | `--lambda-occ-grid-mid M` | `LAMBDA_OCC_GRID_MID` | Mid occupancy loss |
 | `--lambda-occ-grid-coarse C` | `LAMBDA_OCC_GRID_COARSE` | Coarse occupancy loss |
 | `--splat-sigma-fine S` | `SPLAT_TRUNCATION_SIGMA_FINE` | Fine splat sharpness |
-| `--lambda-recon-h H` | `LAMBDA_RECON_H` | h+Z decoder loss weight |
-| `--lambda-recon-zonly Z` | `LAMBDA_RECON_ZONLY` | Z-only decoder loss weight |
+| `--lambda-recon-h` / `--lambda-recon-zonly` / `--lambda-recon-hzonly` | recon weights |
+| `--lambda-anchor-fine` / `--lambda-anchor-mid` | anchor supervision |
+| `--no-anchor-curriculum` | disable GT anchor mix schedule |
+| `--anchor-mix-anneal-epochs N` | curriculum length |
 | `--no-zonly-decoder` | `USE_Z_ONLY_DECODER=False` | Disable Z-only path |
 | `--zonly-jitter J` | `Z_ONLY_QUERY_JITTER` | Train-time query noise |
 | `--unet-depth-fine D` | `UNET_DEPTH_FINE` | Fine U-Net depth |
@@ -174,9 +176,11 @@ python utils/probe_latent.py --help
 | Knob | Default | Effect |
 |------|---------|--------|
 | `USE_Z_ONLY_DECODER` | `True` | Enable Z-only readout path |
-| `LAMBDA_RECON_H` / `LAMBDA_RECON_ZONLY` | `1.0` / `1.2` | Balance h+Z vs Z-only reconstruction |
+| `LAMBDA_RECON_H` / `LAMBDA_RECON_ZONLY` / `LAMBDA_RECON_HZONLY` | `1.5` / `1.0` / `0.8` | h+Z recon / Z-only @ GT / Z-only @ h anchors |
+| `LAMBDA_ANCHOR_FINE` / `MID` | `1.0` / `0.5` | Direct MSE on `tanh(mlp_p_anchor(h))` vs GT |
+| `ANCHOR_MIX_CURRICULUM` | `True` | Train h-decoder with GT anchor mix 1→0 over 40 ep |
 | `Z_ONLY_QUERY_JITTER` | `0.05` | Train-time noise on Z sample locations |
-| `UNET_DEPTH_FINE` | `1` | Shallow fine U-Net (less spatial blur) |
+| `UNET_DEPTH_FINE` | `3` | Fine U-Net depth (depth=1 regresses fine `zpos`; ablation confirmed) |
 | `LAMBDA_NORM_CONTRAST_FINE/MID` | `0.1` | Norm contrastive (Probe C) |
 | `DECODER_GT_ANCHOR_MIX` | `0.0` | **h-decoder only** — blend GT into anchors (probes; keep 0 for training) |
 | `REDUCTION_RATIO_LEVELS` | `[0.2, 0.2, 0.2]` | FPS keep ratio per coarsening step |
@@ -202,6 +206,8 @@ python utils/probe_latent.py --help
 |--------|---------|
 | `utils/build_scene_graph.py` | LAZ → JSON + occ caches |
 | `utils/probe_latent.py` | Anchor / linear / signal probes |
+| `utils/visualize_occ.py` | Occ pred vs LiDAR GT grids |
+| `utils/visualize_recon.py` | GT vs h+Z vs Z-only reconstruction (BEV) |
 | `utils/visualize_supernodes.py` | Export coarsening assignments to JSON + LAS |
 | `utils/diagnose_nan_losses.py` | Per-graph loss breakdown |
 | `utils/metrics_sanity.py` | Oracle checks on metric definitions |

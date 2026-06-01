@@ -15,8 +15,9 @@ import config
 from gvae.training.console import Style, Term, strip_ansi
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
-from gvae.losses.gvae_loss import compute_branch_losses, compute_loss
+from gvae.losses.gvae_loss import compute_branch_losses, compute_loss, decoder_gt_anchor_mix_for_epoch
 from gvae.losses.metrics import compute_metrics
+from gvae.probes.latent import run_latent_probes, save_probe_artifacts
 
 
 class SceneGraphDataset(torch.utils.data.Dataset):
@@ -149,6 +150,8 @@ def _tqdm_kwargs(desc: str, colour: str) -> dict:
 
 def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
     model.eval()
+    saved_mix = config.DECODER_GT_ANCHOR_MIX
+    config.DECODER_GT_ANCHOR_MIX = 0.0
 
     per_graph_losses = []
     all_metrics = []
@@ -187,10 +190,53 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
             avg_metrics[key], _ = _strict_mean(vals)
 
     model.train()
+    config.DECODER_GT_ANCHOR_MIX = saved_mix
     return avg_loss, avg_metrics, avg_components, n_graphs, n_failed, failed_paths
 
 
-def train(model, loader, val_loader, device, ckpt_dir, writer, term: Term):
+def _run_probes(
+    model,
+    train_graphs,
+    val_graphs,
+    device,
+    ckpt_dir,
+    term: Term,
+    *,
+    epoch: int | None = None,
+    probe_target: str = "supernode",
+    text_name: str = "probe_report.txt",
+    json_name: str = "probe_summary.json",
+) -> None:
+    model.eval()
+    report = run_latent_probes(
+        model,
+        train_graphs,
+        val_graphs,
+        device,
+        probe_target=probe_target,
+    )
+    text_path, json_path = save_probe_artifacts(
+        report,
+        ckpt_dir,
+        epoch=epoch,
+        probe_target=probe_target,
+        text_name=text_name,
+        json_name=json_name,
+    )
+    model.train()
+    ep_note = f" (ep {epoch})" if epoch is not None else ""
+    term.ok(f"probes saved{ep_note} → {os.path.basename(text_path)}, {os.path.basename(json_path)}")
+
+
+def train(
+    model,
+    loader,
+    val_loader,
+    device,
+    ckpt_dir,
+    writer,
+    term: Term,
+):
     use_amp = _use_amp(device)
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
@@ -198,6 +244,7 @@ def train(model, loader, val_loader, device, ckpt_dir, writer, term: Term):
     epoch_counter = 0
     best_loss = float('inf')
     current_lr = config.LEARNING_RATE
+    config.DECODER_GT_ANCHOR_MIX = decoder_gt_anchor_mix_for_epoch(0)
 
     for epoch in range(config.NUM_EPOCHS):
         lr = _lr_for_epoch(epoch)
@@ -208,6 +255,15 @@ def train(model, loader, val_loader, device, ckpt_dir, writer, term: Term):
                 f"  LR → {current_lr:.1e} (epoch {epoch + 1})",
                 Style.YELLOW,
             ))
+
+        mix = decoder_gt_anchor_mix_for_epoch(epoch)
+        if mix != config.DECODER_GT_ANCHOR_MIX:
+            config.DECODER_GT_ANCHOR_MIX = mix
+            if config.ANCHOR_MIX_CURRICULUM:
+                tqdm.write(term.paint(
+                    f"  anchor mix → {mix:.2f} (epoch {epoch + 1})",
+                    Style.YELLOW,
+                ))
 
         per_graph_losses = []
         epoch_components = []
@@ -375,7 +431,7 @@ def _teardown_run_logging(log_file):
         log_file.close()
 
 
-def main(ckpt_dir):
+def main(ckpt_dir, *, run_probes: bool, probe_target: str):
     term = Term()
     device = get_device()
     use_amp = _use_amp(device)
@@ -413,8 +469,25 @@ def main(ckpt_dir):
     if config.USE_Z_ONLY_DECODER:
         banner_lines.append(
             f"{term.paint('zonly', Style.DIM)} "
-            f"λ h/z = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY} "
-            f"jitter={config.Z_ONLY_QUERY_JITTER}"
+            f"λ h/z/hz = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY}/"
+            f"{config.LAMBDA_RECON_HZONLY} jitter={config.Z_ONLY_QUERY_JITTER}"
+        )
+    if (
+        config.LAMBDA_ANCHOR_FINE > 0
+        or config.LAMBDA_ANCHOR_MID > 0
+        or config.LAMBDA_ANCHOR_COARSE > 0
+    ):
+        banner_lines.append(
+            f"{term.paint('anchor', Style.DIM)} "
+            f"λ fine/mid/coarse = "
+            f"{config.LAMBDA_ANCHOR_FINE}/{config.LAMBDA_ANCHOR_MID}/"
+            f"{config.LAMBDA_ANCHOR_COARSE}"
+        )
+    if config.ANCHOR_MIX_CURRICULUM:
+        banner_lines.append(
+            f"{term.paint('anchor', Style.DIM)} "
+            f"mix curriculum {config.ANCHOR_MIX_START:.1f}→{config.ANCHOR_MIX_END:.1f} "
+            f"over {config.ANCHOR_MIX_ANNEAL_EPOCHS} ep"
         )
     if config.LAMBDA_NORM_CONTRAST_FINE > 0 or config.LAMBDA_NORM_CONTRAST_MID > 0:
         banner_lines.append(
@@ -455,6 +528,16 @@ def main(ckpt_dir):
     writer.close()
     term.ok(f"done — checkpoints in {ckpt_dir}/ (best.pth, last.pth)")
 
+    best_path = os.path.join(ckpt_dir, "best.pth")
+    if run_probes and os.path.isfile(best_path):
+        model.load_state_dict(torch.load(best_path, map_location=device, weights_only=True))
+        _run_probes(
+            model, train_dataset.graphs, val_dataset.graphs, device, ckpt_dir, term,
+            probe_target=probe_target,
+        )
+    elif run_probes:
+        term.warn("no best.pth saved; skipping probes")
+
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Train GVAE")
@@ -488,6 +571,26 @@ def _parse_args():
         help="Override LAMBDA_RECON_H",
     )
     parser.add_argument(
+        "--lambda-recon-hzonly", type=float, default=None,
+        help="Override LAMBDA_RECON_HZONLY (Z-only at h anchors)",
+    )
+    parser.add_argument(
+        "--lambda-anchor-fine", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_FINE",
+    )
+    parser.add_argument(
+        "--lambda-anchor-mid", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_MID",
+    )
+    parser.add_argument(
+        "--no-anchor-curriculum", action="store_true",
+        help="Disable DECODER_GT_ANCHOR_MIX curriculum (fixed mix=0)",
+    )
+    parser.add_argument(
+        "--anchor-mix-anneal-epochs", type=int, default=None,
+        help="Override ANCHOR_MIX_ANNEAL_EPOCHS",
+    )
+    parser.add_argument(
         "--no-zonly-decoder", action="store_true",
         help="Disable Z-only decode path (USE_Z_ONLY_DECODER=False)",
     )
@@ -507,6 +610,14 @@ def _parse_args():
         "--lambda-norm-contrast-mid", type=float, default=None,
         help="Override LAMBDA_NORM_CONTRAST_MID",
     )
+    parser.add_argument(
+        "--no-probe", action="store_true",
+        help="Skip latent probes after training (default: probe best.pth once at end)",
+    )
+    parser.add_argument(
+        "--probe-target", choices=("supernode", "instance", "both"), default="both",
+        help="Probe sampling: supernode GT, raw instances, or both",
+    )
     return parser.parse_args()
 
 
@@ -525,6 +636,17 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_RECON_ZONLY = args.lambda_recon_zonly
     if args.lambda_recon_h is not None:
         config.LAMBDA_RECON_H = args.lambda_recon_h
+    if args.lambda_recon_hzonly is not None:
+        config.LAMBDA_RECON_HZONLY = args.lambda_recon_hzonly
+    if args.lambda_anchor_fine is not None:
+        config.LAMBDA_ANCHOR_FINE = args.lambda_anchor_fine
+    if args.lambda_anchor_mid is not None:
+        config.LAMBDA_ANCHOR_MID = args.lambda_anchor_mid
+    if args.no_anchor_curriculum:
+        config.ANCHOR_MIX_CURRICULUM = False
+        config.DECODER_GT_ANCHOR_MIX = 0.0
+    if args.anchor_mix_anneal_epochs is not None:
+        config.ANCHOR_MIX_ANNEAL_EPOCHS = args.anchor_mix_anneal_epochs
     if args.no_zonly_decoder:
         config.USE_Z_ONLY_DECODER = False
     if args.zonly_jitter is not None:
@@ -553,7 +675,11 @@ if __name__ == "__main__":
         term = Term()
         term.dim(f"checkpoint  {ckpt_dir}")
         term.dim(f"log         {os.path.join(ckpt_dir, 'train.log')}")
-        main(ckpt_dir)
+        main(
+            ckpt_dir,
+            run_probes=not args.no_probe,
+            probe_target=args.probe_target,
+        )
     except KeyboardInterrupt:
         tqdm.write("\nTraining interrupted.")
         raise

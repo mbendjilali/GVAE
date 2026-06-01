@@ -103,11 +103,18 @@ Point the script at your LAZ / tile root (see script help for exact arguments). 
 Organise outputs into:
 
 ```
-data/graphs/train/   # training scenes
-data/graphs/test/    # held-out validation scenes
+data/graphs/train/   # training scenes (29 tiles)
+data/graphs/test/    # held-out validation scenes (11 tiles)
 ```
 
-The exact tile IDs for the fixed split should be documented in TODO G1. Graphs with **no coarsenable instances** are skipped by the dataset loader.
+**Fixed validation split** (tile IDs = JSON stems without `.json`):
+
+| Split | Count | Tile IDs |
+|-------|------:|----------|
+| **train** | 29 | `5080_54435`, `5085_54320`, `5095_54440`, `5095_54455`, `5100_54495`, `5105_54405`, `5105_54460`, `5110_54320`, `5110_54460`, `5110_54475`, `5110_54495`, `5115_54480`, `5130_54355`, `5135_54495`, `5140_54445`, `5145_54340`, `5145_54405`, `5145_54460`, `5145_54470`, `5145_54480`, `5150_54340`, `5160_54330`, `5165_54390`, `5165_54395`, `5180_54435`, `5180_54485`, `5185_54390`, `5185_54485`, `5190_54400` |
+| **test** (val) | 11 | `5080_54400`, `5080_54470`, `5100_54440`, `5100_54490`, `5120_54445`, `5135_54430`, `5135_54435`, `5140_54390`, `5150_54325`, `5155_54335`, `5175_54395` |
+
+`train.py` loads `data/graphs/train/` for training and `data/graphs/test/` for validation (despite the folder name, this is the **val** split). Graphs with **no coarsenable instances** are skipped by the dataset loader.
 
 ---
 

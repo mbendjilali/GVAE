@@ -80,6 +80,10 @@ class SceneGraphDecoder(nn.Module):
             'r': self.softplus(self.mlp_r(z_pred)),
         }
 
+    def predict_anchors(self, h: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """h-predicted reference box (used for anchor loss and hz readout)."""
+        return torch.tanh(self.mlp_p_anchor(h)), self.softplus(self.mlp_r_anchor(h))
+
 
 def zonly_query_points(p_gt: torch.Tensor, *, training: bool) -> torch.Tensor:
     """Sample locations for Z-only readout; jitter during training for localisation pressure."""

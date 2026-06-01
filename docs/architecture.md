@@ -109,7 +109,7 @@ A **3D U-Net** refines the splatted grid and outputs Gaussian parameters `μ` an
 
 | Output | Grid (H×W×D) | Channels | U-Net depth |
 |--------|----------------|----------|-------------|
-| `Z_fine` | 64×64×8 | 72 | **1** (shallow — less blur) |
+| `Z_fine` | 64×64×8 | 72 | **3** |
 | `Z_mid` | 32×32×8 | 144 | 3 |
 | `Z_coarse` | 16×16×4 | 288 | 2 |
 

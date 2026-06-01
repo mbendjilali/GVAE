@@ -89,7 +89,7 @@ SPLAT_NODE_CHUNK      = 64          # nodes per chunk in chunked-dense path (lar
 UNET_USE_CHECKPOINT = False     # gradient checkpoint on large grids (≥ UNET_CHECKPOINT_MIN_SIDE)
 UNET_CHECKPOINT_MIN_SIDE = 32
 UNET_CHANNELS_LAST = True       # channels_last_3d for cudnn conv (avoids layout copies)
-UNET_DEPTH_FINE = 1             # shallow fine U-Net (less spatial blur); mid/coarse stay deep
+UNET_DEPTH_FINE = 3             # depth-1 ablation regressed fine zpos; keep deep fine U-Net
 UNET_DEPTH_MID = 3
 UNET_DEPTH_COARSE = 2
 
@@ -98,9 +98,21 @@ NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 
 # ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
 USE_Z_ONLY_DECODER = True
-LAMBDA_RECON_H = 1.0           # h+Z deformable decoder reconstruction
-LAMBDA_RECON_ZONLY = 1.2       # Z-only point readout (slightly favoured for DDM)
+LAMBDA_RECON_H = 1.5           # h+Z deformable decoder (raised vs Z-only for localization)
+LAMBDA_RECON_ZONLY = 1.0       # Z-only at GT slots (DDM readout)
+LAMBDA_RECON_HZONLY = 0.8      # Z-only at h-predicted anchors (targets hzpos)
 Z_ONLY_QUERY_JITTER = 0.05     # uniform noise on query points in train (0 = sample at p_gt)
+
+# Auxiliary anchor regression: ||tanh(mlp_p_anchor(h)) - p_gt||² (fine / mid)
+LAMBDA_ANCHOR_FINE = 1.0
+LAMBDA_ANCHOR_MID = 0.5
+LAMBDA_ANCHOR_COARSE = 0.0
+
+# Teacher-forcing curriculum on h-decoder reference boxes (training only; val uses mix=0)
+ANCHOR_MIX_CURRICULUM = True
+ANCHOR_MIX_START = 1.0         # epoch 0: sample Z on GT anchors
+ANCHOR_MIX_END = 0.0           # after anneal: h-predicted anchors only
+ANCHOR_MIX_ANNEAL_EPOCHS = 40  # linear blend over epochs 0 .. N-1, then hold END
 
 # ─── Z norm contrastive (Probe C: ||Z(p_gt)|| > ||Z(empty)||) ─────────────────
 LAMBDA_NORM_CONTRAST_FINE = 0.1

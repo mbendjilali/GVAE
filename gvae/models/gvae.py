@@ -1,6 +1,7 @@
 # gvae/models/gvae.py
 # Top-level GVAE: three-level encoder chain + fine / mid / coarse decoder branches
 
+import torch
 import torch.nn as nn
 
 import config
@@ -64,9 +65,17 @@ class GVAE(nn.Module):
             'recon_fine_zonly': None,
             'recon_mid_zonly': None,
             'recon_coarse_zonly': None,
+            'recon_fine_zonly_hanchor': None,
+            'recon_mid_zonly_hanchor': None,
+            'recon_coarse_zonly_hanchor': None,
+            'p_anchor_fine': enc['p_fine'].new_zeros(0, 3),
+            'p_anchor_mid': enc['p_lm1'].new_zeros(0, 3),
+            'p_anchor_coarse': enc['p_1'].new_zeros(0, 3),
         }
 
         if enc['h_fine'].numel() > 0:
+            p_anchor, _ = self.decoder_fine.predict_anchors(enc['h_fine'])
+            out['p_anchor_fine'] = p_anchor
             out['recon_fine'] = self.decoder_fine(
                 h=enc['h_fine'],
                 Z=enc['z_fine'],
@@ -77,8 +86,13 @@ class GVAE(nn.Module):
                 out['recon_fine_zonly'] = self.zonly_decoder_fine.forward_at_gt(
                     enc['z_fine'], enc['p_fine'],
                 )
+                out['recon_fine_zonly_hanchor'] = self.zonly_decoder_fine.forward(
+                    enc['z_fine'], p_anchor,
+                )
 
         if enc['h_lm1'].numel() > 0:
+            p_anchor_mid, _ = self.decoder_mid.predict_anchors(enc['h_lm1'])
+            out['p_anchor_mid'] = p_anchor_mid
             out['recon_mid'] = self.decoder_mid(
                 h=enc['h_lm1'],
                 Z=enc['z_mid'],
@@ -89,8 +103,13 @@ class GVAE(nn.Module):
                 out['recon_mid_zonly'] = self.zonly_decoder_mid.forward_at_gt(
                     enc['z_mid'], enc['p_lm1'],
                 )
+                out['recon_mid_zonly_hanchor'] = self.zonly_decoder_mid.forward(
+                    enc['z_mid'], p_anchor_mid,
+                )
 
         if enc['h_1'].numel() > 0:
+            p_anchor_coarse, _ = self.decoder_coarse.predict_anchors(enc['h_1'])
+            out['p_anchor_coarse'] = p_anchor_coarse
             out['recon_coarse'] = self.decoder_coarse(
                 h=enc['h_1'],
                 Z=enc['z_coarse'],
@@ -100,6 +119,9 @@ class GVAE(nn.Module):
             if config.USE_Z_ONLY_DECODER:
                 out['recon_coarse_zonly'] = self.zonly_decoder_coarse.forward_at_gt(
                     enc['z_coarse'], enc['p_1'],
+                )
+                out['recon_coarse_zonly_hanchor'] = self.zonly_decoder_coarse.forward(
+                    enc['z_coarse'], p_anchor_coarse,
                 )
 
         return out

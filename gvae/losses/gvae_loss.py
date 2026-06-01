@@ -39,6 +39,30 @@ def reconstruction_loss(recon, p_true, r_true, s_true):
     )
 
 
+def anchor_loss(p_anchor: torch.Tensor, p_gt: torch.Tensor) -> torch.Tensor:
+    """MSE on h-predicted anchor positions vs GT supernode centres."""
+    if p_gt.numel() == 0 or p_anchor.numel() == 0:
+        return p_gt.new_zeros(())
+    return F.mse_loss(p_anchor, p_gt)
+
+
+def decoder_gt_anchor_mix_for_epoch(epoch: int) -> float:
+    """Linear curriculum for DECODER_GT_ANCHOR_MIX (epoch is 0-indexed)."""
+    if not config.ANCHOR_MIX_CURRICULUM:
+        return config.DECODER_GT_ANCHOR_MIX
+    n = max(1, config.ANCHOR_MIX_ANNEAL_EPOCHS)
+    t = min(1.0, epoch / n)
+    return config.ANCHOR_MIX_START + t * (config.ANCHOR_MIX_END - config.ANCHOR_MIX_START)
+
+
+def _lambda_anchor(name: str) -> float:
+    return {
+        'fine': config.LAMBDA_ANCHOR_FINE,
+        'mid': config.LAMBDA_ANCHOR_MID,
+        'coarse': config.LAMBDA_ANCHOR_COARSE,
+    }[name]
+
+
 def KL_loss(mu, logvar):
     kl = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
     return kl.sum() / mu.numel()
@@ -163,9 +187,11 @@ def _maybe_branch_loss(
     branches,
     recon,
     recon_zonly,
+    recon_hzonly,
     p_true,
     r_true,
     s_true,
+    p_anchor,
     mu,
     logvar,
     occ_grid_head,
@@ -178,7 +204,13 @@ def _maybe_branch_loss(
         return
     has_h = recon is not None and config.LAMBDA_RECON_H > 0
     has_z = recon_zonly is not None and config.USE_Z_ONLY_DECODER and config.LAMBDA_RECON_ZONLY > 0
-    if not has_h and not has_z:
+    has_hz = (
+        recon_hzonly is not None
+        and config.USE_Z_ONLY_DECODER
+        and config.LAMBDA_RECON_HZONLY > 0
+    )
+    lambda_anchor = _lambda_anchor(name)
+    if not has_h and not has_z and not has_hz and lambda_anchor <= 0:
         return
 
     parts: dict = {}
@@ -193,6 +225,16 @@ def _maybe_branch_loss(
         L_recon_z = reconstruction_loss(recon_zonly, p_true, r_true, s_true)
         parts['recon_zonly'] = L_recon_z
         total = total + config.LAMBDA_RECON_ZONLY * L_recon_z
+
+    if has_hz:
+        L_recon_hz = reconstruction_loss(recon_hzonly, p_true, r_true, s_true)
+        parts['recon_hzonly'] = L_recon_hz
+        total = total + config.LAMBDA_RECON_HZONLY * L_recon_hz
+
+    if lambda_anchor > 0 and p_anchor is not None and p_anchor.numel() > 0:
+        L_anchor = anchor_loss(p_anchor, p_true)
+        parts['anchor'] = L_anchor
+        total = total + lambda_anchor * L_anchor
 
     L_kl = KL_loss(mu, logvar)
     parts['KL'] = L_kl
@@ -228,7 +270,9 @@ def compute_branch_losses(outputs, graph, step):
         branches,
         outputs.get('recon_fine'),
         outputs.get('recon_fine_zonly'),
+        outputs.get('recon_fine_zonly_hanchor'),
         outputs['p_fine'], outputs['r_fine'], outputs['s_fine'],
+        outputs.get('p_anchor_fine'),
         outputs['mu_fine'], outputs['logvar_fine'],
         outputs['occ_grid_head_fine'],
         outputs['z_fine'], graph.occ_fine,
@@ -238,7 +282,9 @@ def compute_branch_losses(outputs, graph, step):
         branches,
         outputs.get('recon_mid'),
         outputs.get('recon_mid_zonly'),
+        outputs.get('recon_mid_zonly_hanchor'),
         outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'],
+        outputs.get('p_anchor_mid'),
         outputs['mu_mid'], outputs['logvar_mid'],
         outputs['occ_grid_head_mid'],
         outputs['z_mid'], graph.occ_mid,
@@ -248,7 +294,9 @@ def compute_branch_losses(outputs, graph, step):
         branches,
         outputs.get('recon_coarse'),
         outputs.get('recon_coarse_zonly'),
+        outputs.get('recon_coarse_zonly_hanchor'),
         outputs['p_1'], outputs['r_1'], outputs['s_1'],
+        outputs.get('p_anchor_coarse'),
         outputs['mu_coarse'], outputs['logvar_coarse'],
         outputs['occ_grid_head_coarse'],
         outputs['z_coarse'], graph.occ_coarse,
@@ -266,13 +314,15 @@ def compute_loss(outputs, graph, step):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
-    L_recon = L_recon_zonly = L_KL = L_occ = L_norm = zero
+    L_recon = L_recon_zonly = L_recon_hzonly = L_KL = L_occ = L_norm = L_anchor = zero
     L_pool = zero
     pool_extras = {}
 
     for _, _, parts in branches:
         L_recon = L_recon + parts.get('recon', zero)
         L_recon_zonly = L_recon_zonly + parts.get('recon_zonly', zero)
+        L_recon_hzonly = L_recon_hzonly + parts.get('recon_hzonly', zero)
+        L_anchor = L_anchor + parts.get('anchor', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
         L_norm = L_norm + parts.get('norm_contrast', zero)
@@ -288,6 +338,8 @@ def compute_loss(outputs, graph, step):
     components = {
         'recon': L_recon,
         'recon_zonly': L_recon_zonly,
+        'recon_hzonly': L_recon_hzonly,
+        'anchor': L_anchor,
         'KL': L_KL,
         'occ': L_occ,
         'norm_contrast': L_norm,

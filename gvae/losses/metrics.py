@@ -52,21 +52,27 @@ def _occupancy_grid_iou(
     occ_grid_head,
     z: torch.Tensor,
     occ_gt: torch.Tensor,
-) -> tuple[float, float]:
+) -> tuple[float, float, float, float, float]:
+    """Return (iou, precision, recall, pred_rate, gt_rate) over flattened voxels."""
     if occ_gt.numel() == 0:
-        return float("nan"), float("nan")
+        nan = float("nan")
+        return nan, nan, nan, nan, nan
     logits = occ_grid_head(z)
     probs = torch.sigmoid(logits)
     pred = probs >= config.METRICS_OCC_THRESHOLD
     flat_gt = occ_gt.flatten().bool()
     flat_pred = pred.flatten()
+    n = flat_gt.numel()
     tp = (flat_pred & flat_gt).sum().float()
     fp = (flat_pred & ~flat_gt).sum().float()
     fn = (~flat_pred & flat_gt).sum().float()
     union = tp + fp + fn
     iou = (tp / union.clamp(min=1)).item()
     precision = (tp / (tp + fp).clamp(min=1)).item()
-    return iou, precision
+    recall = (tp / (tp + fn).clamp(min=1)).item()
+    pred_rate = (flat_pred.sum().float() / max(n, 1)).item()
+    gt_rate = (flat_gt.sum().float() / max(n, 1)).item()
+    return iou, precision, recall, pred_rate, gt_rate
 
 
 def _instance_pos_err_mid(outputs, graph) -> float:
@@ -91,10 +97,13 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             )
             metrics["soft_miou_fine"] = soft_miou(recon_fine["s"], outputs["s_fine"])
             if config.LAMBDA_OCC_GRID_FINE > 0:
-                iou_f, _ = _occupancy_grid_iou(
+                iou_f, _, rec_f, pr_f, gt_f = _occupancy_grid_iou(
                     outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
                 )
                 metrics["occ_iou_fine"] = iou_f
+                metrics["occ_recall_fine"] = rec_f
+                metrics["occ_pred_rate_fine"] = pr_f
+                metrics["occ_gt_rate_fine"] = gt_f
 
         recon_fine_z = outputs.get("recon_fine_zonly")
         if recon_fine_z is not None and outputs["p_fine"].numel() > 0:
@@ -104,6 +113,16 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             metrics["soft_miou_zonly_fine"] = soft_miou(
                 recon_fine_z["s"], outputs["s_fine"],
             )
+
+        recon_fine_z_h = outputs.get("recon_fine_zonly_hanchor")
+        if recon_fine_z_h is not None and outputs["p_fine"].numel() > 0:
+            metrics["pos_err_zonly_hanchor_fine"] = mean_position_error(
+                recon_fine_z_h["p"], outputs["p_fine"],
+            )
+
+        p_anchor_f = outputs.get("p_anchor_fine")
+        if p_anchor_f is not None and p_anchor_f.numel() > 0 and outputs["p_fine"].numel() > 0:
+            metrics["anchor_err_fine"] = mean_position_error(p_anchor_f, outputs["p_fine"])
 
         if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
             metrics["pos_err_mid"] = mean_position_error(
@@ -119,12 +138,25 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
                 recon_mid_z["p"], outputs["p_lm1"],
             )
 
+        recon_mid_z_h = outputs.get("recon_mid_zonly_hanchor")
+        if recon_mid_z_h is not None and outputs["p_lm1"].numel() > 0:
+            metrics["pos_err_zonly_hanchor_mid"] = mean_position_error(
+                recon_mid_z_h["p"], outputs["p_lm1"],
+            )
+
+        p_anchor_m = outputs.get("p_anchor_mid")
+        if p_anchor_m is not None and p_anchor_m.numel() > 0 and outputs["p_lm1"].numel() > 0:
+            metrics["anchor_err_mid"] = mean_position_error(p_anchor_m, outputs["p_lm1"])
+
         if outputs.get("recon_mid") is not None:
             if config.LAMBDA_OCC_GRID_MID > 0:
-                iou, _ = _occupancy_grid_iou(
+                iou, _, rec_m, pr_m, gt_m = _occupancy_grid_iou(
                     outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
                 )
                 metrics["occ_iou_mid"] = iou
+                metrics["occ_recall_mid"] = rec_m
+                metrics["occ_pred_rate_mid"] = pr_m
+                metrics["occ_gt_rate_mid"] = gt_m
             metrics["inst_pos_err_mid"] = _instance_pos_err_mid(outputs, graph)
 
         if config.LOG_FULL_METRICS:
@@ -146,20 +178,26 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
             recon_fine["s"], outputs["s_fine"],
         ).item()
         if config.LAMBDA_OCC_GRID_FINE > 0:
-            _, prec_f = _occupancy_grid_iou(
+            _, prec_f, rec_f, pr_f, gt_f = _occupancy_grid_iou(
                 outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
             )
             metrics["occ_precision_fine"] = prec_f
+            metrics["occ_recall_fine"] = rec_f
+            metrics["occ_pred_rate_fine"] = pr_f
+            metrics["occ_gt_rate_fine"] = gt_f
 
     if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
         metrics["recon_sem_mid"] = soft_semantic_loss(
             outputs["recon_mid"]["s"], outputs["s_lm1"],
         ).item()
         if config.LAMBDA_OCC_GRID_MID > 0:
-            _, prec_m = _occupancy_grid_iou(
+            _, prec_m, rec_m, pr_m, gt_m = _occupancy_grid_iou(
                 outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
             )
             metrics["occ_precision_mid"] = prec_m
+            metrics["occ_recall_mid"] = rec_m
+            metrics["occ_pred_rate_mid"] = pr_m
+            metrics["occ_gt_rate_mid"] = gt_m
 
     if outputs.get("recon_coarse") is not None:
         if outputs["p_1"].numel() > 0:
@@ -170,11 +208,14 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
                 outputs["recon_coarse"]["s"], outputs["s_1"],
             )
             if config.LAMBDA_OCC_GRID_COARSE > 0:
-                iou_c, prec_c = _occupancy_grid_iou(
+                iou_c, prec_c, rec_c, pr_c, gt_c = _occupancy_grid_iou(
                     outputs["occ_grid_head_coarse"], outputs["z_coarse"], graph.occ_coarse,
                 )
                 metrics["occ_iou_coarse"] = iou_c
                 metrics["occ_precision_coarse"] = prec_c
+                metrics["occ_recall_coarse"] = rec_c
+                metrics["occ_pred_rate_coarse"] = pr_c
+                metrics["occ_gt_rate_coarse"] = gt_c
 
     if outputs["mu_fine"].numel() > 0:
         metrics["kl_fine"] = KL_loss(outputs["mu_fine"], outputs["logvar_fine"]).item()

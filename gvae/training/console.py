@@ -81,7 +81,13 @@ class Term:
         key = f"occ_iou_{level}"
         if key not in metrics:
             return None
-        return f"occ={metrics[key]:.0%}"
+        parts = [f"occ={metrics[key]:.0%}"]
+        pred_key = f"occ_pred_rate_{level}"
+        rec_key = f"occ_recall_{level}"
+        if pred_key in metrics and rec_key in metrics:
+            parts.append(f"pred={metrics[pred_key]:.0%}")
+            parts.append(f"rec={metrics[rec_key]:.0%}")
+        return " ".join(parts)
 
     def metrics_line(self, metrics: dict) -> None:
         if not metrics:
@@ -94,6 +100,12 @@ class Term:
             )
             if "pos_err_zonly_fine" in metrics:
                 fine += f" zpos={metrics['pos_err_zonly_fine']:.3f}"
+                if "soft_miou_zonly_fine" in metrics:
+                    fine += f" zsmiou={metrics['soft_miou_zonly_fine']:.0%}"
+            if "anchor_err_fine" in metrics:
+                fine += f" anc={metrics['anchor_err_fine']:.3f}"
+            if "pos_err_zonly_hanchor_fine" in metrics:
+                fine += f" hzpos={metrics['pos_err_zonly_hanchor_fine']:.3f}"
             occ_f = self._occ_iou_label(metrics, "fine")
             if occ_f:
                 fine += f" {occ_f}"
@@ -101,6 +113,10 @@ class Term:
         mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
         if "pos_err_zonly_mid" in metrics:
             mid += f" zpos={metrics['pos_err_zonly_mid']:.3f}"
+        if "anchor_err_mid" in metrics:
+            mid += f" anc={metrics['anchor_err_mid']:.3f}"
+        if "pos_err_zonly_hanchor_mid" in metrics:
+            mid += f" hzpos={metrics['pos_err_zonly_hanchor_mid']:.3f}"
         occ_m = self._occ_iou_label(metrics, "mid")
         if occ_m:
             mid += f" {occ_m}"
