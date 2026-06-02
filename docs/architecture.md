@@ -132,11 +132,12 @@ During training, two decoders reconstruct supernode attributes from `(h, Z)`. Th
 
 1. Predict an anchor box `(p, r)` from **`h`** (not from ground truth).
 2. Place 27 sample points on a 3×3×3 grid inside that box (+ learned offsets).
-3. Bilinear-sample **`Z`** at those points; cross-attend; predict `ŝ`, `p̂`, `r̂`.
+3. Bilinear-sample **`Z`** at those points; cross-attend; predict `ŝ`, `r̂`.
+4. **`p̂` comes from `ZOnlyDecoder(Z, p_anchor)`** when the Z-only path is enabled (default) — same readout as `hzpos`. The deformable path does not predict position.
 
 `DECODER_GT_ANCHOR_MIX = 0.0` in normal training — anchors come from the model, not from labels. (Probe ablations can blend in GT anchors by raising this value.)
 
-This path drives **`pos_err_fine`** / **`pos_err_mid`** — true **localization** metrics.
+This path drives **`pos_err_fine`** / **`pos_err_mid`** — **`pos` matches `hzpos`** at validation (mix=0).
 
 ### Z-only decoder (DDM-aligned readout)
 
@@ -163,38 +164,47 @@ This replaces older designs that sampled random query points for occupancy.
 
 Total loss per branch (fine / mid / coarse) combines:
 
-$$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_{\text{recon\_zonly}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{grid}}\,\mathcal{L}_{\text{occ\_grid}} + \lambda_{\text{norm}}\,\mathcal{L}_{\text{norm\_contrast}} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
+$$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_{\text{recon\_zonly}} + \lambda_{hz} \mathcal{L}_{\text{recon\_hzonly}} + \lambda_{\text{anc}}\mathcal{L}_{\text{anchor}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{grid}}\,\mathcal{L}_{\text{occ\_grid}} + \lambda_{\text{norm}}\,\mathcal{L}_{\text{norm\_contrast}} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
 
 | Term | Default weight | What it does |
 |------|----------------|--------------|
-| **Recon h** | `LAMBDA_RECON_H = 1.0` | Soft CE on class + MSE on `p`/`r` via h+Z decoder |
-| **Recon zonly** | `LAMBDA_RECON_ZONLY = 1.2` | Same targets via Z-only decoder (slightly favoured for DDM) |
+| **Recon h** | `LAMBDA_RECON_H = 1.5` | Soft CE on class + MSE on `p`/`r` via h+Z path (`p` from ZOnlyDecoder at anchor) |
+| **Recon zonly** | `LAMBDA_RECON_ZONLY = 1.0` | Same targets via Z-only decoder at GT slots (+ train jitter) |
+| **Recon hzonly** | `LAMBDA_RECON_HZONLY = 0.8` | Z-only readout at h-predicted anchors (partially redundant with h recon for `p` when zonly pos readout is on) |
+| **Anchor** | `LAMBDA_ANCHOR_FINE = 1.0`, `MID = 0.5` | MSE on `p_anchor` vs GT supernode centres (fine / mid) |
 | **KL** | cyclical → `LAMBDA_KL_MAX = 1e-3` | Regularise `μ, σ` toward standard normal |
 | **Occ grid** | `LAMBDA_OCC_GRID_* = 1.0` | Voxel occupancy BCE (`OccGridHead`) |
 | **Norm contrast** | `0.1` fine & mid | Hinge: push `‖Z(p_gt)‖` above `‖Z(empty voxel)‖` (Probe C alignment) |
 | **Pool** | soft mode only | Keep coarsening assignments compact and separated |
 
+**Anchor curriculum:** during training, `DECODER_GT_ANCHOR_MIX` blends GT into h-decoder reference boxes (1→0 over 40 epochs by default); validation always uses mix=0. See [training.md](training.md#command-line-overrides).
+
 **Reconstruction** at each supernode uses soft cross-entropy for semantics and MSE for position and footprint (`LAMBDA_SEM`, `LAMBDA_POS`).
 
 **KL annealing** cycles over training (Fu et al., 2019) so the model repeatedly explores then regularises.
+
+Localization experiment arc and recommended λ overrides: [localization-progress.md](localization-progress.md).
 
 ---
 
 ## Validation metrics (what the console shows)
 
-| Metric | Decoder | Good direction | Plain meaning |
-|--------|---------|----------------|---------------|
-| `pos_err_fine` | h + Z | lower | Fine supernode position error |
-| `zpos` (`pos_err_zonly_fine`) | Z-only | lower | Position error when reading `Z` at GT slot |
-| `soft_miou_fine` | h + Z | higher | Semantic overlap on fine supernodes |
-| `occ_iou_fine` | OccGridHead | higher | Predicted vs LiDAR occupancy (fine grid) |
-| `inst_pos_err_mid` | h + Z chain | lower | Instance position via S0→S1→mid decode |
-| `pos_err_mid` | h + Z | lower | Mid supernode position error |
-| `zpos` mid (`pos_err_zonly_mid`) | Z-only | lower | Z-only mid slot readout |
-| `soft_miou_mid` | h + Z | higher | Semantics on mid supernodes |
-| `occ_iou_mid` | OccGridHead | higher | Occupancy IoU on mid grid |
+| Metric | Decoder / source | Good direction | Plain meaning |
+|--------|------------------|----------------|---------------|
+| `pos` (`pos_err_fine`) | h+Z (`p` from Z@anchor by default) | lower | Fine supernode position — **localization** |
+| `hzpos` | Z-only @ `p_anchor` | lower | Same as `pos` with default Z-only decoder |
+| `zpos` (`pos_err_zonly_fine`) | Z-only @ GT slot | lower | Oracle slot readout (DDM with known layout) |
+| `anc` (`anchor_err_fine`) | `mlp_p_anchor(h)` | lower | Anchor placement error before Z refinement |
+| `smiou` | h + Z (deformable) | higher | Semantic reconstruction on fine supernodes |
+| `zsmiou` | Z-only @ GT | higher | Z-only semantic readout at GT slots |
+| `occ` | OccGridHead | higher | Predicted vs LiDAR occupancy (fine grid IoU) |
+| `pred` / `rec` | OccGridHead | — | Occupancy pred rate / recall (over-pred diagnostic) |
+| `inst` (`inst_pos_err_mid`) | h + Z chain | lower | Instance position via S0→S1→mid decode |
+| mid `zpos`, `anc`, `hzpos`, `smiou` | same pattern | — | Mid supernode equivalents |
 
 Set `LOG_FULL_METRICS=True` for extra TensorBoard scalars (hard mIoU, coarse level, KL breakdown, …).
+
+See [localization-progress.md](localization-progress.md) for current benchmark numbers and training recipe.
 
 ---
 

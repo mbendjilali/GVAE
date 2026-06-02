@@ -67,6 +67,18 @@ tensorboard --logdir checkpoint/<run>/tb_logs
 
 **Schedule:** single-stage — fine, mid, and coarse branches all train every epoch. Learning rate drops at epoch `LR_DECAY_EPOCH + 1` (default: 41) from `3e-4` to `1e-4`. Default run length: `150` epochs.
 
+### Localization recipe (Jun 2026 best)
+
+Use a **fresh** `--ckpt-dir` per run. See [localization-progress.md](localization-progress.md) for the three-step arc and metrics.
+
+```bash
+python train.py --ckpt-dir checkpoint/anchor_v2 \
+  --lambda-recon-h 1.5 --lambda-recon-zonly 1.0 --lambda-recon-hzonly 0.5 \
+  --lambda-anchor-fine 2.5 --lambda-anchor-mid 1.0
+```
+
+At end of training, probes run automatically on `best.pth` → `probe_report.txt`, `probe_summary.json`. Pass `--no-probe` to skip; `--probe-target {supernode,instance,both}` (default `both`).
+
 ### Example ablation (25 epochs, all occupancy levels)
 
 ```bash
@@ -92,11 +104,13 @@ These override `config.py` without editing the file:
 | `--lambda-anchor-fine` / `--lambda-anchor-mid` | anchor supervision |
 | `--no-anchor-curriculum` | disable GT anchor mix schedule |
 | `--anchor-mix-anneal-epochs N` | curriculum length |
-| `--no-zonly-decoder` | `USE_Z_ONLY_DECODER=False` | Disable Z-only path |
+| `--no-zonly-decoder` | `USE_Z_ONLY_DECODER=False` | Disable Z-only path (restores deformable `mlp_p`) |
 | `--zonly-jitter J` | `Z_ONLY_QUERY_JITTER` | Train-time query noise |
 | `--unet-depth-fine D` | `UNET_DEPTH_FINE` | Fine U-Net depth |
 | `--lambda-norm-contrast-fine F` | `LAMBDA_NORM_CONTRAST_FINE` | Fine norm contrastive loss |
 | `--lambda-norm-contrast-mid M` | `LAMBDA_NORM_CONTRAST_MID` | Mid norm contrastive loss |
+| `--no-probe` | — | Skip end-of-run latent probes (default: run once on `best.pth`) |
+| `--probe-target` | `both` | Probe sampling: `supernode`, `instance`, or `both` |
 
 Norm contrastive weights are **not** exposed separately on the CLI beyond the two flags above; margin and empty-point count stay in `config.py` (`NORM_CONTRAST_MARGIN`, `NORM_CONTRAST_EMPTY_POINTS`).
 
@@ -122,19 +136,22 @@ model.eval()
 Each epoch prints train/val loss, then a **metrics** line. Example shape:
 
 ```
-Epoch 42/150  lr=3.0e-04  train 7.21  val 7.85
-  │ metrics  fine pos=0.18 smiou=84% zpos=0.08 occ=50%  ·  mid inst=0.17 zpos=0.08 smiou=… occ=64%
+Epoch 132/150  lr=1.0e-04  train 11.99  val 11.24  ★ best
+  │ metrics  fine pos=0.102 smiou=76% zpos=0.082 zsmiou=42% anc=0.158 hzpos=0.102 occ=50% pred=24% rec=99%  ·  mid inst=0.127 zpos=0.076 anc=0.133 hzpos=0.100 occ=64% pred=23% rec=98% smiou=75%
 ```
 
 | Console label | TensorBoard key | Meaning |
 |---------------|-----------------|---------|
-| `pos=` | `pos_err_fine` | h+Z decoder — can the model **find** fine supernodes? |
-| `zpos=` | `pos_err_zonly_fine` | Z-only decoder — given GT slot, can `Z` refine position? |
-| `smiou=` | `soft_miou_fine` | Semantic reconstruction quality |
-| `occ=` | `occ_iou_fine` | Voxel occupancy vs LiDAR |
+| `pos=` | `pos_err_fine` | Final fine position (Z@anchor by default) — **localization** |
+| `hzpos=` | `pos_err_zonly_hanchor_fine` | Z-only at h anchor; equals `pos=` when Z-only decoder is enabled |
+| `zpos=` | `pos_err_zonly_fine` | Z-only at **GT slot** (oracle layout) |
+| `anc=` | `anchor_err_fine` | Anchor vs GT before Z refinement — main bottleneck |
+| `smiou=` / `zsmiou=` | `soft_miou_fine` / `soft_miou_zonly_fine` | Semantics: deformable h+Z vs Z-only @ GT |
+| `occ=` | `occ_iou_fine` | Fine occupancy grid IoU |
+| `pred=` / `rec=` | `occ_pred_rate_*` / `occ_recall_*` | Occ over-prediction diagnostic |
 | `inst=` | `inst_pos_err_mid` | Instance positions via coarsening chain |
 
-**Do not confuse** `pos=` (localization) with `zpos=` (slot-conditioned readout). Both should go down, but they measure different things — see [architecture.md](architecture.md#two-decoders-why-two).
+With default config, **`pos` = `hzpos`**; compare both to **`anc`** to see how much Z refines a misplaced anchor. **`zpos`** is the oracle ceiling when layout slots are known. See [architecture.md](architecture.md#two-decoders-why-two) and [localization-progress.md](localization-progress.md).
 
 ### Occupancy IoU plateau
 
@@ -144,7 +161,7 @@ Fine `occ_iou` often plateaus around ~50% even when training is healthy. The mod
 
 ## Latent probes
 
-After training, run **offline probes** on `best.pth`:
+**Default:** `train.py` runs probes once on `best.pth` at end of training → `probe_report.txt`, `probe_summary.json` in the checkpoint dir. Re-run manually:
 
 ```bash
 python utils/probe_latent.py --checkpoint checkpoint/<run>/best.pth \
@@ -175,9 +192,9 @@ python utils/probe_latent.py --help
 
 | Knob | Default | Effect |
 |------|---------|--------|
-| `USE_Z_ONLY_DECODER` | `True` | Enable Z-only readout path |
+| `USE_Z_ONLY_DECODER` | `True` | Z-only readout; h+Z `pos` comes from ZOnlyDecoder at `p_anchor` |
 | `LAMBDA_RECON_H` / `LAMBDA_RECON_ZONLY` / `LAMBDA_RECON_HZONLY` | `1.5` / `1.0` / `0.8` | h+Z recon / Z-only @ GT / Z-only @ h anchors |
-| `LAMBDA_ANCHOR_FINE` / `MID` | `1.0` / `0.5` | Direct MSE on `tanh(mlp_p_anchor(h))` vs GT |
+| `LAMBDA_ANCHOR_FINE` / `MID` | `1.0` / `0.5` | Direct MSE on `tanh(mlp_p_anchor(h))` vs GT (CLI often uses 2.5 / 1.0 — see [localization-progress.md](localization-progress.md)) |
 | `ANCHOR_MIX_CURRICULUM` | `True` | Train h-decoder with GT anchor mix 1→0 over 40 ep |
 | `Z_ONLY_QUERY_JITTER` | `0.05` | Train-time noise on Z sample locations |
 | `UNET_DEPTH_FINE` | `3` | Fine U-Net depth (depth=1 regresses fine `zpos`; ablation confirmed) |
@@ -218,4 +235,5 @@ python utils/probe_latent.py --help
 
 ## Next work
 
-See [TODO.md](../TODO.md) for ablation matrix, probe automation, and dataset tasks.
+- **Localization:** anchor MLP head — see [localization-progress.md](localization-progress.md)
+- **Backlog / ablations:** [TODO.md](../TODO.md)

@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 
 import config
-from gvae.losses.gvae_loss import KL_loss, kl_weight, soft_semantic_loss
+from gvae.losses.gvae_loss import KL_loss, kl_weight, soft_cross_entropy_loss
 from gvae.losses.metrics import (
     _instance_pos_err_mid,
     _occupancy_grid_iou,
@@ -92,7 +92,7 @@ def run_oracle_checks() -> list[str]:
         _instance_pos_err_mid(outputs, graph) < 1e-6,
     )
 
-    check("recon_sem oracle", soft_semantic_loss(s_true, s_true).item() < 1e-6)
+    check("recon_sem oracle", soft_cross_entropy_loss(s_true, s_true).item() < 1e-6)
     check("kl oracle", abs(KL_loss(torch.zeros(50), torch.zeros(50)).item()) < 1e-6)
 
     old_steps = config.KL_TOTAL_STEPS

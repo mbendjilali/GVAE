@@ -139,3 +139,5 @@ If you edit `GRID_FINE`, `GRID_MID`, or `GRID_COARSE` in `config.py`, you must *
 
 - Model use of this data: [architecture.md](architecture.md)
 - Training commands: [training.md](training.md)
+- Reconstruction BEV checks: `utils/visualize_recon.py` (loads `best.pth` + val graph)
+- Localization experiment recap: [localization-progress.md](localization-progress.md)

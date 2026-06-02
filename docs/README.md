@@ -6,38 +6,22 @@ This folder explains the Scene Graph VAE from scratch. You do **not** need prior
 
 ## Reading order (recommended)
 
-1. **[data.md](data.md)** — What files the model eats (JSON graphs, LiDAR occupancy caches).
-2. **[architecture.md](architecture.md)** — What happens inside the network: graphs → splat → U-Net → `Z` → decoders → losses.
+1. **[data.md](data.md)** — JSON graphs, LiDAR occupancy caches.
+2. **[architecture.md](architecture.md)** —  Graphs → splat → U-Net → `Z` → decoders → losses.
 3. **[training.md](training.md)** — How to run training, interpret the console, and run probes.
+4. **[localization-progress.md](localization-progress.md)** — Jun 2026 anchor / `pos` experiment recap (half page).
 
-Then skim **[../TODO.md](../TODO.md)** for active experiments and ablation commands.
+Then skim **[../TODO.md](../TODO.md)** for remaining backlog.
 
 ---
 
 ## Document map
 
-| File | Audience | Contents |
-|------|----------|----------|
-| [data.md](data.md) | Data engineers | LAZ → JSON pipeline, class list, occupancy grids |
-| [architecture.md](architecture.md) | Model readers | Encoder chain, two decoders, loss terms, metrics |
-| [training.md](training.md) | Practitioners | Environment, CLI flags, checkpoints, probes |
+| File | Contents |
+|------|----------|
+| [data.md](data.md) | LAZ → JSON pipeline, class list, occupancy grids, train/val split |
+| [architecture.md](architecture.md) | Encoder chain, two decoders, loss terms, metrics |
+| [training.md](training.md) |Environment, CLI flags, checkpoints, probes |
+| [localization-progress.md](localization-progress.md) |Three-run arc, current numbers, next experiment |
 
 ---
-
-## Agent handoff (local, gitignored)
-
-| File | Purpose |
-|------|---------|
-| [agent/development-retrospective.md](agent/development-retrospective.md) | May 2026 development arc — objectives, obstacles, checkpoints |
-| [agent/next_step.md](agent/next_step.md) | Earlier probe-driven plan (partially superseded) |
-
----
-
-## Archive
-
-Superseded drafts are in [archive/](archive/). **Do not use them** — they describe older designs (single mid/coarse grid, query-based occupancy, etc.).
-
-| File | Replaced by |
-|------|-------------|
-| `archive/GVAE-description.md` | `architecture.md` |
-| `archive/scene_graph_vae_implementation_plan.md` | `architecture.md` + `../TODO.md` |

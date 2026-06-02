@@ -6,7 +6,7 @@ from __future__ import annotations
 import torch
 
 import config
-from gvae.losses.gvae_loss import soft_semantic_loss
+from gvae.losses.gvae_loss import soft_cross_entropy_loss
 
 
 def soft_miou(pred_probs: torch.Tensor, true_soft: torch.Tensor) -> float:
@@ -174,7 +174,7 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
     recon_fine = outputs.get("recon_fine")
     if recon_fine is not None and outputs["p_fine"].numel() > 0:
         metrics["miou_fine"] = hard_miou(recon_fine["s"], outputs["s_fine"])
-        metrics["recon_sem_fine"] = soft_semantic_loss(
+        metrics["recon_sem_fine"] = soft_cross_entropy_loss(
             recon_fine["s"], outputs["s_fine"],
         ).item()
         if config.LAMBDA_OCC_GRID_FINE > 0:
@@ -187,7 +187,7 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
             metrics["occ_gt_rate_fine"] = gt_f
 
     if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
-        metrics["recon_sem_mid"] = soft_semantic_loss(
+        metrics["recon_sem_mid"] = soft_cross_entropy_loss(
             outputs["recon_mid"]["s"], outputs["s_lm1"],
         ).item()
         if config.LAMBDA_OCC_GRID_MID > 0:

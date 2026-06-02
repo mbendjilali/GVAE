@@ -23,10 +23,6 @@ def soft_cross_entropy_loss(pred_probs: torch.Tensor, true_soft: torch.Tensor) -
     return -(true * log_pred).sum(dim=1).mean()
 
 
-# Backward-compatible alias for metrics / diagnostics
-soft_semantic_loss = soft_cross_entropy_loss
-
-
 def reconstruction_loss(recon, p_true, r_true, s_true):
     """Decode-from-Z reconstruction: semantics + position + footprint."""
     L_sem = soft_cross_entropy_loss(recon['s'], s_true)

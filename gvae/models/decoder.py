@@ -44,8 +44,9 @@ class SceneGraphDecoder(nn.Module):
         self.W_K = nn.Linear(d, d)
         self.W_V = nn.Linear(d, d)
         self.mlp_s = nn.Linear(d, config.NUM_CLASSES)
-        self.mlp_p = nn.Linear(d, 3)
         self.mlp_r = nn.Linear(d, 3)
+        if not config.USE_Z_ONLY_DECODER:
+            self.mlp_p = nn.Linear(d, 3)
         self.softplus = nn.Softplus()
 
     def _reference_geometry(self, h, p_gt=None, r_gt=None):
@@ -74,9 +75,15 @@ class SceneGraphDecoder(nn.Module):
         attn = torch.softmax((Q @ K.transpose(1, 2)) / scale, dim=2)
         z_pred = (attn @ V).squeeze(1)
 
+        if config.USE_Z_ONLY_DECODER:
+            # GVAE.forward patches p from ZOnlyDecoder at p_anchor.
+            p_hat = p_ref
+        else:
+            p_hat = torch.tanh(self.mlp_p(z_pred))
+
         return {
             's': torch.softmax(self.mlp_s(z_pred), dim=1),
-            'p': torch.tanh(self.mlp_p(z_pred)),
+            'p': p_hat,
             'r': self.softplus(self.mlp_r(z_pred)),
         }
 

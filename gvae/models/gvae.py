@@ -10,6 +10,27 @@ from gvae.models.decoder import SceneGraphDecoder, ZOnlyDecoder
 from gvae.models.occ_grid_head import OccGridHead
 
 
+def _branch_readouts(
+    decoder: SceneGraphDecoder,
+    zonly_decoder: ZOnlyDecoder | None,
+    *,
+    h,
+    z,
+    p_gt,
+    r_gt,
+) -> tuple[dict, torch.Tensor, dict | None, dict | None]:
+    """Deformable h+Z recon (p from Z@anchor when zonly enabled), zonly @ GT, zonly @ anchor."""
+    p_anchor, _ = decoder.predict_anchors(h)
+    recon = decoder(h=h, Z=z, p_gt=p_gt, r_gt=r_gt)
+    recon_zonly = None
+    recon_zonly_hanchor = None
+    if zonly_decoder is not None:
+        recon_zonly = zonly_decoder.forward_at_gt(z, p_gt)
+        recon_zonly_hanchor = zonly_decoder.forward(z, p_anchor)
+        recon['p'] = recon_zonly_hanchor['p']
+    return recon, p_anchor, recon_zonly, recon_zonly_hanchor
+
+
 class GVAE(nn.Module):
     def __init__(self):
         super().__init__()
@@ -17,6 +38,9 @@ class GVAE(nn.Module):
         self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
         self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
         self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
+        self.zonly_decoder_fine = None
+        self.zonly_decoder_mid = None
+        self.zonly_decoder_coarse = None
         if config.USE_Z_ONLY_DECODER:
             self.zonly_decoder_fine = ZOnlyDecoder(config.D_FINE_LATENT)
             self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
@@ -74,54 +98,45 @@ class GVAE(nn.Module):
         }
 
         if enc['h_fine'].numel() > 0:
-            p_anchor, _ = self.decoder_fine.predict_anchors(enc['h_fine'])
-            out['p_anchor_fine'] = p_anchor
-            out['recon_fine'] = self.decoder_fine(
+            recon, p_anchor, z_gt, z_anc = _branch_readouts(
+                self.decoder_fine,
+                self.zonly_decoder_fine,
                 h=enc['h_fine'],
-                Z=enc['z_fine'],
+                z=enc['z_fine'],
                 p_gt=enc['p_fine'],
                 r_gt=enc['r_fine'],
             )
-            if config.USE_Z_ONLY_DECODER:
-                out['recon_fine_zonly'] = self.zonly_decoder_fine.forward_at_gt(
-                    enc['z_fine'], enc['p_fine'],
-                )
-                out['recon_fine_zonly_hanchor'] = self.zonly_decoder_fine.forward(
-                    enc['z_fine'], p_anchor,
-                )
+            out['recon_fine'] = recon
+            out['p_anchor_fine'] = p_anchor
+            out['recon_fine_zonly'] = z_gt
+            out['recon_fine_zonly_hanchor'] = z_anc
 
         if enc['h_lm1'].numel() > 0:
-            p_anchor_mid, _ = self.decoder_mid.predict_anchors(enc['h_lm1'])
-            out['p_anchor_mid'] = p_anchor_mid
-            out['recon_mid'] = self.decoder_mid(
+            recon, p_anchor, z_gt, z_anc = _branch_readouts(
+                self.decoder_mid,
+                self.zonly_decoder_mid,
                 h=enc['h_lm1'],
-                Z=enc['z_mid'],
+                z=enc['z_mid'],
                 p_gt=enc['p_lm1'],
                 r_gt=enc['r_lm1'],
             )
-            if config.USE_Z_ONLY_DECODER:
-                out['recon_mid_zonly'] = self.zonly_decoder_mid.forward_at_gt(
-                    enc['z_mid'], enc['p_lm1'],
-                )
-                out['recon_mid_zonly_hanchor'] = self.zonly_decoder_mid.forward(
-                    enc['z_mid'], p_anchor_mid,
-                )
+            out['recon_mid'] = recon
+            out['p_anchor_mid'] = p_anchor
+            out['recon_mid_zonly'] = z_gt
+            out['recon_mid_zonly_hanchor'] = z_anc
 
         if enc['h_1'].numel() > 0:
-            p_anchor_coarse, _ = self.decoder_coarse.predict_anchors(enc['h_1'])
-            out['p_anchor_coarse'] = p_anchor_coarse
-            out['recon_coarse'] = self.decoder_coarse(
+            recon, p_anchor, z_gt, z_anc = _branch_readouts(
+                self.decoder_coarse,
+                self.zonly_decoder_coarse,
                 h=enc['h_1'],
-                Z=enc['z_coarse'],
+                z=enc['z_coarse'],
                 p_gt=enc['p_1'],
                 r_gt=enc['r_1'],
             )
-            if config.USE_Z_ONLY_DECODER:
-                out['recon_coarse_zonly'] = self.zonly_decoder_coarse.forward_at_gt(
-                    enc['z_coarse'], enc['p_1'],
-                )
-                out['recon_coarse_zonly_hanchor'] = self.zonly_decoder_coarse.forward(
-                    enc['z_coarse'], p_anchor_coarse,
-                )
+            out['recon_coarse'] = recon
+            out['p_anchor_coarse'] = p_anchor
+            out['recon_coarse_zonly'] = z_gt
+            out['recon_coarse_zonly_hanchor'] = z_anc
 
         return out

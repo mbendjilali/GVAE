@@ -98,7 +98,7 @@ NUM_REF_POINTS = 27            # P = 3×3×3 reference points per node
 
 # ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
 USE_Z_ONLY_DECODER = True
-LAMBDA_RECON_H = 1.5           # h+Z deformable decoder (raised vs Z-only for localization)
+LAMBDA_RECON_H = 1.5           # h+Z deformable decoder (semantics/r; p from ZOnlyDecoder at anchor)
 LAMBDA_RECON_ZONLY = 1.0       # Z-only at GT slots (DDM readout)
 LAMBDA_RECON_HZONLY = 0.8      # Z-only at h-predicted anchors (targets hzpos)
 Z_ONLY_QUERY_JITTER = 0.05     # uniform noise on query points in train (0 = sample at p_gt)
