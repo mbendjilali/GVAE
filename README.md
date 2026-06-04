@@ -2,26 +2,7 @@
 
 A neural encoder that turns **3D outdoor scene graphs** (cars, poles, trees, …) into **three dense 3D latent volumes** — `Z_fine`, `Z_mid`, and `Z_coarse`. A downstream **diffusion model (DDM)** can then sample or edit layout using those volumes.
 
-Think of it like compressing a city block into three maps at different zoom levels: fine detail, neighborhood scale, and whole-scene envelope.
-
----
-
-## What you need to know first
-
-| Term | Meaning |
-|------|---------|
-| **Scene graph** | A list of objects (nodes) with position, size, and class, plus edges between nearby objects |
-| **Supernode** | A group of objects merged by coarsening — one representative point per group |
-| **Latent volume `Z`** | A 3D grid of learned feature vectors (like a 3D image the model can read and write) |
-| **Splatting** | Spreading each node's features onto nearby voxels in that grid |
-| **Decoder** | A small network that reads `Z` and predicts object attributes (class, position, size) |
-| **DDM handoff** | The diffusion model uses `Z` (and known layout slots), not the full graph encoder |
-
----
-
 ## Documentation
-
-Read in this order if you are new:
 
 | # | Doc | What it covers |
 |---|-----|----------------|
