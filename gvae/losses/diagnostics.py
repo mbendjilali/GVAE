@@ -81,7 +81,10 @@ def _branch_terms(
     ):
         _store_term(
             bd, f"recon_latent_{prefix}",
-            reconstruction_loss(recon, p_true, r_true, s_true),
+            reconstruction_loss(
+                recon, p_true, r_true, s_true,
+                pos_weight=config.LAMBDA_POS_LATENT,
+            ),
         )
         total += config.LAMBDA_RECON_LATENT * bd.terms[f"recon_latent_{prefix}"]
 

@@ -115,7 +115,8 @@ LATENT_GRAPH_VAE_MODE = False
 LAMBDA_RECON_LATENT = 1.0       # reconstruction loss on Z-only slot decoder
 LATENT_GRAPH_MAX_SLOTS = 512    # max supernodes per level (queries)
 LATENT_GRAPH_ATTN_HEADS = 8
-LATENT_GRAPH_REFINE_FROM_Z_SAMPLE = True  # second readout after sampling Z at predicted p
+LATENT_GRAPH_REFINE_FROM_Z_SAMPLE = True  # fuse slot trunk with Z sample at predicted p
+LAMBDA_POS_LATENT = 3.0        # position MSE weight in latent-graph recon (vs LAMBDA_POS)
 
 # ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
 USE_Z_ONLY_DECODER = True
@@ -178,7 +179,7 @@ CUDA_DEVICE = 0
 LEARNING_RATE      = 3e-4
 LEARNING_RATE_LATE = 1e-4   # LR after LR_DECAY_EPOCH
 LR_DECAY_EPOCH     = 120     # epochs 1..40 at LEARNING_RATE, then LEARNING_RATE_LATE
-BATCH_SIZE         = 4
+BATCH_SIZE         = 2
 NUM_EPOCHS         = 150
 
 # Performance (training throughput)

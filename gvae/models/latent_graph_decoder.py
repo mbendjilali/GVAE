@@ -3,19 +3,23 @@
 
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import config
-from gvae.models.decoder import bound_position, sample_volume
+from gvae.models.decoder import sample_volume
+from gvae.models.splatting import make_voxel_centers
 
 
 class LatentGraphDecoder(nn.Module):
     """
     Decode supernode (p, r, s) from latent volume Z alone.
 
-    Uses N learned slot queries (N = number of supernodes on the encoded graph).
-    Cardinality comes from the graph topology at encode time, not from GT positions.
+    Position: soft-argmax over voxel centres (slot-specific spatial attention).
+    Semantics / size: Z sampled at predicted p (and optional slot trunk).
     """
 
     def __init__(self, d: int, *, max_slots: int | None = None, num_heads: int | None = None):
@@ -28,7 +32,6 @@ class LatentGraphDecoder(nn.Module):
         self.num_heads = heads
 
         self.z_proj = nn.Conv3d(d, d, kernel_size=1)
-        # One query per supernode index in graph tensor order (not GT position).
         self.slot_index_embed = nn.Embedding(self.max_slots, d)
         self.cross_attn = nn.MultiheadAttention(d, heads, batch_first=True)
         self.norm = nn.LayerNorm(d)
@@ -37,9 +40,20 @@ class LatentGraphDecoder(nn.Module):
             nn.ReLU(inplace=True),
         )
         self.mlp_s = nn.Linear(d, config.NUM_CLASSES)
-        self.mlp_p = nn.Linear(d, 3)
         self.mlp_r = nn.Linear(d, 3)
         self.softplus = nn.Softplus()
+        self._pos_scale = math.sqrt(d)
+
+    def _spatial_positions(
+        self,
+        slots: torch.Tensor,
+        tokens: torch.Tensor,
+        centers: torch.Tensor,
+    ) -> torch.Tensor:
+        """Differentiable expected position in [-1, 1]³ per slot (N, 3)."""
+        logits = (slots @ tokens.T) / self._pos_scale
+        weights = F.softmax(logits, dim=-1)
+        return (weights @ centers).clamp(-1.0, 1.0)
 
     def forward(self, Z: torch.Tensor, n_nodes: int) -> dict[str, torch.Tensor]:
         """
@@ -58,20 +72,25 @@ class LatentGraphDecoder(nn.Module):
 
         feat = self.z_proj(Z.unsqueeze(0))
         _, _, H, W, D = feat.shape
+        grid = (H, W, D)
         tokens = feat.flatten(2).transpose(1, 2)
+        centers = make_voxel_centers(grid, Z.device)
+
         slot_ids = torch.arange(n_nodes, device=Z.device, dtype=torch.long)
         queries = self.slot_index_embed(slot_ids).unsqueeze(0)
         slots, _ = self.cross_attn(queries, tokens, tokens)
-        slots = self.norm(slots)
-        slots = self.readout(slots.squeeze(0))
+        slots = self.norm(slots).squeeze(0)
 
+        p_hat = self._spatial_positions(slots, tokens.squeeze(0), centers)
+
+        z_samp = sample_volume(Z, p_hat.unsqueeze(1)).reshape(n_nodes, -1)
+        feat_at = self.readout(z_samp)
         if config.LATENT_GRAPH_REFINE_FROM_Z_SAMPLE:
-            p_coarse = bound_position(self.mlp_p(slots))
-            z_samp = sample_volume(Z, p_coarse.unsqueeze(1)).reshape(n_nodes, -1)
-            slots = slots + self.readout(z_samp)
+            trunk = self.readout(slots)
+            feat_at = feat_at + trunk
 
         return {
-            's': torch.softmax(self.mlp_s(slots), dim=1),
-            'p': bound_position(self.mlp_p(slots)),
-            'r': self.softplus(self.mlp_r(slots)),
+            's': torch.softmax(self.mlp_s(feat_at), dim=1),
+            'p': p_hat,
+            'r': self.softplus(self.mlp_r(feat_at)),
         }

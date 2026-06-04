@@ -40,16 +40,18 @@ def reconstruction_loss(
     *,
     size_weight: float | None = None,
     sem_weight: float | None = None,
+    pos_weight: float | None = None,
 ):
     """Decode-from-Z reconstruction: semantics + position + footprint."""
     w_size = config.LAMBDA_SIZE if size_weight is None else size_weight
     w_sem = config.LAMBDA_SEM if sem_weight is None else sem_weight
+    w_pos = config.LAMBDA_POS if pos_weight is None else pos_weight
     L_sem = soft_cross_entropy_loss(recon['s'], s_true)
     L_pos = F.mse_loss(recon['p'], p_true)
     L_size = footprint_loss(recon['r'], r_true)
     return (
         w_sem * L_sem
-        + config.LAMBDA_POS * L_pos
+        + w_pos * L_pos
         + w_size * L_size
     )
 
@@ -254,7 +256,10 @@ def _maybe_branch_loss(
     w_sem_z = config.LAMBDA_SEM_ZONLY
 
     if has_latent:
-        L_recon = reconstruction_loss(recon, p_true, r_true, s_true)
+        L_recon = reconstruction_loss(
+            recon, p_true, r_true, s_true,
+            pos_weight=config.LAMBDA_POS_LATENT,
+        )
         parts['recon_latent'] = L_recon
         total = total + config.LAMBDA_RECON_LATENT * L_recon
 

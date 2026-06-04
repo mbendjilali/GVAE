@@ -493,7 +493,8 @@ def main(
             f"{term.paint('latent-vae', Style.DIM)} "
             f"Z→graph_hat (slot cross-attn) λ recon={config.LAMBDA_RECON_LATENT} "
             f"max_slots={config.LATENT_GRAPH_MAX_SLOTS} "
-            f"refine_z={config.LATENT_GRAPH_REFINE_FROM_Z_SAMPLE}"
+            f"refine_z={config.LATENT_GRAPH_REFINE_FROM_Z_SAMPLE} "
+            f"λ_pos={config.LAMBDA_POS_LATENT}"
         )
     if config.USE_Z_ONLY_DECODER:
         pos_mode = (
