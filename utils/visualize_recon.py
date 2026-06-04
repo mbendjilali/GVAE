@@ -76,17 +76,31 @@ def _load_model(
         torch.load(checkpoint, map_location=device, weights_only=True),
     )
     if use_zonly_decoder is None:
-        config.USE_Z_ONLY_DECODER = any(
-            k.startswith("zonly_decoder_fine.") for k in state
+        config.LATENT_GRAPH_VAE_MODE = any(
+            k.startswith("latent_decoder_fine.") for k in state
         )
+        if not config.LATENT_GRAPH_VAE_MODE:
+            config.USE_Z_ONLY_DECODER = any(
+                k.startswith("zonly_decoder_fine.") for k in state
+            )
     else:
         config.USE_Z_ONLY_DECODER = use_zonly_decoder
     model = GVAE().to(device)
     incompatible = model.load_state_dict(state, strict=False)
+    legacy_prefixes = _LEGACY_DECODER_MLP_P
+    if config.LATENT_GRAPH_VAE_MODE:
+        legacy_prefixes = legacy_prefixes + (
+            "decoder_fine.",
+            "decoder_mid.",
+            "decoder_coarse.",
+            "zonly_decoder_fine.",
+            "zonly_decoder_mid.",
+            "zonly_decoder_coarse.",
+        )
     unexpected = [
         k
         for k in incompatible.unexpected_keys
-        if not any(k.startswith(p) for p in _LEGACY_DECODER_MLP_P)
+        if not any(k.startswith(p) for p in legacy_prefixes)
     ]
     if unexpected:
         preview = ", ".join(unexpected[:6])

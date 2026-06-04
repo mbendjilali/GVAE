@@ -94,10 +94,29 @@ class Term:
             return
         parts = []
         if "pos_err_fine" in metrics:
+            tag = "graph_hat" if metrics.get("latent_graph_vae") else "fine"
             fine = (
-                f"fine pos={metrics['pos_err_fine']:.3f} "
+                f"{tag} pos={metrics['pos_err_fine']:.3f} "
                 f"smiou={metrics.get('soft_miou_fine', 0):.0%}"
             )
+            if metrics.get("latent_graph_vae"):
+                if "size_err_fine" in metrics:
+                    fine += f" size={metrics['size_err_fine']:.3f}"
+                occ_f = self._occ_iou_label(metrics, "fine")
+                if occ_f:
+                    fine += f" {occ_f}"
+                parts.append(fine)
+                mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+                if "size_err_mid" in metrics:
+                    mid += f" size={metrics['size_err_mid']:.3f}"
+                occ_m = self._occ_iou_label(metrics, "mid")
+                if occ_m:
+                    mid += f" {occ_m}"
+                mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
+                parts.append(mid)
+                line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)
+                self.write(line)
+                return
             if "pos_err_zonly_fine" in metrics:
                 fine += f" zpos={metrics['pos_err_zonly_fine']:.3f}"
                 if "soft_miou_zonly_fine" in metrics:

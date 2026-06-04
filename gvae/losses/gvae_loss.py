@@ -234,17 +234,26 @@ def _maybe_branch_loss(
 ):
     if p_true.numel() == 0:
         return
-    has_h = recon is not None and config.LAMBDA_RECON_H > 0
+    has_latent = (
+        recon is not None
+        and config.LATENT_GRAPH_VAE_MODE
+        and config.LAMBDA_RECON_LATENT > 0
+    )
+    has_h = (
+        recon is not None
+        and not config.LATENT_GRAPH_VAE_MODE
+        and config.LAMBDA_RECON_H > 0
+    )
     has_z = recon_zonly is not None and config.USE_Z_ONLY_DECODER and config.LAMBDA_RECON_ZONLY > 0
     has_hz = (
         recon_hzonly is not None
         and config.USE_Z_ONLY_DECODER
         and config.LAMBDA_RECON_HZONLY > 0
     )
-    lambda_anchor = _lambda_anchor(name)
-    lambda_anchor_r = _lambda_anchor_r(name)
+    lambda_anchor = 0.0 if config.LATENT_GRAPH_VAE_MODE else _lambda_anchor(name)
+    lambda_anchor_r = 0.0 if config.LATENT_GRAPH_VAE_MODE else _lambda_anchor_r(name)
     if (
-        not has_h and not has_z and not has_hz
+        not has_latent and not has_h and not has_z and not has_hz
         and lambda_anchor <= 0
         and lambda_anchor_r <= 0
     ):
@@ -255,6 +264,11 @@ def _maybe_branch_loss(
 
     w_size_z = config.LAMBDA_SIZE_ZONLY
     w_sem_z = config.LAMBDA_SEM_ZONLY
+
+    if has_latent:
+        L_recon = reconstruction_loss(recon, p_true, r_true, s_true)
+        parts['recon_latent'] = L_recon
+        total = total + config.LAMBDA_RECON_LATENT * L_recon
 
     if has_h:
         L_recon_h = reconstruction_loss(recon, p_true, r_true, s_true)

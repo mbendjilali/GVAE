@@ -7,6 +7,7 @@ import torch.nn as nn
 import config
 from gvae.models.encoder import SceneGraphEncoder
 from gvae.models.decoder import SceneGraphDecoder, ZOnlyDecoder
+from gvae.models.latent_graph_decoder import LatentGraphDecoder
 from gvae.models.occ_grid_head import OccGridHead
 
 
@@ -32,20 +33,45 @@ def _branch_readouts(
     return recon, p_anchor, r_anchor, recon_zonly, recon_zonly_hanchor
 
 
+def _latent_branch_readout(
+    decoder: LatentGraphDecoder,
+    *,
+    z,
+    n_nodes: int,
+) -> dict:
+    """Z → graph_hat; n_nodes sets slot count only (no GT positions)."""
+    return decoder(z, n_nodes)
+
+
 class GVAE(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = SceneGraphEncoder()
-        self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
-        self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
-        self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
+        self.latent_mode = config.LATENT_GRAPH_VAE_MODE
+
+        self.decoder_fine = None
+        self.decoder_mid = None
+        self.decoder_coarse = None
         self.zonly_decoder_fine = None
         self.zonly_decoder_mid = None
         self.zonly_decoder_coarse = None
-        if config.USE_Z_ONLY_DECODER:
-            self.zonly_decoder_fine = ZOnlyDecoder(config.D_FINE_LATENT)
-            self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
-            self.zonly_decoder_coarse = ZOnlyDecoder(config.D_COARSE_LATENT)
+        self.latent_decoder_fine = None
+        self.latent_decoder_mid = None
+        self.latent_decoder_coarse = None
+
+        if self.latent_mode:
+            self.latent_decoder_fine = LatentGraphDecoder(config.D_FINE_LATENT)
+            self.latent_decoder_mid = LatentGraphDecoder(config.D_MID_LATENT)
+            self.latent_decoder_coarse = LatentGraphDecoder(config.D_COARSE_LATENT)
+        else:
+            self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
+            self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
+            self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
+            if config.USE_Z_ONLY_DECODER:
+                self.zonly_decoder_fine = ZOnlyDecoder(config.D_FINE_LATENT)
+                self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
+                self.zonly_decoder_coarse = ZOnlyDecoder(config.D_COARSE_LATENT)
+
         self.occ_grid_head_fine = OccGridHead(config.D_FINE_LATENT)
         self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
         self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
@@ -53,6 +79,7 @@ class GVAE(nn.Module):
     def forward(self, graph):
         enc = self.encoder(graph)
 
+        device_ref = enc['p_fine']
         out = {
             'mu_fine': enc['mu_fine'],
             'logvar_fine': enc['logvar_fine'],
@@ -93,13 +120,32 @@ class GVAE(nn.Module):
             'recon_fine_zonly_hanchor': None,
             'recon_mid_zonly_hanchor': None,
             'recon_coarse_zonly_hanchor': None,
-            'p_anchor_fine': enc['p_fine'].new_zeros(0, 3),
-            'r_anchor_fine': enc['p_fine'].new_zeros(0, 3),
-            'p_anchor_mid': enc['p_lm1'].new_zeros(0, 3),
-            'r_anchor_mid': enc['p_lm1'].new_zeros(0, 3),
-            'p_anchor_coarse': enc['p_1'].new_zeros(0, 3),
-            'r_anchor_coarse': enc['p_1'].new_zeros(0, 3),
+            'p_anchor_fine': device_ref.new_zeros(0, 3),
+            'r_anchor_fine': device_ref.new_zeros(0, 3),
+            'p_anchor_mid': device_ref.new_zeros(0, 3),
+            'r_anchor_mid': device_ref.new_zeros(0, 3),
+            'p_anchor_coarse': device_ref.new_zeros(0, 3),
+            'r_anchor_coarse': device_ref.new_zeros(0, 3),
+            'latent_graph_vae': self.latent_mode,
         }
+
+        if self.latent_mode:
+            n_fine = enc['p_fine'].shape[0]
+            if n_fine > 0:
+                out['recon_fine'] = _latent_branch_readout(
+                    self.latent_decoder_fine, z=enc['z_fine'], n_nodes=n_fine,
+                )
+            n_mid = enc['p_lm1'].shape[0]
+            if n_mid > 0:
+                out['recon_mid'] = _latent_branch_readout(
+                    self.latent_decoder_mid, z=enc['z_mid'], n_nodes=n_mid,
+                )
+            n_coarse = enc['p_1'].shape[0]
+            if n_coarse > 0:
+                out['recon_coarse'] = _latent_branch_readout(
+                    self.latent_decoder_coarse, z=enc['z_coarse'], n_nodes=n_coarse,
+                )
+            return out
 
         if enc['h_fine'].numel() > 0:
             recon, p_anchor, r_anchor, z_gt, z_anc = _branch_readouts(

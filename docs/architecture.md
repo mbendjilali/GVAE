@@ -139,6 +139,24 @@ During training, two decoders reconstruct supernode attributes from `(h, Z)`. Th
 
 This path drives **`pos_err_fine`** / **`pos_err_mid`** — **`pos` matches `hzpos`** at validation (mix=0).
 
+### Latent graph VAE mode (`LATENT_GRAPH_VAE_MODE`)
+
+Honest reconstruction path: **graph → encode → `Z` → `LatentGraphDecoder` → `graph_hat`**.
+
+- Encoder unchanged (splat + U-Net).
+- Decode uses **only** `Z` and supernode count **N** (slot `i` aligns with the *i*-th supernode in graph storage order — not GT `p`).
+- No `h`, no `p_gt` sampling, no anchor heads at decode.
+- Train with `--latent-graph-vae`; monitor **`pos` / `size` / `smiou`** on `recon_*` only.
+
+### Latent graph VAE mode (`LATENT_GRAPH_VAE_MODE`)
+
+Honest reconstruction: **graph → encode → `Z` → `LatentGraphDecoder` → `graph_hat`**.
+
+- Encoder unchanged (splat + U-Net).
+- Decode uses **only** `Z` and supernode count **N** (slot `i` = *i*-th supernode in graph storage order — not GT `p`).
+- No `h`, no `p_gt` sampling, no anchor heads at decode.
+- Train: `--latent-graph-vae`. Metrics: **`pos` / `size` / `smiou`** on `recon_*` only.
+
 ### Z-only decoder (DDM-aligned readout)
 
 1. Sample **`Z` at ground-truth supernode positions `p`** (with small random jitter during training).

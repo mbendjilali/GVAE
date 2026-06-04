@@ -497,6 +497,13 @@ def main(
         f"{term.paint('occ', Style.DIM)} "
         f"grid λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
     )
+    if config.LATENT_GRAPH_VAE_MODE:
+        banner_lines.append(
+            f"{term.paint('latent-vae', Style.DIM)} "
+            f"Z→graph_hat (slot cross-attn) λ recon={config.LAMBDA_RECON_LATENT} "
+            f"max_slots={config.LATENT_GRAPH_MAX_SLOTS} "
+            f"refine_z={config.LATENT_GRAPH_REFINE_FROM_Z_SAMPLE}"
+        )
     if config.USE_Z_ONLY_DECODER:
         pos_mode = (
             "patch p←Z@anchor"
@@ -727,6 +734,14 @@ def _parse_args():
         help="Override ANCHOR_MIX_ANNEAL_EPOCHS",
     )
     parser.add_argument(
+        "--latent-graph-vae", action="store_true",
+        help="Honest graph VAE: encode→Z→LatentGraphDecoder→graph_hat (no h at decode)",
+    )
+    parser.add_argument(
+        "--lambda-recon-latent", type=float, default=None,
+        help="Override LAMBDA_RECON_LATENT (Z→graph_hat reconstruction)",
+    )
+    parser.add_argument(
         "--no-zonly-decoder", action="store_true",
         help="Disable Z-only decode path (USE_Z_ONLY_DECODER=False)",
     )
@@ -812,6 +827,22 @@ def _apply_config_overrides(args) -> None:
         config.DECODER_GT_ANCHOR_MIX = 0.0
     if args.anchor_mix_anneal_epochs is not None:
         config.ANCHOR_MIX_ANNEAL_EPOCHS = args.anchor_mix_anneal_epochs
+    if args.latent_graph_vae:
+        config.LATENT_GRAPH_VAE_MODE = True
+        config.USE_Z_ONLY_DECODER = False
+        config.LAMBDA_RECON_H = 0.0
+        config.LAMBDA_RECON_ZONLY = 0.0
+        config.LAMBDA_RECON_HZONLY = 0.0
+        config.LAMBDA_ANCHOR_FINE = 0.0
+        config.LAMBDA_ANCHOR_MID = 0.0
+        config.LAMBDA_ANCHOR_COARSE = 0.0
+        config.LAMBDA_ANCHOR_R_FINE = 0.0
+        config.LAMBDA_ANCHOR_R_MID = 0.0
+        config.LAMBDA_ANCHOR_R_COARSE = 0.0
+        config.ANCHOR_MIX_CURRICULUM = False
+        config.DECODER_GT_ANCHOR_MIX = 0.0
+    if args.lambda_recon_latent is not None:
+        config.LAMBDA_RECON_LATENT = args.lambda_recon_latent
     if args.no_zonly_decoder:
         config.USE_Z_ONLY_DECODER = False
     if args.zonly_aux_loss_only:

@@ -96,6 +96,8 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
     """Primary monitoring metrics (console + TensorBoard)."""
     with torch.no_grad():
         metrics: dict[str, float] = {}
+        if outputs.get("latent_graph_vae"):
+            metrics["latent_graph_vae"] = 1.0
 
         recon_fine = outputs.get("recon_fine")
         if recon_fine is not None and outputs["p_fine"].numel() > 0:

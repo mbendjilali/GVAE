@@ -109,6 +109,14 @@ POSITION_BOUND = "clamp"
 # Z-only / deformable p: Δp from query (anchor or GT slot), not absolute from biased Z
 POSITION_RESIDUAL = True
 
+# ─── Latent graph VAE (honest Z → graph_hat, no h at decode) ─────────────────
+# graph → encode → Z → LatentGraphDecoder → graph_hat; metrics on recon_* only.
+LATENT_GRAPH_VAE_MODE = False
+LAMBDA_RECON_LATENT = 1.0       # reconstruction loss on Z-only slot decoder
+LATENT_GRAPH_MAX_SLOTS = 512    # max supernodes per level (queries)
+LATENT_GRAPH_ATTN_HEADS = 8
+LATENT_GRAPH_REFINE_FROM_Z_SAMPLE = True  # second readout after sampling Z at predicted p
+
 # ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
 USE_Z_ONLY_DECODER = True
 # If True, recon_fine['p'] is replaced by ZOnlyDecoder @ p_anchor (hzpos = pos in logs).

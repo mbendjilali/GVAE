@@ -2,6 +2,16 @@
 
 How to set up the environment, run training, read the logs, and check whether `Z` is good enough for diffusion handoff.
 
+## Latent graph VAE (honest Z → graph_hat)
+
+```bash
+python train.py --ckpt-dir checkpoint/latent_graph_vae \
+  --latent-graph-vae \
+  --lambda-recon-latent 1.0
+```
+
+Decode uses **only** `Z` and supernode **count** (no `h`, no GT `p` at decode). Val metrics `pos` / `size` / `smiou` are `graph_hat` vs GT.
+
 ---
 
 ## Environment
