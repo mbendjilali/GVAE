@@ -18,7 +18,11 @@ def occ_grid_pos_weight(occ_gt: torch.Tensor) -> float:
         return float(config.OCC_GRID_POS_WEIGHT)
     n_pos = occ_gt.sum().float().clamp(min=1.0)
     n_neg = (occ_gt.numel() - n_pos).clamp(min=1.0)
-    return (n_neg / n_pos).item()
+    ratio = (n_neg / n_pos).item()
+    cap = config.OCC_GRID_POS_WEIGHT_CAP
+    if cap is not None and cap > 0:
+        ratio = min(ratio, cap)
+    return ratio
 
 
 def loss_occ_grid(logits: torch.Tensor, occ_gt: torch.Tensor) -> torch.Tensor:

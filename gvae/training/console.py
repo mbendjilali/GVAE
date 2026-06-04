@@ -104,6 +104,10 @@ class Term:
                     fine += f" zsmiou={metrics['soft_miou_zonly_fine']:.0%}"
             if "anchor_err_fine" in metrics:
                 fine += f" anc={metrics['anchor_err_fine']:.3f}"
+            if "size_err_fine" in metrics:
+                fine += f" size={metrics['size_err_fine']:.3f}"
+            if "anchor_size_err_fine" in metrics:
+                fine += f" asz={metrics['anchor_size_err_fine']:.3f}"
             if "pos_err_zonly_hanchor_fine" in metrics:
                 fine += f" hzpos={metrics['pos_err_zonly_hanchor_fine']:.3f}"
             occ_f = self._occ_iou_label(metrics, "fine")
@@ -115,6 +119,10 @@ class Term:
             mid += f" zpos={metrics['pos_err_zonly_mid']:.3f}"
         if "anchor_err_mid" in metrics:
             mid += f" anc={metrics['anchor_err_mid']:.3f}"
+        if "size_err_mid" in metrics:
+            mid += f" size={metrics['size_err_mid']:.3f}"
+        if "anchor_size_err_mid" in metrics:
+            mid += f" asz={metrics['anchor_size_err_mid']:.3f}"
         if "pos_err_zonly_hanchor_mid" in metrics:
             mid += f" hzpos={metrics['pos_err_zonly_hanchor_mid']:.3f}"
         occ_m = self._occ_iou_label(metrics, "mid")

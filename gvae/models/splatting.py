@@ -28,13 +28,14 @@ def _voxel_spacing(grid) -> torch.Tensor:
 
 
 def _truncation_box(sigma: float, r: torch.Tensor, grid, voxel_cap_radius: float | None):
-    """Per-node, per-axis truncation half-width: min(σ·r, cap·spacing)."""
-    trunc = sigma * r
-    if voxel_cap_radius is None:
-        return trunc
+    """Per-node, per-axis truncation half-width: min(σ·r, cap·spacing), with voxel floor."""
     spacing = _voxel_spacing(grid).to(device=r.device, dtype=r.dtype)
-    cap = voxel_cap_radius * spacing.unsqueeze(0)
-    return torch.minimum(trunc, cap)
+    trunc = sigma * r
+    if voxel_cap_radius is not None:
+        cap = voxel_cap_radius * spacing.unsqueeze(0)
+        trunc = torch.minimum(trunc, cap)
+    floor = config.SPLAT_MIN_TRUNC_VOXEL_FRAC * spacing.unsqueeze(0)
+    return torch.maximum(trunc, floor)
 
 
 def _splat_dense(h, p, r, grid, sigma, eps, voxel_cap_radius=None, vox_centers=None):
@@ -101,6 +102,13 @@ def _splat_dense_chunked(h, p, r, grid, sigma, eps, node_chunk: int, voxel_cap_r
 
     voxel_features = voxel_features / (weight_sum.unsqueeze(1) + eps)
     return voxel_features.T.reshape(d, H, W, D)
+
+
+def center_splat_grid(features: torch.Tensor) -> torch.Tensor:
+    """Subtract spatial mean per channel so U-Net does not amplify a DC blob."""
+    if not config.SPLAT_SUBTRACT_SPATIAL_MEAN:
+        return features
+    return features - features.mean(dim=(1, 2, 3), keepdim=True)
 
 
 class GaussianSplatting(nn.Module):

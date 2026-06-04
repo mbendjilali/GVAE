@@ -19,16 +19,17 @@ def _branch_readouts(
     p_gt,
     r_gt,
 ) -> tuple[dict, torch.Tensor, dict | None, dict | None]:
-    """Deformable h+Z recon (p from Z@anchor when zonly enabled), zonly @ GT, zonly @ anchor."""
-    p_anchor, _ = decoder.predict_anchors(h)
+    """Deformable h+Z recon; optional Z-only @ GT / @ anchor (aux losses and/or position patch)."""
+    p_anchor, r_anchor = decoder.predict_anchors(h)
     recon = decoder(h=h, Z=z, p_gt=p_gt, r_gt=r_gt)
     recon_zonly = None
     recon_zonly_hanchor = None
     if zonly_decoder is not None:
         recon_zonly = zonly_decoder.forward_at_gt(z, p_gt)
         recon_zonly_hanchor = zonly_decoder.forward(z, p_anchor)
-        recon['p'] = recon_zonly_hanchor['p']
-    return recon, p_anchor, recon_zonly, recon_zonly_hanchor
+        if config.Z_ONLY_PATCH_DEFORMABLE_POSITION:
+            recon['p'] = recon_zonly_hanchor['p']
+    return recon, p_anchor, r_anchor, recon_zonly, recon_zonly_hanchor
 
 
 class GVAE(nn.Module):
@@ -93,12 +94,15 @@ class GVAE(nn.Module):
             'recon_mid_zonly_hanchor': None,
             'recon_coarse_zonly_hanchor': None,
             'p_anchor_fine': enc['p_fine'].new_zeros(0, 3),
+            'r_anchor_fine': enc['p_fine'].new_zeros(0, 3),
             'p_anchor_mid': enc['p_lm1'].new_zeros(0, 3),
+            'r_anchor_mid': enc['p_lm1'].new_zeros(0, 3),
             'p_anchor_coarse': enc['p_1'].new_zeros(0, 3),
+            'r_anchor_coarse': enc['p_1'].new_zeros(0, 3),
         }
 
         if enc['h_fine'].numel() > 0:
-            recon, p_anchor, z_gt, z_anc = _branch_readouts(
+            recon, p_anchor, r_anchor, z_gt, z_anc = _branch_readouts(
                 self.decoder_fine,
                 self.zonly_decoder_fine,
                 h=enc['h_fine'],
@@ -108,11 +112,12 @@ class GVAE(nn.Module):
             )
             out['recon_fine'] = recon
             out['p_anchor_fine'] = p_anchor
+            out['r_anchor_fine'] = r_anchor
             out['recon_fine_zonly'] = z_gt
             out['recon_fine_zonly_hanchor'] = z_anc
 
         if enc['h_lm1'].numel() > 0:
-            recon, p_anchor, z_gt, z_anc = _branch_readouts(
+            recon, p_anchor, r_anchor, z_gt, z_anc = _branch_readouts(
                 self.decoder_mid,
                 self.zonly_decoder_mid,
                 h=enc['h_lm1'],
@@ -122,11 +127,12 @@ class GVAE(nn.Module):
             )
             out['recon_mid'] = recon
             out['p_anchor_mid'] = p_anchor
+            out['r_anchor_mid'] = r_anchor
             out['recon_mid_zonly'] = z_gt
             out['recon_mid_zonly_hanchor'] = z_anc
 
         if enc['h_1'].numel() > 0:
-            recon, p_anchor, z_gt, z_anc = _branch_readouts(
+            recon, p_anchor, r_anchor, z_gt, z_anc = _branch_readouts(
                 self.decoder_coarse,
                 self.zonly_decoder_coarse,
                 h=enc['h_1'],
@@ -136,6 +142,7 @@ class GVAE(nn.Module):
             )
             out['recon_coarse'] = recon
             out['p_anchor_coarse'] = p_anchor
+            out['r_anchor_coarse'] = r_anchor
             out['recon_coarse_zonly'] = z_gt
             out['recon_coarse_zonly_hanchor'] = z_anc
 

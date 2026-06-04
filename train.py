@@ -431,7 +431,38 @@ def _teardown_run_logging(log_file):
         log_file.close()
 
 
-def main(ckpt_dir, *, run_probes: bool, probe_target: str):
+def _load_init_checkpoint(model, path: str, device, term: Term) -> None:
+    """Load pretrained weights; allow architecture mismatches (e.g. phase-1 → phase-2)."""
+    from gvae.checkpoint_compat import migrate_state_dict
+
+    state = migrate_state_dict(
+        torch.load(path, map_location=device, weights_only=True),
+    )
+    incompatible = model.load_state_dict(state, strict=False)
+    n_unexp = len(incompatible.unexpected_keys)
+    n_miss = len(incompatible.missing_keys)
+    if n_unexp:
+        term.dim(
+            f"init from {path}: ignored {n_unexp} checkpoint key(s) "
+            f"(not in this model)"
+        )
+    if n_miss:
+        preview = ", ".join(incompatible.missing_keys[:6])
+        suffix = " ..." if n_miss > 6 else ""
+        term.warn(
+            f"init: {n_miss} module(s) not in checkpoint — random init ({preview}{suffix})"
+        )
+    if not n_unexp and not n_miss:
+        term.ok(f"init from {path} (strict match)")
+
+
+def main(
+    ckpt_dir,
+    *,
+    run_probes: bool,
+    probe_target: str,
+    init_checkpoint: str | None = None,
+):
     term = Term()
     device = get_device()
     use_amp = _use_amp(device)
@@ -467,34 +498,77 @@ def main(ckpt_dir, *, run_probes: bool, probe_target: str):
         f"grid λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
     )
     if config.USE_Z_ONLY_DECODER:
+        pos_mode = (
+            "patch p←Z@anchor"
+            if config.Z_ONLY_PATCH_DEFORMABLE_POSITION
+            else "aux losses only (deformable p)"
+        )
         banner_lines.append(
             f"{term.paint('zonly', Style.DIM)} "
             f"λ h/z/hz = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY}/"
-            f"{config.LAMBDA_RECON_HZONLY} jitter={config.Z_ONLY_QUERY_JITTER}"
+            f"{config.LAMBDA_RECON_HZONLY} jitter={config.Z_ONLY_QUERY_JITTER} · {pos_mode}"
         )
     if (
         config.LAMBDA_ANCHOR_FINE > 0
         or config.LAMBDA_ANCHOR_MID > 0
         or config.LAMBDA_ANCHOR_COARSE > 0
+        or config.LAMBDA_ANCHOR_R_FINE > 0
+        or config.LAMBDA_ANCHOR_R_MID > 0
+        or config.LAMBDA_ANCHOR_R_COARSE > 0
     ):
         banner_lines.append(
             f"{term.paint('anchor', Style.DIM)} "
-            f"λ fine/mid/coarse = "
+            f"λ p fine/mid/coarse = "
             f"{config.LAMBDA_ANCHOR_FINE}/{config.LAMBDA_ANCHOR_MID}/"
-            f"{config.LAMBDA_ANCHOR_COARSE}"
+            f"{config.LAMBDA_ANCHOR_COARSE} · "
+            f"λ r = {config.LAMBDA_ANCHOR_R_FINE}/"
+            f"{config.LAMBDA_ANCHOR_R_MID}/{config.LAMBDA_ANCHOR_R_COARSE}"
         )
+    banner_lines.append(
+        f"{term.paint('recon', Style.DIM)} "
+        f"λ sem/pos/size = {config.LAMBDA_SEM}/"
+        f"{config.LAMBDA_POS}/{config.LAMBDA_SIZE} "
+        f"(zonly sem/size = {config.LAMBDA_SEM_ZONLY}/{config.LAMBDA_SIZE_ZONLY})"
+    )
     if config.ANCHOR_MIX_CURRICULUM:
         banner_lines.append(
             f"{term.paint('anchor', Style.DIM)} "
             f"mix curriculum {config.ANCHOR_MIX_START:.1f}→{config.ANCHOR_MIX_END:.1f} "
             f"over {config.ANCHOR_MIX_ANNEAL_EPOCHS} ep"
         )
-    if config.LAMBDA_NORM_CONTRAST_FINE > 0 or config.LAMBDA_NORM_CONTRAST_MID > 0:
+    if (
+        config.LAMBDA_NORM_CONTRAST_FINE > 0
+        or config.LAMBDA_NORM_CONTRAST_MID > 0
+        or config.LAMBDA_NORM_CONTRAST_COARSE > 0
+    ):
         banner_lines.append(
             f"{term.paint('norm', Style.DIM)} "
-            f"contrast λ fine/mid = "
-            f"{config.LAMBDA_NORM_CONTRAST_FINE}/{config.LAMBDA_NORM_CONTRAST_MID} "
+            f"contrast λ fine/mid/coarse = "
+            f"{config.LAMBDA_NORM_CONTRAST_FINE}/"
+            f"{config.LAMBDA_NORM_CONTRAST_MID}/"
+            f"{config.LAMBDA_NORM_CONTRAST_COARSE} "
             f"margin={config.NORM_CONTRAST_MARGIN}"
+        )
+    if config.USE_ANCHOR_MLP:
+        banner_lines.append(
+            f"{term.paint('anchor', Style.DIM)} "
+            f"anchor MLP (hidden={'d' if config.ANCHOR_MLP_HIDDEN <= 0 else config.ANCHOR_MLP_HIDDEN})"
+        )
+    banner_lines.append(
+        f"{term.paint('decoder', Style.DIM)} "
+        f"position bound={config.POSITION_BOUND} "
+        f"residual={config.POSITION_RESIDUAL}"
+    )
+    if config.USE_Z_PRED_READOUT_MLP:
+        hidden = "d" if config.Z_PRED_READOUT_MLP_HIDDEN <= 0 else config.Z_PRED_READOUT_MLP_HIDDEN
+        banner_lines.append(
+            f"{term.paint('decoder', Style.DIM)} "
+            f"z_pred readout MLP (hidden={hidden})"
+        )
+    if config.SPLAT_SUBTRACT_SPATIAL_MEAN:
+        banner_lines.append(
+            f"{term.paint('splat', Style.DIM)} "
+            f"subtract spatial mean before U-Net"
         )
     if (
         config.SPLAT_TRUNCATION_SIGMA_FINE != config.SPLAT_TRUNCATION_SIGMA
@@ -504,7 +578,8 @@ def main(ckpt_dir, *, run_probes: bool, probe_target: str):
         banner_lines.append(
             f"{term.paint('splat', Style.DIM)} "
             f"σ fine={config.SPLAT_TRUNCATION_SIGMA_FINE} "
-            f"(mid/coarse={config.SPLAT_TRUNCATION_SIGMA}){cap}"
+            f"(mid/coarse={config.SPLAT_TRUNCATION_SIGMA}){cap} "
+            f"trunc_floor={config.SPLAT_MIN_TRUNC_VOXEL_FRAC}×spacing"
         )
     banner_lines.append(
         f"{term.paint('tb', Style.DIM)}       "
@@ -520,6 +595,8 @@ def main(ckpt_dir, *, run_probes: bool, probe_target: str):
     val_dataloader = make_dataloader(val_dataset, shuffle=False)
 
     model = GVAE().to(device)
+    if init_checkpoint:
+        _load_init_checkpoint(model, init_checkpoint, device, term)
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
 
     train(model, train_dataloader, val_dataloader, device, ckpt_dir, writer, term)
@@ -530,7 +607,13 @@ def main(ckpt_dir, *, run_probes: bool, probe_target: str):
 
     best_path = os.path.join(ckpt_dir, "best.pth")
     if run_probes and os.path.isfile(best_path):
-        model.load_state_dict(torch.load(best_path, map_location=device, weights_only=True))
+        from gvae.checkpoint_compat import migrate_state_dict
+        model.load_state_dict(
+            migrate_state_dict(
+                torch.load(best_path, map_location=device, weights_only=True),
+            ),
+            strict=False,
+        )
         _run_probes(
             model, train_dataset.graphs, val_dataset.graphs, device, ckpt_dir, term,
             probe_target=probe_target,
@@ -544,6 +627,11 @@ def _parse_args():
     parser.add_argument(
         "--ckpt-dir", type=str, default="",
         help="Checkpoint directory (default: checkpoint/<timestamp>)",
+    )
+    parser.add_argument(
+        "--init-checkpoint", type=str, default=None,
+        help="Load weights from .pth before training (e.g. phase-1 best.pth); "
+        "optimizer/epoch start fresh",
     )
     parser.add_argument("--epochs", type=int, default=None, help="Override NUM_EPOCHS")
     parser.add_argument(
@@ -583,6 +671,54 @@ def _parse_args():
         help="Override LAMBDA_ANCHOR_MID",
     )
     parser.add_argument(
+        "--lambda-size", type=float, default=None,
+        help="Override LAMBDA_SIZE (h+Z footprint loss in L_recon)",
+    )
+    parser.add_argument(
+        "--lambda-size-zonly", type=float, default=None,
+        help="Override LAMBDA_SIZE_ZONLY (Z-only / hz footprint weight)",
+    )
+    parser.add_argument(
+        "--lambda-sem-zonly", type=float, default=None,
+        help="Override LAMBDA_SEM_ZONLY (Z-only / hz semantic CE weight)",
+    )
+    parser.add_argument(
+        "--lambda-norm-contrast-coarse", type=float, default=None,
+        help="Override LAMBDA_NORM_CONTRAST_COARSE",
+    )
+    parser.add_argument(
+        "--no-anchor-mlp", action="store_true",
+        help="Use Linear anchor heads (USE_ANCHOR_MLP=False)",
+    )
+    parser.add_argument(
+        "--no-zpred-readout-mlp", action="store_true",
+        help="Linear s/r/p heads on z_pred (USE_Z_PRED_READOUT_MLP=False)",
+    )
+    parser.add_argument(
+        "--position-bound", choices=("clamp", "tanh"), default=None,
+        help="Position head: clamp (default) or tanh",
+    )
+    parser.add_argument(
+        "--no-position-residual", action="store_true",
+        help="Predict absolute p from Z (POSITION_RESIDUAL=False)",
+    )
+    parser.add_argument(
+        "--no-splat-center", action="store_true",
+        help="Disable SPLAT_SUBTRACT_SPATIAL_MEAN before U-Net",
+    )
+    parser.add_argument(
+        "--splat-min-trunc-frac", type=float, default=None,
+        help="Override SPLAT_MIN_TRUNC_VOXEL_FRAC",
+    )
+    parser.add_argument(
+        "--lambda-anchor-r-fine", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_R_FINE",
+    )
+    parser.add_argument(
+        "--lambda-anchor-r-mid", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_R_MID",
+    )
+    parser.add_argument(
         "--no-anchor-curriculum", action="store_true",
         help="Disable DECODER_GT_ANCHOR_MIX curriculum (fixed mix=0)",
     )
@@ -593,6 +729,11 @@ def _parse_args():
     parser.add_argument(
         "--no-zonly-decoder", action="store_true",
         help="Disable Z-only decode path (USE_Z_ONLY_DECODER=False)",
+    )
+    parser.add_argument(
+        "--zonly-aux-loss-only", action="store_true",
+        help="Z-only @ GT/anchor for training losses only; deformable mlp_p sets "
+        "recon p (Z_ONLY_PATCH_DEFORMABLE_POSITION=False)",
     )
     parser.add_argument(
         "--zonly-jitter", type=float, default=None,
@@ -642,6 +783,30 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_ANCHOR_FINE = args.lambda_anchor_fine
     if args.lambda_anchor_mid is not None:
         config.LAMBDA_ANCHOR_MID = args.lambda_anchor_mid
+    if args.lambda_size is not None:
+        config.LAMBDA_SIZE = args.lambda_size
+    if args.lambda_size_zonly is not None:
+        config.LAMBDA_SIZE_ZONLY = args.lambda_size_zonly
+    if args.lambda_sem_zonly is not None:
+        config.LAMBDA_SEM_ZONLY = args.lambda_sem_zonly
+    if args.lambda_norm_contrast_coarse is not None:
+        config.LAMBDA_NORM_CONTRAST_COARSE = args.lambda_norm_contrast_coarse
+    if args.no_anchor_mlp:
+        config.USE_ANCHOR_MLP = False
+    if args.no_zpred_readout_mlp:
+        config.USE_Z_PRED_READOUT_MLP = False
+    if args.position_bound is not None:
+        config.POSITION_BOUND = args.position_bound
+    if args.no_position_residual:
+        config.POSITION_RESIDUAL = False
+    if args.no_splat_center:
+        config.SPLAT_SUBTRACT_SPATIAL_MEAN = False
+    if args.splat_min_trunc_frac is not None:
+        config.SPLAT_MIN_TRUNC_VOXEL_FRAC = args.splat_min_trunc_frac
+    if args.lambda_anchor_r_fine is not None:
+        config.LAMBDA_ANCHOR_R_FINE = args.lambda_anchor_r_fine
+    if args.lambda_anchor_r_mid is not None:
+        config.LAMBDA_ANCHOR_R_MID = args.lambda_anchor_r_mid
     if args.no_anchor_curriculum:
         config.ANCHOR_MIX_CURRICULUM = False
         config.DECODER_GT_ANCHOR_MIX = 0.0
@@ -649,6 +814,10 @@ def _apply_config_overrides(args) -> None:
         config.ANCHOR_MIX_ANNEAL_EPOCHS = args.anchor_mix_anneal_epochs
     if args.no_zonly_decoder:
         config.USE_Z_ONLY_DECODER = False
+    if args.zonly_aux_loss_only:
+        if args.no_zonly_decoder:
+            raise SystemExit("--zonly-aux-loss-only requires Z-only decoder (omit --no-zonly-decoder)")
+        config.Z_ONLY_PATCH_DEFORMABLE_POSITION = False
     if args.zonly_jitter is not None:
         config.Z_ONLY_QUERY_JITTER = args.zonly_jitter
     if args.unet_depth_fine is not None:
@@ -679,6 +848,7 @@ if __name__ == "__main__":
             ckpt_dir,
             run_probes=not args.no_probe,
             probe_target=args.probe_target,
+            init_checkpoint=args.init_checkpoint,
         )
     except KeyboardInterrupt:
         tqdm.write("\nTraining interrupted.")

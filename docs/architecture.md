@@ -132,8 +132,8 @@ During training, two decoders reconstruct supernode attributes from `(h, Z)`. Th
 
 1. Predict an anchor box `(p, r)` from **`h`** (not from ground truth).
 2. Place 27 sample points on a 3×3×3 grid inside that box (+ learned offsets).
-3. Bilinear-sample **`Z`** at those points; cross-attend; predict `ŝ`, `r̂`.
-4. **`p̂` comes from `ZOnlyDecoder(Z, p_anchor)`** when the Z-only path is enabled (default) — same readout as `hzpos`. The deformable path does not predict position.
+3. Bilinear-sample **`Z`** at those points; cross-attend → **`z_pred`**; optional shared 2-layer MLP trunk (`USE_Z_PRED_READOUT_MLP`); then predict `ŝ`, `r̂` (and `p̂` when Z-only is off).
+4. **`p̂`:** by default `ZOnlyDecoder(Z, p_anchor)` replaces deformable `p` (`Z_ONLY_PATCH_DEFORMABLE_POSITION=True`). With **`--zonly-aux-loss-only`**, Z-only runs are **loss-only**; **`p̂`** comes from deformable **`mlp_p(z_pred)`** at the h-anchor (logs: **`pos`** = deploy path, **`hzpos`** = Z@anchor auxiliary).
 
 `DECODER_GT_ANCHOR_MIX = 0.0` in normal training — anchors come from the model, not from labels. (Probe ablations can blend in GT anchors by raising this value.)
 
@@ -179,7 +179,7 @@ $$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_
 
 **Anchor curriculum:** during training, `DECODER_GT_ANCHOR_MIX` blends GT into h-decoder reference boxes (1→0 over 40 epochs by default); validation always uses mix=0. See [training.md](training.md#command-line-overrides).
 
-**Reconstruction** at each supernode uses soft cross-entropy for semantics and MSE for position and footprint (`LAMBDA_SEM`, `LAMBDA_POS`).
+**Reconstruction** at each supernode uses soft cross-entropy for semantics, MSE for position (`LAMBDA_POS`), and log-space Smooth-L1 for footprint (`LAMBDA_SIZE`; Z-only paths use `LAMBDA_SIZE_ZONLY`). Anchor footprints use `LAMBDA_ANCHOR_R_*` on `r_anchor(h)`.
 
 **KL annealing** cycles over training (Fu et al., 2019) so the model repeatedly explores then regularises.
 
