@@ -48,6 +48,13 @@ def mean_position_error(pred_positions: torch.Tensor, true_positions: torch.Tens
     return torch.norm(pred_positions - true_positions, dim=1).mean().item()
 
 
+def mean_footprint_error(pred_r: torch.Tensor, true_r: torch.Tensor) -> float:
+    """Mean L1 error on footprint semi-axes (x, y, z)."""
+    if pred_r.numel() == 0:
+        return float("nan")
+    return (pred_r - true_r).abs().mean().item()
+
+
 def _occupancy_grid_iou(
     occ_grid_head,
     z: torch.Tensor,
@@ -95,6 +102,9 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             metrics["pos_err_fine"] = mean_position_error(
                 recon_fine["p"], outputs["p_fine"],
             )
+            metrics["size_err_fine"] = mean_footprint_error(
+                recon_fine["r"], outputs["r_fine"],
+            )
             metrics["soft_miou_fine"] = soft_miou(recon_fine["s"], outputs["s_fine"])
             if config.LAMBDA_OCC_GRID_FINE > 0:
                 iou_f, _, rec_f, pr_f, gt_f = _occupancy_grid_iou(
@@ -110,6 +120,9 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             metrics["pos_err_zonly_fine"] = mean_position_error(
                 recon_fine_z["p"], outputs["p_fine"],
             )
+            metrics["size_err_zonly_fine"] = mean_footprint_error(
+                recon_fine_z["r"], outputs["r_fine"],
+            )
             metrics["soft_miou_zonly_fine"] = soft_miou(
                 recon_fine_z["s"], outputs["s_fine"],
             )
@@ -123,10 +136,18 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
         p_anchor_f = outputs.get("p_anchor_fine")
         if p_anchor_f is not None and p_anchor_f.numel() > 0 and outputs["p_fine"].numel() > 0:
             metrics["anchor_err_fine"] = mean_position_error(p_anchor_f, outputs["p_fine"])
+        r_anchor_f = outputs.get("r_anchor_fine")
+        if r_anchor_f is not None and r_anchor_f.numel() > 0 and outputs["r_fine"].numel() > 0:
+            metrics["anchor_size_err_fine"] = mean_footprint_error(
+                r_anchor_f, outputs["r_fine"],
+            )
 
         if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
             metrics["pos_err_mid"] = mean_position_error(
                 outputs["recon_mid"]["p"], outputs["p_lm1"],
+            )
+            metrics["size_err_mid"] = mean_footprint_error(
+                outputs["recon_mid"]["r"], outputs["r_lm1"],
             )
             metrics["soft_miou_mid"] = soft_miou(
                 outputs["recon_mid"]["s"], outputs["s_lm1"],
@@ -147,6 +168,11 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
         p_anchor_m = outputs.get("p_anchor_mid")
         if p_anchor_m is not None and p_anchor_m.numel() > 0 and outputs["p_lm1"].numel() > 0:
             metrics["anchor_err_mid"] = mean_position_error(p_anchor_m, outputs["p_lm1"])
+        r_anchor_m = outputs.get("r_anchor_mid")
+        if r_anchor_m is not None and r_anchor_m.numel() > 0 and outputs["r_lm1"].numel() > 0:
+            metrics["anchor_size_err_mid"] = mean_footprint_error(
+                r_anchor_m, outputs["r_lm1"],
+            )
 
         if outputs.get("recon_mid") is not None:
             if config.LAMBDA_OCC_GRID_MID > 0:

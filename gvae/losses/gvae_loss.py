@@ -23,15 +23,37 @@ def soft_cross_entropy_loss(pred_probs: torch.Tensor, true_soft: torch.Tensor) -
     return -(true * log_pred).sum(dim=1).mean()
 
 
-def reconstruction_loss(recon, p_true, r_true, s_true):
+def footprint_loss(r_pred: torch.Tensor, r_true: torch.Tensor) -> torch.Tensor:
+    """Log-space Smooth-L1 on footprint semi-axes (stable vs raw log-MSE)."""
+    if r_true.numel() == 0:
+        return r_true.new_zeros(())
+    eps = config.SIZE_LOG_EPS
+    log_pred = torch.log(r_pred.clamp(min=eps))
+    log_true = torch.log(r_true.clamp(min=eps))
+    return F.smooth_l1_loss(
+        log_pred, log_true, beta=config.SIZE_LOG_HUBER_BETA,
+    )
+
+
+def reconstruction_loss(
+    recon,
+    p_true,
+    r_true,
+    s_true,
+    *,
+    size_weight: float | None = None,
+    sem_weight: float | None = None,
+):
     """Decode-from-Z reconstruction: semantics + position + footprint."""
+    w_size = config.LAMBDA_SIZE if size_weight is None else size_weight
+    w_sem = config.LAMBDA_SEM if sem_weight is None else sem_weight
     L_sem = soft_cross_entropy_loss(recon['s'], s_true)
     L_pos = F.mse_loss(recon['p'], p_true)
-    L_size = F.mse_loss(recon['r'], r_true)
+    L_size = footprint_loss(recon['r'], r_true)
     return (
-        config.LAMBDA_SEM * L_sem
+        w_sem * L_sem
         + config.LAMBDA_POS * L_pos
-        + config.LAMBDA_POS * L_size
+        + w_size * L_size
     )
 
 
@@ -40,6 +62,11 @@ def anchor_loss(p_anchor: torch.Tensor, p_gt: torch.Tensor) -> torch.Tensor:
     if p_gt.numel() == 0 or p_anchor.numel() == 0:
         return p_gt.new_zeros(())
     return F.mse_loss(p_anchor, p_gt)
+
+
+def anchor_footprint_loss(r_anchor: torch.Tensor, r_gt: torch.Tensor) -> torch.Tensor:
+    """Log-MSE on h-predicted anchor footprints vs GT supernode semi-axes."""
+    return footprint_loss(r_anchor, r_gt)
 
 
 def decoder_gt_anchor_mix_for_epoch(epoch: int) -> float:
@@ -59,6 +86,14 @@ def _lambda_anchor(name: str) -> float:
     }[name]
 
 
+def _lambda_anchor_r(name: str) -> float:
+    return {
+        'fine': config.LAMBDA_ANCHOR_R_FINE,
+        'mid': config.LAMBDA_ANCHOR_R_MID,
+        'coarse': config.LAMBDA_ANCHOR_R_COARSE,
+    }[name]
+
+
 def KL_loss(mu, logvar):
     kl = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
     return kl.sum() / mu.numel()
@@ -68,7 +103,7 @@ def _lambda_norm_contrast(name: str) -> float:
     return {
         'fine': config.LAMBDA_NORM_CONTRAST_FINE,
         'mid': config.LAMBDA_NORM_CONTRAST_MID,
-        'coarse': 0.0,
+        'coarse': config.LAMBDA_NORM_CONTRAST_COARSE,
     }[name]
 
 
@@ -188,6 +223,7 @@ def _maybe_branch_loss(
     r_true,
     s_true,
     p_anchor,
+    r_anchor,
     mu,
     logvar,
     occ_grid_head,
@@ -206,11 +242,19 @@ def _maybe_branch_loss(
         and config.LAMBDA_RECON_HZONLY > 0
     )
     lambda_anchor = _lambda_anchor(name)
-    if not has_h and not has_z and not has_hz and lambda_anchor <= 0:
+    lambda_anchor_r = _lambda_anchor_r(name)
+    if (
+        not has_h and not has_z and not has_hz
+        and lambda_anchor <= 0
+        and lambda_anchor_r <= 0
+    ):
         return
 
     parts: dict = {}
     total = mu.new_zeros(())
+
+    w_size_z = config.LAMBDA_SIZE_ZONLY
+    w_sem_z = config.LAMBDA_SEM_ZONLY
 
     if has_h:
         L_recon_h = reconstruction_loss(recon, p_true, r_true, s_true)
@@ -218,12 +262,18 @@ def _maybe_branch_loss(
         total = total + config.LAMBDA_RECON_H * L_recon_h
 
     if has_z:
-        L_recon_z = reconstruction_loss(recon_zonly, p_true, r_true, s_true)
+        L_recon_z = reconstruction_loss(
+            recon_zonly, p_true, r_true, s_true,
+            size_weight=w_size_z, sem_weight=w_sem_z,
+        )
         parts['recon_zonly'] = L_recon_z
         total = total + config.LAMBDA_RECON_ZONLY * L_recon_z
 
     if has_hz:
-        L_recon_hz = reconstruction_loss(recon_hzonly, p_true, r_true, s_true)
+        L_recon_hz = reconstruction_loss(
+            recon_hzonly, p_true, r_true, s_true,
+            size_weight=w_size_z, sem_weight=w_sem_z,
+        )
         parts['recon_hzonly'] = L_recon_hz
         total = total + config.LAMBDA_RECON_HZONLY * L_recon_hz
 
@@ -231,6 +281,11 @@ def _maybe_branch_loss(
         L_anchor = anchor_loss(p_anchor, p_true)
         parts['anchor'] = L_anchor
         total = total + lambda_anchor * L_anchor
+
+    if lambda_anchor_r > 0 and r_anchor is not None and r_anchor.numel() > 0:
+        L_anchor_r = anchor_footprint_loss(r_anchor, r_true)
+        parts['anchor_r'] = L_anchor_r
+        total = total + lambda_anchor_r * L_anchor_r
 
     L_kl = KL_loss(mu, logvar)
     parts['KL'] = L_kl
@@ -269,6 +324,7 @@ def compute_branch_losses(outputs, graph, step):
         outputs.get('recon_fine_zonly_hanchor'),
         outputs['p_fine'], outputs['r_fine'], outputs['s_fine'],
         outputs.get('p_anchor_fine'),
+        outputs.get('r_anchor_fine'),
         outputs['mu_fine'], outputs['logvar_fine'],
         outputs['occ_grid_head_fine'],
         outputs['z_fine'], graph.occ_fine,
@@ -281,6 +337,7 @@ def compute_branch_losses(outputs, graph, step):
         outputs.get('recon_mid_zonly_hanchor'),
         outputs['p_lm1'], outputs['r_lm1'], outputs['s_lm1'],
         outputs.get('p_anchor_mid'),
+        outputs.get('r_anchor_mid'),
         outputs['mu_mid'], outputs['logvar_mid'],
         outputs['occ_grid_head_mid'],
         outputs['z_mid'], graph.occ_mid,
@@ -293,6 +350,7 @@ def compute_branch_losses(outputs, graph, step):
         outputs.get('recon_coarse_zonly_hanchor'),
         outputs['p_1'], outputs['r_1'], outputs['s_1'],
         outputs.get('p_anchor_coarse'),
+        outputs.get('r_anchor_coarse'),
         outputs['mu_coarse'], outputs['logvar_coarse'],
         outputs['occ_grid_head_coarse'],
         outputs['z_coarse'], graph.occ_coarse,
@@ -310,7 +368,7 @@ def compute_loss(outputs, graph, step):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
-    L_recon = L_recon_zonly = L_recon_hzonly = L_KL = L_occ = L_norm = L_anchor = zero
+    L_recon = L_recon_zonly = L_recon_hzonly = L_KL = L_occ = L_norm = L_anchor = L_anchor_r = zero
     L_pool = zero
     pool_extras = {}
 
@@ -319,6 +377,7 @@ def compute_loss(outputs, graph, step):
         L_recon_zonly = L_recon_zonly + parts.get('recon_zonly', zero)
         L_recon_hzonly = L_recon_hzonly + parts.get('recon_hzonly', zero)
         L_anchor = L_anchor + parts.get('anchor', zero)
+        L_anchor_r = L_anchor_r + parts.get('anchor_r', zero)
         L_KL = L_KL + parts.get('KL', zero)
         L_occ = L_occ + parts.get('occ', zero)
         L_norm = L_norm + parts.get('norm_contrast', zero)
@@ -336,6 +395,7 @@ def compute_loss(outputs, graph, step):
         'recon_zonly': L_recon_zonly,
         'recon_hzonly': L_recon_hzonly,
         'anchor': L_anchor,
+        'anchor_r': L_anchor_r,
         'KL': L_KL,
         'occ': L_occ,
         'norm_contrast': L_norm,

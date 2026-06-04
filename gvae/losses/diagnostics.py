@@ -11,11 +11,13 @@ import torch
 import config
 from gvae.losses.gvae_loss import (
     KL_loss,
+    anchor_footprint_loss,
     anchor_loss,
     kl_weight,
     norm_contrastive_loss,
     reconstruction_loss,
     _lambda_anchor,
+    _lambda_anchor_r,
 )
 from gvae.data.occupancy import loss_occ_grid
 
@@ -66,6 +68,7 @@ def _branch_terms(
     r_true,
     s_true,
     p_anchor,
+    r_anchor,
     mu,
     logvar,
     occ_grid_head,
@@ -78,6 +81,9 @@ def _branch_terms(
 
     total = 0.0
     prefix = name
+
+    w_size_z = config.LAMBDA_SIZE_ZONLY
+    w_sem_z = config.LAMBDA_SEM_ZONLY
 
     if recon is not None and config.LAMBDA_RECON_H > 0:
         _store_term(
@@ -93,7 +99,10 @@ def _branch_terms(
     ):
         _store_term(
             bd, f"recon_zonly_{prefix}",
-            reconstruction_loss(recon_zonly, p_true, r_true, s_true),
+            reconstruction_loss(
+                recon_zonly, p_true, r_true, s_true,
+                size_weight=w_size_z, sem_weight=w_sem_z,
+            ),
         )
         total += config.LAMBDA_RECON_ZONLY * bd.terms[f"recon_zonly_{prefix}"]
 
@@ -104,7 +113,10 @@ def _branch_terms(
     ):
         _store_term(
             bd, f"recon_hzonly_{prefix}",
-            reconstruction_loss(recon_hzonly, p_true, r_true, s_true),
+            reconstruction_loss(
+                recon_hzonly, p_true, r_true, s_true,
+                size_weight=w_size_z, sem_weight=w_sem_z,
+            ),
         )
         total += config.LAMBDA_RECON_HZONLY * bd.terms[f"recon_hzonly_{prefix}"]
 
@@ -112,6 +124,11 @@ def _branch_terms(
     if lambda_anchor > 0 and p_anchor is not None and p_anchor.numel() > 0:
         _store_term(bd, f"anchor_{prefix}", anchor_loss(p_anchor, p_true))
         total += lambda_anchor * bd.terms[f"anchor_{prefix}"]
+
+    lambda_anchor_r = _lambda_anchor_r(prefix)
+    if lambda_anchor_r > 0 and r_anchor is not None and r_anchor.numel() > 0:
+        _store_term(bd, f"anchor_r_{prefix}", anchor_footprint_loss(r_anchor, r_true))
+        total += lambda_anchor_r * bd.terms[f"anchor_r_{prefix}"]
 
     _store_term(bd, f"KL_{prefix}", KL_loss(mu, logvar))
     total += lam_kl * bd.terms[f"KL_{prefix}"]
@@ -128,7 +145,7 @@ def _branch_terms(
     lambda_norm = {
         'fine': config.LAMBDA_NORM_CONTRAST_FINE,
         'mid': config.LAMBDA_NORM_CONTRAST_MID,
-        'coarse': 0.0,
+        'coarse': config.LAMBDA_NORM_CONTRAST_COARSE,
     }[prefix]
     if lambda_norm > 0 and occ_grid.numel() > 0:
         _store_term(
@@ -173,6 +190,7 @@ def loss_breakdown(
         r_true=outputs["r_fine"],
         s_true=outputs["s_fine"],
         p_anchor=outputs.get("p_anchor_fine"),
+        r_anchor=outputs.get("r_anchor_fine"),
         mu=outputs["mu_fine"],
         logvar=outputs["logvar_fine"],
         occ_grid_head=outputs["occ_grid_head_fine"],
@@ -190,6 +208,7 @@ def loss_breakdown(
         r_true=outputs["r_lm1"],
         s_true=outputs["s_lm1"],
         p_anchor=outputs.get("p_anchor_mid"),
+        r_anchor=outputs.get("r_anchor_mid"),
         mu=outputs["mu_mid"],
         logvar=outputs["logvar_mid"],
         occ_grid_head=outputs["occ_grid_head_mid"],
@@ -207,6 +226,7 @@ def loss_breakdown(
         r_true=outputs["r_1"],
         s_true=outputs["s_1"],
         p_anchor=outputs.get("p_anchor_coarse"),
+        r_anchor=outputs.get("r_anchor_coarse"),
         mu=outputs["mu_coarse"],
         logvar=outputs["logvar_coarse"],
         occ_grid_head=outputs["occ_grid_head_coarse"],

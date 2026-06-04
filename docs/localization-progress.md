@@ -38,8 +38,8 @@ python train.py --ckpt-dir checkpoint/<new_run> \
 
 Probes run once at end → `probe_report.txt`, `probe_summary.json` (`--no-probe` to skip). **Use a fresh `--ckpt-dir` per experiment** — reusing `anchor_localize/` overwrites prior runs.
 
-## Next experiment
+## Next experiment (`localize_v3`)
 
-Upgrade **`Linear(h) → p_anchor`** to a small **anchor MLP** (or 1–2 message-passing steps before anchor prediction). Keep current losses. Target **`anc` ≤ 0.10** before **`pos` ≤ 0.05** is realistic.
+Code defaults (Jun 2026): **anchor MLP** (`USE_ANCHOR_MLP`), **splat trunc floor** (`SPLAT_MIN_TRUNC_VOXEL_FRAC`), **`LAMBDA_SEM_ZONLY`**, **coarse norm contrast**. Same CLI recipe as `r_focus_v2` with stronger anchor λ. Target **`anc` ≤ 0.10**, **`pos` ≤ 0.08**, **`zsmiou` ≥ 50%**.
 
 Superseded May handoff: [archive/next_step-202605-handoff.md](archive/next_step-202605-handoff.md).

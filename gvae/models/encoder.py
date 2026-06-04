@@ -7,7 +7,7 @@ import torch.nn as nn
 import config
 from gvae.models.gps import GPSLayer
 from gvae.models.coarsening import FPSCoarsening
-from gvae.models.splatting import GaussianSplatting
+from gvae.models.splatting import GaussianSplatting, center_splat_grid
 from gvae.models.unet3d import UNet3D
 
 _NODE_INPUT_DIM = config.NUM_CLASSES + 3 + 3
@@ -157,14 +157,14 @@ class SceneGraphEncoder(nn.Module):
             out[f'logvar_{key}'] = lv
 
         if h_fine.numel() > 0:
-            F_fine = self.splat_fine(h_fine, p_fine, r_fine)
+            F_fine = center_splat_grid(self.splat_fine(h_fine, p_fine, r_fine))
             z_fine, mu_fine, logvar_fine = self.unet_fine(F_fine)
             out['z_fine'] = z_fine
             out['mu_fine'] = mu_fine
             out['logvar_fine'] = logvar_fine
 
         if h_Lm1.numel() > 0:
-            F_mid = self.splat_mid(h_Lm1, p1, r1)
+            F_mid = center_splat_grid(self.splat_mid(h_Lm1, p1, r1))
             z_mid, mu_mid, logvar_mid = self.unet_mid(F_mid)
             out['z_mid'] = z_mid
             out['mu_mid'] = mu_mid
@@ -178,7 +178,7 @@ class SceneGraphEncoder(nn.Module):
         out['edge_index_1'] = edge_index_2
 
         if h_1.numel() > 0:
-            F_coarse = self.splat_coarse(h_1, p2, r2)
+            F_coarse = center_splat_grid(self.splat_coarse(h_1, p2, r2))
             z_coarse, mu_coarse, logvar_coarse = self.unet_coarse(F_coarse)
             out['z_coarse'] = z_coarse
             out['mu_coarse'] = mu_coarse

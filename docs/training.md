@@ -194,7 +194,7 @@ python utils/probe_latent.py --help
 |------|---------|--------|
 | `USE_Z_ONLY_DECODER` | `True` | Z-only readout; h+Z `pos` comes from ZOnlyDecoder at `p_anchor` |
 | `LAMBDA_RECON_H` / `LAMBDA_RECON_ZONLY` / `LAMBDA_RECON_HZONLY` | `1.5` / `1.0` / `0.8` | h+Z recon / Z-only @ GT / Z-only @ h anchors |
-| `LAMBDA_ANCHOR_FINE` / `MID` | `1.0` / `0.5` | Direct MSE on `tanh(mlp_p_anchor(h))` vs GT (CLI often uses 2.5 / 1.0 — see [localization-progress.md](localization-progress.md)) |
+| `LAMBDA_ANCHOR_FINE` / `MID` | `1.0` / `0.5` | MSE on `bound(mlp_p_anchor(h))` vs GT (`POSITION_BOUND=clamp` by default) |
 | `ANCHOR_MIX_CURRICULUM` | `True` | Train h-decoder with GT anchor mix 1→0 over 40 ep |
 | `Z_ONLY_QUERY_JITTER` | `0.05` | Train-time noise on Z sample locations |
 | `UNET_DEPTH_FINE` | `3` | Fine U-Net depth (depth=1 regresses fine `zpos`; ablation confirmed) |
