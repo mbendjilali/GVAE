@@ -150,14 +150,9 @@ NORM_CONTRAST_MARGIN = 0.0     # hinge: relu(||Z_empty|| - ||Z_gt|| + margin)
 NORM_CONTRAST_EMPTY_POINTS = 256
 
 # ─── Loss weights ─────────────────────────────────────────────────────────────
-# Total per branch: λ_h·L_recon_h + λ_z·L_recon_zonly + λ_KL·L_KL + λ_occ·L_occ
+# Total per branch: λ_h·L_recon_h + λ_z·L_recon_zonly + λ_KL·L_KL + …
 LAMBDA_KL_MAX   = 1e-3         # β — maximum KL weight after annealing ramp
 
-# Voxel-aligned occupancy BCE on Z (OccGridHead); 0 = disabled per level
-LAMBDA_OCC_GRID_FINE   = 1.0
-LAMBDA_OCC_GRID_MID    = 1.0
-LAMBDA_OCC_GRID_COARSE = 1.0
-OCC_GRID_POS_WEIGHT    = None  # None = auto (neg/pos ratio per forward); float = fixed
 LAMBDA_SEM      = 1.0          # semantic soft-CE weight (h+Z recon)
 LAMBDA_SEM_ZONLY = 2.0         # stronger CE on Z-only / hz paths (zsmiou)
 LAMBDA_POS      = 1.0          # position MSE weight (in L_recon)
@@ -165,7 +160,6 @@ LAMBDA_SIZE     = 1.0          # footprint loss on h+Z recon (see footprint_loss
 LAMBDA_SIZE_ZONLY = 0.5        # footprint on Z-only paths (single-point readout; softer)
 SIZE_LOG_EPS    = 1e-6         # matches encoder log(r + eps)
 SIZE_LOG_HUBER_BETA = 0.25     # Smooth-L1 in log-space (~25% relative scale knee)
-OCC_GRID_POS_WEIGHT_CAP = 50.0 # cap neg/pos BCE ratio (stabilises sparse-grid loss)
 
 # Set at train startup: len(train_dataset) * NUM_EPOCHS (graph forwards)
 KL_TOTAL_STEPS = 0
@@ -197,7 +191,6 @@ DATALOADER_PIN_MEMORY   = True
 DECODER_GT_ANCHOR_MIX = 0.0
 
 # Validation metrics
-METRICS_OCC_THRESHOLD = 0.5   # binarisation threshold for occupancy IoU / precision / recall
 SOFT_MIOU_EPS = 1e-6          # min soft class mass to include in soft mIoU mean
 LOG_FULL_METRICS = True      # if True, log extended debug metrics to TensorBoard
 

@@ -76,19 +76,6 @@ class Term:
         star = self.paint("  ★ best", Style.YELLOW, Style.BOLD) if is_best else ""
         self.write(f"\n{ep}  {lr_s}  train {tr}  val {va}{star}")
 
-    @staticmethod
-    def _occ_iou_label(metrics: dict, level: str) -> str | None:
-        key = f"occ_iou_{level}"
-        if key not in metrics:
-            return None
-        parts = [f"occ={metrics[key]:.0%}"]
-        pred_key = f"occ_pred_rate_{level}"
-        rec_key = f"occ_recall_{level}"
-        if pred_key in metrics and rec_key in metrics:
-            parts.append(f"pred={metrics[pred_key]:.0%}")
-            parts.append(f"rec={metrics[rec_key]:.0%}")
-        return " ".join(parts)
-
     def metrics_line(self, metrics: dict) -> None:
         if not metrics:
             return
@@ -102,16 +89,10 @@ class Term:
             if metrics.get("latent_graph_vae"):
                 if "size_err_fine" in metrics:
                     fine += f" size={metrics['size_err_fine']:.3f}"
-                occ_f = self._occ_iou_label(metrics, "fine")
-                if occ_f:
-                    fine += f" {occ_f}"
                 parts.append(fine)
                 mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
                 if "size_err_mid" in metrics:
                     mid += f" size={metrics['size_err_mid']:.3f}"
-                occ_m = self._occ_iou_label(metrics, "mid")
-                if occ_m:
-                    mid += f" {occ_m}"
                 mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
                 parts.append(mid)
                 line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)
@@ -129,9 +110,6 @@ class Term:
                 fine += f" asz={metrics['anchor_size_err_fine']:.3f}"
             if "pos_err_zonly_hanchor_fine" in metrics:
                 fine += f" hzpos={metrics['pos_err_zonly_hanchor_fine']:.3f}"
-            occ_f = self._occ_iou_label(metrics, "fine")
-            if occ_f:
-                fine += f" {occ_f}"
             parts.append(fine)
         mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
         if "pos_err_zonly_mid" in metrics:
@@ -144,9 +122,6 @@ class Term:
             mid += f" asz={metrics['anchor_size_err_mid']:.3f}"
         if "pos_err_zonly_hanchor_mid" in metrics:
             mid += f" hzpos={metrics['pos_err_zonly_hanchor_mid']:.3f}"
-        occ_m = self._occ_iou_label(metrics, "mid")
-        if occ_m:
-            mid += f" {occ_m}"
         mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
         parts.append(mid)
         line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)

@@ -69,15 +69,15 @@ def _forward_loss(model, graph, step, device, use_amp: bool):
         branches, lambda_kl = compute_branch_losses(outputs, graph, step)
 
     zero = graph.p.new_zeros(())
-    L_recon = L_KL = L_occ = L_pool = zero
+    L_recon = L_KL = L_pool = zero
     for _, _, parts in branches:
         L_recon = L_recon + parts.get('recon', zero)
+        L_recon = L_recon + parts.get('recon_latent', zero)
         L_KL = L_KL + parts.get('KL', zero)
-        L_occ = L_occ + parts.get('occ', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
     components = {
-        'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl,
+        'recon': L_recon, 'KL': L_KL, 'lambda_kl': lambda_kl,
     }
     if config.USE_POOL_LOSS and config.COARSEN_ASSIGNMENT == "soft":
         components['pool'] = L_pool
@@ -488,15 +488,6 @@ def main(
         f"{config.COARSEN_ASSIGNMENT} · ratios {config.REDUCTION_RATIO_LEVELS}"
         + (f" · pool λ={config.LAMBDA_POOL}" if config.USE_POOL_LOSS else ""),
     ]
-    occ_grid = (
-        config.LAMBDA_OCC_GRID_FINE,
-        config.LAMBDA_OCC_GRID_MID,
-        config.LAMBDA_OCC_GRID_COARSE,
-    )
-    banner_lines.append(
-        f"{term.paint('occ', Style.DIM)} "
-        f"grid λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
-    )
     if config.LATENT_GRAPH_VAE_MODE:
         banner_lines.append(
             f"{term.paint('latent-vae', Style.DIM)} "
@@ -642,18 +633,6 @@ def _parse_args():
     )
     parser.add_argument("--epochs", type=int, default=None, help="Override NUM_EPOCHS")
     parser.add_argument(
-        "--lambda-occ-grid-fine", type=float, default=None,
-        help="Override LAMBDA_OCC_GRID_FINE",
-    )
-    parser.add_argument(
-        "--lambda-occ-grid-mid", type=float, default=None,
-        help="Override LAMBDA_OCC_GRID_MID",
-    )
-    parser.add_argument(
-        "--lambda-occ-grid-coarse", type=float, default=None,
-        help="Override LAMBDA_OCC_GRID_COARSE",
-    )
-    parser.add_argument(
         "--splat-sigma-fine", type=float, default=None,
         help="Override SPLAT_TRUNCATION_SIGMA_FINE",
     )
@@ -780,12 +759,6 @@ def _parse_args():
 def _apply_config_overrides(args) -> None:
     if args.epochs is not None:
         config.NUM_EPOCHS = args.epochs
-    if args.lambda_occ_grid_fine is not None:
-        config.LAMBDA_OCC_GRID_FINE = args.lambda_occ_grid_fine
-    if args.lambda_occ_grid_mid is not None:
-        config.LAMBDA_OCC_GRID_MID = args.lambda_occ_grid_mid
-    if args.lambda_occ_grid_coarse is not None:
-        config.LAMBDA_OCC_GRID_COARSE = args.lambda_occ_grid_coarse
     if args.splat_sigma_fine is not None:
         config.SPLAT_TRUNCATION_SIGMA_FINE = args.splat_sigma_fine
     if args.lambda_recon_zonly is not None:

@@ -97,6 +97,12 @@ def _load_model(
             "zonly_decoder_mid.",
             "zonly_decoder_coarse.",
         )
+    else:
+        legacy_prefixes = legacy_prefixes + (
+            "occ_grid_head_fine.",
+            "occ_grid_head_mid.",
+            "occ_grid_head_coarse.",
+        )
     unexpected = [
         k
         for k in incompatible.unexpected_keys
@@ -280,22 +286,6 @@ def _format_metrics(metrics: dict[str, float], level: str) -> list[str]:
                 parts.append(f"{label}={v:.3f}")
     if parts:
         lines.append(f"  [{level}] " + "  ".join(parts))
-    for occ_level in (level,):
-        occ_parts = []
-        for suffix, label in (
-            (f"occ_iou_{occ_level}", "occ"),
-            (f"occ_pred_rate_{occ_level}", "pred"),
-            (f"occ_gt_rate_{occ_level}", "gt"),
-            (f"occ_recall_{occ_level}", "rec"),
-        ):
-            if suffix in metrics:
-                v = metrics[suffix]
-                if label in ("occ", "rec", "pred", "gt"):
-                    occ_parts.append(f"{label}={v:.0%}")
-                else:
-                    occ_parts.append(f"{label}={v:.3f}")
-        if occ_parts:
-            lines.append(f"  [occ {occ_level}] " + "  ".join(occ_parts))
     return lines
 
 

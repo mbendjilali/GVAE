@@ -106,9 +106,8 @@ These override `config.py` without editing the file:
 |------|-----------------|---------|
 | `--ckpt-dir PATH` | — | Output directory |
 | `--epochs N` | `NUM_EPOCHS` | Training length |
-| `--lambda-occ-grid-fine F` | `LAMBDA_OCC_GRID_FINE` | Fine occupancy loss (0 = off) |
-| `--lambda-occ-grid-mid M` | `LAMBDA_OCC_GRID_MID` | Mid occupancy loss |
-| `--lambda-occ-grid-coarse C` | `LAMBDA_OCC_GRID_COARSE` | Coarse occupancy loss |
+| `--latent-graph-vae` | `LATENT_GRAPH_VAE_MODE` | Honest Z→graph_hat decode (no h, no occ head) |
+| `--lambda-recon-latent` | `LAMBDA_RECON_LATENT` | Weight on latent-graph reconstruction |
 | `--splat-sigma-fine S` | `SPLAT_TRUNCATION_SIGMA_FINE` | Fine splat sharpness |
 | `--lambda-recon-h` / `--lambda-recon-zonly` / `--lambda-recon-hzonly` | recon weights |
 | `--lambda-anchor-fine` / `--lambda-anchor-mid` | anchor supervision |
@@ -137,7 +136,7 @@ model.load_state_dict(torch.load("checkpoint/<run>/best.pth", map_location="cpu"
 model.eval()
 ```
 
-**Compatibility:** checkpoints from older runs may fail to load after architecture changes (fine coarsening, `OccGridHead`, Z-only decoders, U-Net depth, …). Retrain or filter `state_dict` keys when migrating.
+**Compatibility:** `migrate_state_dict` drops legacy `occ_grid_head_*` keys. Retrain after major architecture changes (Z-only decoders, latent-graph VAE, U-Net depth, …).
 
 ---
 
@@ -147,7 +146,7 @@ Each epoch prints train/val loss, then a **metrics** line. Example shape:
 
 ```
 Epoch 132/150  lr=1.0e-04  train 11.99  val 11.24  ★ best
-  │ metrics  fine pos=0.102 smiou=76% zpos=0.082 zsmiou=42% anc=0.158 hzpos=0.102 occ=50% pred=24% rec=99%  ·  mid inst=0.127 zpos=0.076 anc=0.133 hzpos=0.100 occ=64% pred=23% rec=98% smiou=75%
+  │ metrics  fine pos=0.102 smiou=76% zpos=0.082 zsmiou=42% anc=0.158 hzpos=0.102  ·  mid inst=0.127 zpos=0.076 anc=0.133 hzpos=0.100 smiou=75%
 ```
 
 | Console label | TensorBoard key | Meaning |
@@ -157,17 +156,9 @@ Epoch 132/150  lr=1.0e-04  train 11.99  val 11.24  ★ best
 | `zpos=` | `pos_err_zonly_fine` | Z-only at **GT slot** (oracle layout) |
 | `anc=` | `anchor_err_fine` | Anchor vs GT before Z refinement — main bottleneck |
 | `smiou=` / `zsmiou=` | `soft_miou_fine` / `soft_miou_zonly_fine` | Semantics: deformable h+Z vs Z-only @ GT |
-| `occ=` | `occ_iou_fine` | Fine occupancy grid IoU |
-| `pred=` / `rec=` | `occ_pred_rate_*` / `occ_recall_*` | Occ over-prediction diagnostic |
 | `inst=` | `inst_pos_err_mid` | Instance positions via coarsening chain |
 
 With default config, **`pos` = `hzpos`**; compare both to **`anc`** to see how much Z refines a misplaced anchor. **`zpos`** is the oracle ceiling when layout slots are known. See [architecture.md](architecture.md#two-decoders-why-two) and [localization-progress.md](localization-progress.md).
-
-### Occupancy IoU plateau
-
-Fine `occ_iou` often plateaus around ~50% even when training is healthy. The model may over-predict occupied voxels relative to sparse LiDAR GT; IoU is capped by pred/gt rate ratio. Mid occupancy usually looks better (~60%+). Use probes and visual inspection for occ sanity, not IoU alone.
-
----
 
 ## Latent probes
 
@@ -211,7 +202,6 @@ python utils/probe_latent.py --help
 | `LAMBDA_NORM_CONTRAST_FINE/MID` | `0.1` | Norm contrastive (Probe C) |
 | `DECODER_GT_ANCHOR_MIX` | `0.0` | **h-decoder only** — blend GT into anchors (probes; keep 0 for training) |
 | `REDUCTION_RATIO_LEVELS` | `[0.2, 0.2, 0.2]` | FPS keep ratio per coarsening step |
-| `LAMBDA_OCC_GRID_*` | `1.0` | Occupancy BCE per level |
 | `SPLAT_TRUNCATION_SIGMA_FINE` | `1.0` | Sharper fine splat (mid/coarse use 2.0) |
 | `GRAD_CLIP_NORM` | `1.0` | Gradient clipping (`0` = off) |
 | `LOG_FULL_METRICS` | `True` | Extra TensorBoard metrics |
@@ -233,7 +223,6 @@ python utils/probe_latent.py --help
 |--------|---------|
 | `utils/build_scene_graph.py` | LAZ → JSON + occ caches |
 | `utils/probe_latent.py` | Anchor / linear / signal probes |
-| `utils/visualize_occ.py` | Occ pred vs LiDAR GT grids |
 | `utils/visualize_recon.py` | GT vs h+Z vs Z-only reconstruction (BEV) |
 | `utils/visualize_supernodes.py` | Export coarsening assignments to JSON + LAS |
 | `utils/diagnose_nan_losses.py` | Per-graph loss breakdown |

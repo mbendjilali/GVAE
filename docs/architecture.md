@@ -170,19 +170,11 @@ This path drives **`pos_err_zonly_*`** (console: `zpos=`). For **global** locali
 
 ---
 
-## Occupancy head
-
-Each `Z` level has an **`OccGridHead`**: a small conv network that predicts occupancy logits for **every voxel** in the grid. Loss is binary cross-entropy against the LiDAR cache (with automatic class imbalance weighting).
-
-This replaces older designs that sampled random query points for occupancy.
-
----
-
 ## Loss function
 
 Total loss per branch (fine / mid / coarse) combines:
 
-$$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_{\text{recon\_zonly}} + \lambda_{hz} \mathcal{L}_{\text{recon\_hzonly}} + \lambda_{\text{anc}}\mathcal{L}_{\text{anchor}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{grid}}\,\mathcal{L}_{\text{occ\_grid}} + \lambda_{\text{norm}}\,\mathcal{L}_{\text{norm\_contrast}} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
+$$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_{\text{recon\_zonly}} + \lambda_{hz} \mathcal{L}_{\text{recon\_hzonly}} + \lambda_{\text{latent}}\mathcal{L}_{\text{recon\_latent}} + \lambda_{\text{anc}}\mathcal{L}_{\text{anchor}} + \lambda_{\text{KL}}(t)\,\mathcal{L}_{\text{KL}} + \lambda_{\text{norm}}\,\mathcal{L}_{\text{norm\_contrast}} + \lambda_{\text{pool}}\,\mathcal{L}_{\text{pool}}$$
 
 | Term | Default weight | What it does |
 |------|----------------|--------------|
@@ -191,8 +183,7 @@ $$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_
 | **Recon hzonly** | `LAMBDA_RECON_HZONLY = 0.8` | Z-only readout at h-predicted anchors (partially redundant with h recon for `p` when zonly pos readout is on) |
 | **Anchor** | `LAMBDA_ANCHOR_FINE = 1.0`, `MID = 0.5` | MSE on `p_anchor` vs GT supernode centres (fine / mid) |
 | **KL** | cyclical → `LAMBDA_KL_MAX = 1e-3` | Regularise `μ, σ` toward standard normal |
-| **Occ grid** | `LAMBDA_OCC_GRID_* = 1.0` | Voxel occupancy BCE (`OccGridHead`) |
-| **Norm contrast** | `0.1` fine & mid | Hinge: push `‖Z(p_gt)‖` above `‖Z(empty voxel)‖` (Probe C alignment) |
+| **Norm contrast** | `0.1` fine & mid | Hinge: push `‖Z(p_gt)‖` above `‖Z(empty voxel)‖` (uses LiDAR occ cache for empty samples only) |
 | **Pool** | soft mode only | Keep coarsening assignments compact and separated |
 
 **Anchor curriculum:** during training, `DECODER_GT_ANCHOR_MIX` blends GT into h-decoder reference boxes (1→0 over 40 epochs by default); validation always uses mix=0. See [training.md](training.md#command-line-overrides).
@@ -215,8 +206,6 @@ Localization experiment arc and recommended λ overrides: [localization-progress
 | `anc` (`anchor_err_fine`) | `mlp_p_anchor(h)` | lower | Anchor placement error before Z refinement |
 | `smiou` | h + Z (deformable) | higher | Semantic reconstruction on fine supernodes |
 | `zsmiou` | Z-only @ GT | higher | Z-only semantic readout at GT slots |
-| `occ` | OccGridHead | higher | Predicted vs LiDAR occupancy (fine grid IoU) |
-| `pred` / `rec` | OccGridHead | — | Occupancy pred rate / recall (over-pred diagnostic) |
 | `inst` (`inst_pos_err_mid`) | h + Z chain | lower | Instance position via S0→S1→mid decode |
 | mid `zpos`, `anc`, `hzpos`, `smiou` | same pattern | — | Mid supernode equivalents |
 
@@ -230,7 +219,7 @@ See [localization-progress.md](localization-progress.md) for current benchmark n
 
 ```
 gvae/
-├── models/       encoder, decoder, coarsening, splatting, unet3d, occ_grid_head, gvae
+├── models/       encoder, decoder, latent_graph_decoder, coarsening, splatting, unet3d, gvae
 ├── losses/       gvae_loss, metrics, diagnostics
 ├── probes/       offline latent probe library
 ├── data/         scene_graph, occupancy, voxelize, graph_masks

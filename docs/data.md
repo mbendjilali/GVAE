@@ -76,7 +76,7 @@ Occupancy is **real LiDAR voxelisation**, not bounding-box fill.
 | Mid | 32×32×8 | `{stem}_occ_mid.npy` |
 | Coarse | 16×16×4 | `{stem}_occ_coarse.npy` |
 
-These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` and the `OccGridHead` output shapes.
+These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` (used for norm-contrastive empty-voxel sampling, not occupancy prediction).
 
 ### Build settings
 
@@ -86,7 +86,7 @@ These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` and the `OccGrid
 | `OCC_REQUIRE_CACHE` | `True` | Crash early if a sidecar is missing |
 | `OCC_FILTER_NON_INSTANTIABLE` | `True` | Drop ground/vegetation/fence from occ GT |
 
-Training supervises occupancy with **full-grid BCE** on `OccGridHead` (not random query points). Probes may sample query locations from these grids for diagnostics.
+Probes may sample query locations from these grids for norm-contrast diagnostics (Probe C).
 
 ---
 

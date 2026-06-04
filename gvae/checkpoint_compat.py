@@ -27,9 +27,19 @@ def _inject_z_pred_trunk(state: dict) -> dict:
     return out
 
 
+def _drop_occ_grid_heads(state: dict) -> dict:
+    """Remove OccGridHead weights from checkpoints predating its removal."""
+    return {
+        k: v for k, v in state.items()
+        if not k.startswith(
+            ("occ_grid_head_fine.", "occ_grid_head_mid.", "occ_grid_head_coarse."),
+        )
+    }
+
+
 def migrate_state_dict(state: dict) -> dict:
     """Map legacy Linear anchor heads into 2-layer MLP final layer (index 2)."""
-    out = dict(state)
+    out = _drop_occ_grid_heads(state)
     for key in list(state.keys()):
         for stem in ("mlp_p_anchor", "mlp_r_anchor"):
             old_w = f".{stem}.weight"

@@ -1,5 +1,5 @@
 # gvae/losses/metrics.py
-# Primary validation metrics: fine instance layout, mid supernode, occupancy
+# Primary validation metrics: fine instance layout, mid supernode, reconstruction
 
 from __future__ import annotations
 
@@ -55,33 +55,6 @@ def mean_footprint_error(pred_r: torch.Tensor, true_r: torch.Tensor) -> float:
     return (pred_r - true_r).abs().mean().item()
 
 
-def _occupancy_grid_iou(
-    occ_grid_head,
-    z: torch.Tensor,
-    occ_gt: torch.Tensor,
-) -> tuple[float, float, float, float, float]:
-    """Return (iou, precision, recall, pred_rate, gt_rate) over flattened voxels."""
-    if occ_gt.numel() == 0:
-        nan = float("nan")
-        return nan, nan, nan, nan, nan
-    logits = occ_grid_head(z)
-    probs = torch.sigmoid(logits)
-    pred = probs >= config.METRICS_OCC_THRESHOLD
-    flat_gt = occ_gt.flatten().bool()
-    flat_pred = pred.flatten()
-    n = flat_gt.numel()
-    tp = (flat_pred & flat_gt).sum().float()
-    fp = (flat_pred & ~flat_gt).sum().float()
-    fn = (~flat_pred & flat_gt).sum().float()
-    union = tp + fp + fn
-    iou = (tp / union.clamp(min=1)).item()
-    precision = (tp / (tp + fp).clamp(min=1)).item()
-    recall = (tp / (tp + fn).clamp(min=1)).item()
-    pred_rate = (flat_pred.sum().float() / max(n, 1)).item()
-    gt_rate = (flat_gt.sum().float() / max(n, 1)).item()
-    return iou, precision, recall, pred_rate, gt_rate
-
-
 def _instance_pos_err_mid(outputs, graph) -> float:
     idx = graph.coarsen_mask.nonzero(as_tuple=True)[0]
     if idx.numel() == 0 or outputs["S0"].numel() == 0 or outputs["S1"].numel() == 0:
@@ -108,14 +81,6 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
                 recon_fine["r"], outputs["r_fine"],
             )
             metrics["soft_miou_fine"] = soft_miou(recon_fine["s"], outputs["s_fine"])
-            if config.LAMBDA_OCC_GRID_FINE > 0:
-                iou_f, _, rec_f, pr_f, gt_f = _occupancy_grid_iou(
-                    outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
-                )
-                metrics["occ_iou_fine"] = iou_f
-                metrics["occ_recall_fine"] = rec_f
-                metrics["occ_pred_rate_fine"] = pr_f
-                metrics["occ_gt_rate_fine"] = gt_f
 
         recon_fine_z = outputs.get("recon_fine_zonly")
         if recon_fine_z is not None and outputs["p_fine"].numel() > 0:
@@ -177,14 +142,6 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             )
 
         if outputs.get("recon_mid") is not None:
-            if config.LAMBDA_OCC_GRID_MID > 0:
-                iou, _, rec_m, pr_m, gt_m = _occupancy_grid_iou(
-                    outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
-                )
-                metrics["occ_iou_mid"] = iou
-                metrics["occ_recall_mid"] = rec_m
-                metrics["occ_pred_rate_mid"] = pr_m
-                metrics["occ_gt_rate_mid"] = gt_m
             metrics["inst_pos_err_mid"] = _instance_pos_err_mid(outputs, graph)
 
         if config.LOG_FULL_METRICS:
@@ -205,27 +162,11 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
         metrics["recon_sem_fine"] = soft_cross_entropy_loss(
             recon_fine["s"], outputs["s_fine"],
         ).item()
-        if config.LAMBDA_OCC_GRID_FINE > 0:
-            _, prec_f, rec_f, pr_f, gt_f = _occupancy_grid_iou(
-                outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
-            )
-            metrics["occ_precision_fine"] = prec_f
-            metrics["occ_recall_fine"] = rec_f
-            metrics["occ_pred_rate_fine"] = pr_f
-            metrics["occ_gt_rate_fine"] = gt_f
 
     if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
         metrics["recon_sem_mid"] = soft_cross_entropy_loss(
             outputs["recon_mid"]["s"], outputs["s_lm1"],
         ).item()
-        if config.LAMBDA_OCC_GRID_MID > 0:
-            _, prec_m, rec_m, pr_m, gt_m = _occupancy_grid_iou(
-                outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
-            )
-            metrics["occ_precision_mid"] = prec_m
-            metrics["occ_recall_mid"] = rec_m
-            metrics["occ_pred_rate_mid"] = pr_m
-            metrics["occ_gt_rate_mid"] = gt_m
 
     if outputs.get("recon_coarse") is not None:
         if outputs["p_1"].numel() > 0:
@@ -235,15 +176,6 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
             metrics["soft_miou_coarse"] = soft_miou(
                 outputs["recon_coarse"]["s"], outputs["s_1"],
             )
-            if config.LAMBDA_OCC_GRID_COARSE > 0:
-                iou_c, prec_c, rec_c, pr_c, gt_c = _occupancy_grid_iou(
-                    outputs["occ_grid_head_coarse"], outputs["z_coarse"], graph.occ_coarse,
-                )
-                metrics["occ_iou_coarse"] = iou_c
-                metrics["occ_precision_coarse"] = prec_c
-                metrics["occ_recall_coarse"] = rec_c
-                metrics["occ_pred_rate_coarse"] = pr_c
-                metrics["occ_gt_rate_coarse"] = gt_c
 
     if outputs["mu_fine"].numel() > 0:
         metrics["kl_fine"] = KL_loss(outputs["mu_fine"], outputs["logvar_fine"]).item()

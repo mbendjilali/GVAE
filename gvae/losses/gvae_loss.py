@@ -5,9 +5,6 @@ import torch
 import torch.nn.functional as F
 import config
 from gvae.data.graph_masks import pool_subgraph
-from gvae.data.occupancy import loss_occ_grid
-
-
 def kl_weight(step):
     total_steps = config.KL_TOTAL_STEPS or config.NUM_EPOCHS
     cycle_len = max(1, total_steps // config.KL_ANNEAL_CYCLES)
@@ -206,14 +203,6 @@ def compute_pool_loss(outputs, graph) -> tuple[torch.Tensor, dict]:
     return config.LAMBDA_POOL * L_pool, parts
 
 
-def _lambda_occ_grid(name: str) -> float:
-    return {
-        'fine': config.LAMBDA_OCC_GRID_FINE,
-        'mid': config.LAMBDA_OCC_GRID_MID,
-        'coarse': config.LAMBDA_OCC_GRID_COARSE,
-    }[name]
-
-
 def _maybe_branch_loss(
     branches,
     recon,
@@ -226,7 +215,6 @@ def _maybe_branch_loss(
     r_anchor,
     mu,
     logvar,
-    occ_grid_head,
     z,
     occ_grid,
     name: str,
@@ -305,12 +293,6 @@ def _maybe_branch_loss(
     parts['KL'] = L_kl
     total = total + lambda_kl * L_kl
 
-    lambda_grid = _lambda_occ_grid(name)
-    if lambda_grid > 0 and occ_grid_head is not None:
-        L_occ = loss_occ_grid(occ_grid_head(z), occ_grid)
-        parts['occ'] = L_occ
-        total = total + lambda_grid * L_occ
-
     lambda_norm = _lambda_norm_contrast(name)
     if lambda_norm > 0 and occ_grid.numel() > 0:
         L_norm = norm_contrastive_loss(z, p_true, occ_grid)
@@ -340,7 +322,6 @@ def compute_branch_losses(outputs, graph, step):
         outputs.get('p_anchor_fine'),
         outputs.get('r_anchor_fine'),
         outputs['mu_fine'], outputs['logvar_fine'],
-        outputs['occ_grid_head_fine'],
         outputs['z_fine'], graph.occ_fine,
         'fine', lambda_kl,
     )
@@ -353,7 +334,6 @@ def compute_branch_losses(outputs, graph, step):
         outputs.get('p_anchor_mid'),
         outputs.get('r_anchor_mid'),
         outputs['mu_mid'], outputs['logvar_mid'],
-        outputs['occ_grid_head_mid'],
         outputs['z_mid'], graph.occ_mid,
         'mid', lambda_kl,
     )
@@ -366,7 +346,6 @@ def compute_branch_losses(outputs, graph, step):
         outputs.get('p_anchor_coarse'),
         outputs.get('r_anchor_coarse'),
         outputs['mu_coarse'], outputs['logvar_coarse'],
-        outputs['occ_grid_head_coarse'],
         outputs['z_coarse'], graph.occ_coarse,
         'coarse', lambda_kl,
     )
@@ -382,7 +361,7 @@ def compute_loss(outputs, graph, step):
     p = graph.p
     branches, lambda_kl = compute_branch_losses(outputs, graph, step)
     zero = p.new_zeros(())
-    L_recon = L_recon_zonly = L_recon_hzonly = L_KL = L_occ = L_norm = L_anchor = L_anchor_r = zero
+    L_recon = L_recon_zonly = L_recon_hzonly = L_KL = L_norm = L_anchor = L_anchor_r = zero
     L_pool = zero
     pool_extras = {}
 
@@ -393,7 +372,6 @@ def compute_loss(outputs, graph, step):
         L_anchor = L_anchor + parts.get('anchor', zero)
         L_anchor_r = L_anchor_r + parts.get('anchor_r', zero)
         L_KL = L_KL + parts.get('KL', zero)
-        L_occ = L_occ + parts.get('occ', zero)
         L_norm = L_norm + parts.get('norm_contrast', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
@@ -411,7 +389,6 @@ def compute_loss(outputs, graph, step):
         'anchor': L_anchor,
         'anchor_r': L_anchor_r,
         'KL': L_KL,
-        'occ': L_occ,
         'norm_contrast': L_norm,
         'lambda_kl': lambda_kl,
     }

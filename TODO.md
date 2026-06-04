@@ -9,7 +9,7 @@ Living task list for the DALES scene-graph VAE. Docs: [docs/README.md](docs/READ
 | `checkpoint/anchor_localize/` | Localization SOTA | ~0.10 | — | `smiou` ~76%; no footprint loss |
 | `checkpoint/r_focus_v2/` | Footprint + balanced loss | ~0.11 | ~0.006 | `smiou` ~64%; val loss ~15 |
 
-**Decision metrics:** `pos`, `anc`, `zpos`, `size`, `asz`, `soft_miou_fine`, `occ_iou_fine`, probes (`norm_ratio_gt_over_empty`, `linear_pos_err_val`, anchor mix @0).
+**Decision metrics:** `pos`, `anc`, `zpos`, `size`, `asz`, `soft_miou_fine`, probes (`norm_ratio_gt_over_empty`, `linear_pos_err_val`, anchor mix @0).
 
 ---
 

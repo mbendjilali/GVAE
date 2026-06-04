@@ -19,8 +19,6 @@ from gvae.losses.gvae_loss import (
     _lambda_anchor,
     _lambda_anchor_r,
 )
-from gvae.data.occupancy import loss_occ_grid
-
 
 @dataclass
 class LossBreakdown:
@@ -49,14 +47,6 @@ def _store_term(breakdown: LossBreakdown, name: str, tensor: torch.Tensor) -> No
         breakdown.nan_terms.append(name)
 
 
-def _maybe_occ_grid(bd: LossBreakdown, name: str, head, z, occ_gt, lambda_grid: float) -> float:
-    if lambda_grid <= 0 or head is None:
-        return 0.0
-    loss = loss_occ_grid(head(z), occ_gt)
-    _store_term(bd, name, loss)
-    return lambda_grid * bd.terms[name]
-
-
 def _branch_terms(
     bd: LossBreakdown,
     *,
@@ -71,7 +61,6 @@ def _branch_terms(
     r_anchor,
     mu,
     logvar,
-    occ_grid_head,
     z,
     occ_grid,
     lam_kl: float,
@@ -85,7 +74,18 @@ def _branch_terms(
     w_size_z = config.LAMBDA_SIZE_ZONLY
     w_sem_z = config.LAMBDA_SEM_ZONLY
 
-    if recon is not None and config.LAMBDA_RECON_H > 0:
+    if (
+        recon is not None
+        and config.LATENT_GRAPH_VAE_MODE
+        and config.LAMBDA_RECON_LATENT > 0
+    ):
+        _store_term(
+            bd, f"recon_latent_{prefix}",
+            reconstruction_loss(recon, p_true, r_true, s_true),
+        )
+        total += config.LAMBDA_RECON_LATENT * bd.terms[f"recon_latent_{prefix}"]
+
+    if recon is not None and not config.LATENT_GRAPH_VAE_MODE and config.LAMBDA_RECON_H > 0:
         _store_term(
             bd, f"recon_{prefix}",
             reconstruction_loss(recon, p_true, r_true, s_true),
@@ -132,15 +132,6 @@ def _branch_terms(
 
     _store_term(bd, f"KL_{prefix}", KL_loss(mu, logvar))
     total += lam_kl * bd.terms[f"KL_{prefix}"]
-
-    lambda_grid = {
-        'fine': config.LAMBDA_OCC_GRID_FINE,
-        'mid': config.LAMBDA_OCC_GRID_MID,
-        'coarse': config.LAMBDA_OCC_GRID_COARSE,
-    }[prefix]
-    total += _maybe_occ_grid(
-        bd, f"occ_{prefix}", occ_grid_head, z, occ_grid, lambda_grid,
-    )
 
     lambda_norm = {
         'fine': config.LAMBDA_NORM_CONTRAST_FINE,
@@ -193,7 +184,6 @@ def loss_breakdown(
         r_anchor=outputs.get("r_anchor_fine"),
         mu=outputs["mu_fine"],
         logvar=outputs["logvar_fine"],
-        occ_grid_head=outputs["occ_grid_head_fine"],
         z=outputs["z_fine"],
         occ_grid=graph.occ_fine,
         lam_kl=lam_kl,
@@ -211,7 +201,6 @@ def loss_breakdown(
         r_anchor=outputs.get("r_anchor_mid"),
         mu=outputs["mu_mid"],
         logvar=outputs["logvar_mid"],
-        occ_grid_head=outputs["occ_grid_head_mid"],
         z=outputs["z_mid"],
         occ_grid=graph.occ_mid,
         lam_kl=lam_kl,
@@ -229,7 +218,6 @@ def loss_breakdown(
         r_anchor=outputs.get("r_anchor_coarse"),
         mu=outputs["mu_coarse"],
         logvar=outputs["logvar_coarse"],
-        occ_grid_head=outputs["occ_grid_head_coarse"],
         z=outputs["z_coarse"],
         occ_grid=graph.occ_coarse,
         lam_kl=lam_kl,

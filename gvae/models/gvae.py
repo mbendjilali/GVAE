@@ -8,8 +8,6 @@ import config
 from gvae.models.encoder import SceneGraphEncoder
 from gvae.models.decoder import SceneGraphDecoder, ZOnlyDecoder
 from gvae.models.latent_graph_decoder import LatentGraphDecoder
-from gvae.models.occ_grid_head import OccGridHead
-
 
 def _branch_readouts(
     decoder: SceneGraphDecoder,
@@ -72,10 +70,6 @@ class GVAE(nn.Module):
                 self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
                 self.zonly_decoder_coarse = ZOnlyDecoder(config.D_COARSE_LATENT)
 
-        self.occ_grid_head_fine = OccGridHead(config.D_FINE_LATENT)
-        self.occ_grid_head_mid = OccGridHead(config.D_MID_LATENT)
-        self.occ_grid_head_coarse = OccGridHead(config.D_COARSE_LATENT)
-
     def forward(self, graph):
         enc = self.encoder(graph)
 
@@ -108,9 +102,6 @@ class GVAE(nn.Module):
             'S2': enc['S2'],
             'edge_index_lm1': enc['edge_index_lm1'],
             'edge_index_1': enc['edge_index_1'],
-            'occ_grid_head_fine': self.occ_grid_head_fine,
-            'occ_grid_head_mid': self.occ_grid_head_mid,
-            'occ_grid_head_coarse': self.occ_grid_head_coarse,
             'recon_fine': None,
             'recon_mid': None,
             'recon_coarse': None,
