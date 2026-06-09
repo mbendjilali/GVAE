@@ -15,7 +15,12 @@ import config
 from gvae.training.console import Style, Term, strip_ansi
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
-from gvae.losses.gvae_loss import compute_branch_losses, compute_loss, decoder_gt_anchor_mix_for_epoch
+from gvae.losses.gvae_loss import (
+    compute_branch_losses,
+    compute_loss,
+    decoder_gt_anchor_mix_for_epoch,
+    latent_gt_window_mix_for_epoch,
+)
 from gvae.losses.metrics import compute_metrics
 from gvae.probes.latent import run_latent_probes, save_probe_artifacts
 
@@ -66,7 +71,7 @@ def _forward_loss(model, graph, step, device, use_amp: bool):
     graph = graph.on_device(device, non_blocking=True)
     with torch.amp.autocast('cuda', enabled=use_amp):
         outputs = model(graph)
-        branches, lambda_kl = compute_branch_losses(outputs, graph, step)
+        branches, lambda_kl = compute_branch_losses(outputs, graph, step, model=model)
 
     zero = graph.p.new_zeros(())
     L_recon = L_KL = L_pool = zero
@@ -152,6 +157,8 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
     model.eval()
     saved_mix = config.DECODER_GT_ANCHOR_MIX
     config.DECODER_GT_ANCHOR_MIX = 0.0
+    saved_gt_win = config.LATENT_GT_WINDOW_MIX
+    config.LATENT_GT_WINDOW_MIX = 0.0
 
     per_graph_losses = []
     all_metrics = []
@@ -165,7 +172,7 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
                 with torch.amp.autocast('cuda', enabled=use_amp):
                     outputs = model(graph)
                     loss, components = compute_loss(
-                        outputs, graph, step=step,
+                        outputs, graph, step=step, model=model,
                     )
                 val = loss.item()
                 per_graph_losses.append(val)
@@ -191,6 +198,7 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
 
     model.train()
     config.DECODER_GT_ANCHOR_MIX = saved_mix
+    config.LATENT_GT_WINDOW_MIX = saved_gt_win
     return avg_loss, avg_metrics, avg_components, n_graphs, n_failed, failed_paths
 
 
@@ -245,6 +253,7 @@ def train(
     best_loss = float('inf')
     current_lr = config.LEARNING_RATE
     config.DECODER_GT_ANCHOR_MIX = decoder_gt_anchor_mix_for_epoch(0)
+    config.LATENT_GT_WINDOW_MIX = latent_gt_window_mix_for_epoch(0)
 
     for epoch in range(config.NUM_EPOCHS):
         lr = _lr_for_epoch(epoch)
@@ -262,6 +271,15 @@ def train(
             if config.ANCHOR_MIX_CURRICULUM:
                 tqdm.write(term.paint(
                     f"  anchor mix → {mix:.2f} (epoch {epoch + 1})",
+                    Style.YELLOW,
+                ))
+
+        gt_mix = latent_gt_window_mix_for_epoch(epoch)
+        if gt_mix != config.LATENT_GT_WINDOW_MIX:
+            config.LATENT_GT_WINDOW_MIX = gt_mix
+            if config.LATENT_GRAPH_VAE_MODE and config.LATENT_GT_WINDOW_CURRICULUM:
+                tqdm.write(term.paint(
+                    f"  gt-window mix → {gt_mix:.2f} (epoch {epoch + 1})",
                     Style.YELLOW,
                 ))
 
@@ -433,9 +451,9 @@ def _teardown_run_logging(log_file):
 
 def _load_init_checkpoint(model, path: str, device, term: Term) -> None:
     """Load pretrained weights; allow architecture mismatches (e.g. phase-1 → phase-2)."""
-    from gvae.checkpoint_compat import migrate_state_dict
+    from gvae.checkpoint_compat import prepare_checkpoint
 
-    state = migrate_state_dict(
+    state = prepare_checkpoint(
         torch.load(path, map_location=device, weights_only=True),
     )
     incompatible = model.load_state_dict(state, strict=False)
@@ -482,6 +500,8 @@ def main(
         f"@ ep {config.LR_DECAY_EPOCH + 1} · batch {config.BATCH_SIZE}",
         f"{term.paint('grid', Style.DIM)}     "
         f"fine {config.GRID_FINE} · mid {config.GRID_MID} · coarse {config.GRID_COARSE} · "
+        f"gnn {config.D_INSTANCE}/{config.D_REGION}/{config.D_SCENE} · "
+        f"Z {config.D_FINE_LATENT}/{config.D_MID_LATENT}/{config.D_COARSE_LATENT} · "
         f"unet depth fine/mid/coarse = "
         f"{config.UNET_DEPTH_FINE}/{config.UNET_DEPTH_MID}/{config.UNET_DEPTH_COARSE}",
         f"{term.paint('coarsen', Style.DIM)}  "
@@ -491,10 +511,11 @@ def main(
     if config.LATENT_GRAPH_VAE_MODE:
         banner_lines.append(
             f"{term.paint('latent-vae', Style.DIM)} "
-            f"Z→graph_hat (slot cross-attn) λ recon={config.LAMBDA_RECON_LATENT} "
-            f"max_slots={config.LATENT_GRAPH_MAX_SLOTS} "
-            f"refine_z={config.LATENT_GRAPH_REFINE_FROM_Z_SAMPLE} "
-            f"λ_pos={config.LAMBDA_POS_LATENT}"
+            f"Z→graph_hat (per-slot spatial) λ recon={config.LAMBDA_RECON_LATENT} "
+            f"λ_peak={config.LAMBDA_Z_PEAK_FINE}/{config.LAMBDA_Z_PEAK_MID}/"
+            f"{config.LAMBDA_Z_PEAK_COARSE} "
+            f"decode={config.LATENT_DECODE_MODE} λ_pos={config.LAMBDA_POS_LATENT} "
+            f"λ_peak layout (recon+KL+norm; VGAE slot readout)"
         )
     if config.USE_Z_ONLY_DECODER:
         pos_mode = (
@@ -690,6 +711,10 @@ def _parse_args():
         help="Predict absolute p from Z (POSITION_RESIDUAL=False)",
     )
     parser.add_argument(
+        "--latent-dims", type=str, default=None,
+        help="Z channel dims fine,mid,coarse (e.g. 96,192,384). GNN dims stay at D_MODEL_LEVELS.",
+    )
+    parser.add_argument(
         "--no-splat-center", action="store_true",
         help="Disable SPLAT_SUBTRACT_SPATIAL_MEAN before U-Net",
     )
@@ -720,6 +745,50 @@ def _parse_args():
     parser.add_argument(
         "--lambda-recon-latent", type=float, default=None,
         help="Override LAMBDA_RECON_LATENT (Z→graph_hat reconstruction)",
+    )
+    parser.add_argument(
+        "--lambda-z-peak-fine", type=float, default=None,
+        help="Override LAMBDA_Z_PEAK_FINE (||Z|| peaks at supernode sites)",
+    )
+    parser.add_argument(
+        "--lambda-z-peak-mid", type=float, default=None,
+        help="Override LAMBDA_Z_PEAK_MID",
+    )
+    parser.add_argument(
+        "--lambda-z-peak-coarse", type=float, default=None,
+        help="Override LAMBDA_Z_PEAK_COARSE",
+    )
+    parser.add_argument(
+        "--lambda-slot-spread", type=float, default=None,
+        help="Override LAMBDA_SLOT_SPREAD (latent graph decode)",
+    )
+    parser.add_argument(
+        "--lambda-index-peak-distill", type=float, default=None,
+        help="Per-slot MSE(p_hat[i], oracle layout peak at k-NN(p_gt[i]))",
+    )
+    parser.add_argument(
+        "--lambda-layout-distill", type=float, default=None,
+        help="Deprecated alias for --lambda-index-peak-distill",
+    )
+    parser.add_argument(
+        "--lambda-pos-latent", type=float, default=None,
+        help="Override LAMBDA_POS_LATENT (index MSE in recon when --latent-pos-matched off)",
+    )
+    parser.add_argument(
+        "--latent-pos-matched", action="store_true",
+        help="Use Hungarian pos in latent recon (hides slot-order error in loss)",
+    )
+    parser.add_argument(
+        "--lambda-sem-at-gt", type=float, default=None,
+        help="Aux sem/size loss at p_gt (does not change graph_hat forward)",
+    )
+    parser.add_argument(
+        "--lambda-query-cover", type=float, default=None,
+        help="Pull slot-query k-NN windows over GT sites (query decode mode)",
+    )
+    parser.add_argument(
+        "--latent-decode-mode", choices=("vgae", "query", "nms_slots", "nms"), default=None,
+        help="LatentGraphDecoder position readout mode",
     )
     parser.add_argument(
         "--no-zonly-decoder", action="store_true",
@@ -757,7 +826,16 @@ def _parse_args():
     return parser.parse_args()
 
 
+def _parse_latent_dims(spec: str) -> tuple[int, int, int]:
+    parts = [int(x.strip()) for x in spec.split(",")]
+    if len(parts) != 3:
+        raise SystemExit("--latent-dims requires three comma-separated integers, e.g. 96,192,384")
+    return parts[0], parts[1], parts[2]
+
+
 def _apply_config_overrides(args) -> None:
+    if args.latent_dims is not None:
+        config.apply_latent_levels(*_parse_latent_dims(args.latent_dims))
     if args.epochs is not None:
         config.NUM_EPOCHS = args.epochs
     if args.splat_sigma_fine is not None:
@@ -815,8 +893,58 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_ANCHOR_R_COARSE = 0.0
         config.ANCHOR_MIX_CURRICULUM = False
         config.DECODER_GT_ANCHOR_MIX = 0.0
+        config.LAMBDA_NORM_CONTRAST_FINE = max(
+            config.LAMBDA_NORM_CONTRAST_FINE, 0.3,
+        )
+        if args.lambda_z_peak_fine is None:
+            config.LAMBDA_Z_PEAK_FINE = 1.0
+        if args.lambda_z_peak_mid is None:
+            config.LAMBDA_Z_PEAK_MID = 0.3
+        if args.lambda_z_peak_coarse is None:
+            config.LAMBDA_Z_PEAK_COARSE = 0.2
+        if not args.no_splat_center:
+            config.SPLAT_SUBTRACT_SPATIAL_MEAN = False
+        config.LATENT_LAYOUT_HEAD = True
+        config.LATENT_TRAIN_Z_SAMPLE_AT_GT = False
+        config.LATENT_DECODE_MODE = "vgae"
+        config.LATENT_POS_MATCHED = False
+        config.LATENT_GT_WINDOW_CURRICULUM = False
+        if getattr(args, 'lambda_sem_at_gt', None) is None:
+            config.LAMBDA_SEM_AT_GT = 0.0
+        if args.lambda_index_peak_distill is None and args.lambda_layout_distill is None:
+            config.LAMBDA_INDEX_PEAK_DISTILL = 0.0
+        if args.lambda_query_cover is None:
+            config.LAMBDA_QUERY_COVER = 0.0
+        if args.lambda_pos_latent is None:
+            config.LAMBDA_POS_LATENT = 1.0
+        if args.lambda_slot_spread is None:
+            config.LAMBDA_SLOT_SPREAD = 0.0
     if args.lambda_recon_latent is not None:
         config.LAMBDA_RECON_LATENT = args.lambda_recon_latent
+    if args.lambda_z_peak_fine is not None:
+        config.LAMBDA_Z_PEAK_FINE = args.lambda_z_peak_fine
+    if args.lambda_z_peak_mid is not None:
+        config.LAMBDA_Z_PEAK_MID = args.lambda_z_peak_mid
+    if args.lambda_z_peak_coarse is not None:
+        config.LAMBDA_Z_PEAK_COARSE = args.lambda_z_peak_coarse
+    if args.lambda_slot_spread is not None:
+        config.LAMBDA_SLOT_SPREAD = args.lambda_slot_spread
+    if args.lambda_index_peak_distill is not None:
+        config.LAMBDA_INDEX_PEAK_DISTILL = args.lambda_index_peak_distill
+    if args.lambda_layout_distill is not None:
+        config.LAMBDA_LAYOUT_DISTILL = args.lambda_layout_distill
+        if args.lambda_index_peak_distill is None:
+            config.LAMBDA_INDEX_PEAK_DISTILL = args.lambda_layout_distill
+    if args.lambda_pos_latent is not None:
+        config.LAMBDA_POS_LATENT = args.lambda_pos_latent
+    if args.latent_pos_matched:
+        config.LATENT_POS_MATCHED = True
+    if args.lambda_sem_at_gt is not None:
+        config.LAMBDA_SEM_AT_GT = args.lambda_sem_at_gt
+    if args.lambda_query_cover is not None:
+        config.LAMBDA_QUERY_COVER = args.lambda_query_cover
+    if args.latent_decode_mode is not None:
+        config.LATENT_DECODE_MODE = args.latent_decode_mode
     if args.no_zonly_decoder:
         config.USE_Z_ONLY_DECODER = False
     if args.zonly_aux_loss_only:

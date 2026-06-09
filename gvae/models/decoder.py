@@ -75,26 +75,28 @@ def sample_volume(Z, ref_pts):
 
 
 class SceneGraphDecoder(nn.Module):
-    def __init__(self, d: int):
+    def __init__(self, d_h: int, *, d_z: int | None = None):
         super().__init__()
-        self.d = d
+        self.d_h = d_h
+        self.d_z = d_z if d_z is not None else d_h
+        self.d = d_h  # legacy alias (h embedding width)
         P = config.NUM_REF_POINTS
 
-        self.mlp_p_anchor = _anchor_mlp(d, 3)
-        self.mlp_r_anchor = _anchor_mlp(d, 3)
+        self.mlp_p_anchor = _anchor_mlp(d_h, 3)
+        self.mlp_r_anchor = _anchor_mlp(d_h, 3)
         self.mlp_offset = nn.Sequential(
-            nn.Linear(d, d),
+            nn.Linear(d_h, d_h),
             nn.ReLU(),
-            nn.Linear(d, P * 3),
+            nn.Linear(d_h, P * 3),
         )
-        self.W_Q = nn.Linear(d, d)
-        self.W_K = nn.Linear(d, d)
-        self.W_V = nn.Linear(d, d)
-        self.z_pred_trunk = _z_pred_trunk(d)
-        self.mlp_s = nn.Linear(d, config.NUM_CLASSES)
-        self.mlp_r = nn.Linear(d, 3)
+        self.W_Q = nn.Linear(d_h, d_h)
+        self.W_K = nn.Linear(self.d_z, d_h)
+        self.W_V = nn.Linear(self.d_z, d_h)
+        self.z_pred_trunk = _z_pred_trunk(d_h)
+        self.mlp_s = nn.Linear(d_h, config.NUM_CLASSES)
+        self.mlp_r = nn.Linear(d_h, 3)
         if deformable_predicts_position():
-            self.mlp_p = nn.Linear(d, 3)
+            self.mlp_p = nn.Linear(d_h, 3)
         self.softplus = nn.Softplus()
 
     def _reference_geometry(self, h, p_gt=None, r_gt=None):
@@ -119,7 +121,7 @@ class SceneGraphDecoder(nn.Module):
         K = self.W_K(Z_sampled)
         V = self.W_V(Z_sampled)
 
-        scale = self.d ** 0.5
+        scale = self.d_h ** 0.5
         attn = torch.softmax((Q @ K.transpose(1, 2)) / scale, dim=2)
         z_pred = (attn @ V).squeeze(1)
         feat = self.z_pred_trunk(z_pred)

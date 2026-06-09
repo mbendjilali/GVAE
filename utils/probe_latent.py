@@ -19,17 +19,17 @@ sys.path.insert(0, _REPO)
 import torch
 
 import config
-from gvae.checkpoint_compat import migrate_state_dict
+from gvae.checkpoint_compat import prepare_checkpoint
 from gvae.models.gvae import GVAE
 from gvae.probes.latent import format_report, run_latent_probes, save_probe_artifacts
 from train import SceneGraphDataset, get_device
 
 
 def _load_model(checkpoint: str, device: torch.device) -> GVAE:
-    model = GVAE().to(device)
-    state = migrate_state_dict(
+    state = prepare_checkpoint(
         torch.load(checkpoint, map_location=device, weights_only=True),
     )
+    model = GVAE().to(device)
     model.load_state_dict(state, strict=False)
     model.eval()
     return model

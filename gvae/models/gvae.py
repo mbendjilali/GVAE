@@ -36,9 +36,11 @@ def _latent_branch_readout(
     *,
     z,
     n_nodes: int,
+    p_gt: torch.Tensor | None = None,
+    layout: torch.Tensor | None = None,
 ) -> dict:
-    """Z → graph_hat; n_nodes sets slot count only (no GT positions)."""
-    return decoder(z, n_nodes)
+    """Z → graph_hat; p_gt used for teacher-forced Z sampling in train."""
+    return decoder(z, n_nodes, p_gt=p_gt, layout=layout)
 
 
 class GVAE(nn.Module):
@@ -62,9 +64,16 @@ class GVAE(nn.Module):
             self.latent_decoder_mid = LatentGraphDecoder(config.D_MID_LATENT)
             self.latent_decoder_coarse = LatentGraphDecoder(config.D_COARSE_LATENT)
         else:
-            self.decoder_fine = SceneGraphDecoder(config.D_FINE_LATENT)
-            self.decoder_mid = SceneGraphDecoder(config.D_MID_LATENT)
-            self.decoder_coarse = SceneGraphDecoder(config.D_COARSE_LATENT)
+            # h+Z decoder: h width = GNN; Z readout width = D_*_LATENT
+            self.decoder_fine = SceneGraphDecoder(
+                config.D_INSTANCE, d_z=config.D_FINE_LATENT,
+            )
+            self.decoder_mid = SceneGraphDecoder(
+                config.D_REGION, d_z=config.D_MID_LATENT,
+            )
+            self.decoder_coarse = SceneGraphDecoder(
+                config.D_SCENE, d_z=config.D_COARSE_LATENT,
+            )
             if config.USE_Z_ONLY_DECODER:
                 self.zonly_decoder_fine = ZOnlyDecoder(config.D_FINE_LATENT)
                 self.zonly_decoder_mid = ZOnlyDecoder(config.D_MID_LATENT)
@@ -124,17 +133,29 @@ class GVAE(nn.Module):
             n_fine = enc['p_fine'].shape[0]
             if n_fine > 0:
                 out['recon_fine'] = _latent_branch_readout(
-                    self.latent_decoder_fine, z=enc['z_fine'], n_nodes=n_fine,
+                    self.latent_decoder_fine,
+                    z=enc['z_fine'],
+                    n_nodes=n_fine,
+                    p_gt=enc['p_fine'],
+                    layout=enc.get('layout_fine'),
                 )
             n_mid = enc['p_lm1'].shape[0]
             if n_mid > 0:
                 out['recon_mid'] = _latent_branch_readout(
-                    self.latent_decoder_mid, z=enc['z_mid'], n_nodes=n_mid,
+                    self.latent_decoder_mid,
+                    z=enc['z_mid'],
+                    n_nodes=n_mid,
+                    p_gt=enc['p_lm1'],
+                    layout=enc.get('layout_mid'),
                 )
             n_coarse = enc['p_1'].shape[0]
             if n_coarse > 0:
                 out['recon_coarse'] = _latent_branch_readout(
-                    self.latent_decoder_coarse, z=enc['z_coarse'], n_nodes=n_coarse,
+                    self.latent_decoder_coarse,
+                    z=enc['z_coarse'],
+                    n_nodes=n_coarse,
+                    p_gt=enc['p_1'],
+                    layout=enc.get('layout_coarse'),
                 )
             return out
 

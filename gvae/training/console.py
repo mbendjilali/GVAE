@@ -9,6 +9,8 @@ import sys
 
 from tqdm import tqdm
 
+import config
+
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -82,15 +84,33 @@ class Term:
         parts = []
         if "pos_err_fine" in metrics:
             tag = "graph_hat" if metrics.get("latent_graph_vae") else "fine"
+            pos_r = metrics.get("pos_err_fine", 0)
+            pos_m = metrics.get("pos_err_matched_fine")
+            if pos_m is not None and config.LATENT_POS_MATCHED:
+                fine_pos = f"pos={pos_m:.3f}/{pos_r:.3f}"
+            else:
+                fine_pos = f"pos={pos_r:.3f}"
+                if pos_m is not None:
+                    fine_pos += f"*={pos_m:.3f}"
             fine = (
-                f"{tag} pos={metrics['pos_err_fine']:.3f} "
+                f"{tag} {fine_pos} "
                 f"smiou={metrics.get('soft_miou_fine', 0):.0%}"
             )
             if metrics.get("latent_graph_vae"):
                 if "size_err_fine" in metrics:
                     fine += f" size={metrics['size_err_fine']:.3f}"
+                if "pred_pos_std_fine" in metrics:
+                    fine += f" pstd={metrics['pred_pos_std_fine']:.3f}"
+                if "z_peak_err_fine" in metrics:
+                    fine += f" zpeak={metrics['z_peak_err_fine']:.3f}"
                 parts.append(fine)
-                mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+                mid_pos = metrics.get(
+                    "pos_err_matched_mid", metrics.get("pos_err_mid"),
+                )
+                mid = (
+                    f"mid pos={mid_pos:.3f} "
+                    f"inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+                )
                 if "size_err_mid" in metrics:
                     mid += f" size={metrics['size_err_mid']:.3f}"
                 mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"

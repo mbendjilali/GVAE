@@ -48,6 +48,15 @@ def mean_position_error(pred_positions: torch.Tensor, true_positions: torch.Tens
     return torch.norm(pred_positions - true_positions, dim=1).mean().item()
 
 
+def matched_position_error(pred_positions: torch.Tensor, true_positions: torch.Tensor) -> float:
+    """Mean L2 after Hungarian match (fair when peak order ≠ graph order)."""
+    from gvae.losses.gvae_loss import matched_position_loss
+
+    if pred_positions.numel() == 0:
+        return float("nan")
+    return matched_position_loss(pred_positions, true_positions).sqrt().item()
+
+
 def mean_footprint_error(pred_r: torch.Tensor, true_r: torch.Tensor) -> float:
     """Mean L1 error on footprint semi-axes (x, y, z)."""
     if pred_r.numel() == 0:
@@ -77,10 +86,23 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             metrics["pos_err_fine"] = mean_position_error(
                 recon_fine["p"], outputs["p_fine"],
             )
+            if outputs.get("latent_graph_vae") and config.LATENT_POS_MATCHED:
+                metrics["pos_err_matched_fine"] = matched_position_error(
+                    recon_fine["p"], outputs["p_fine"],
+                )
             metrics["size_err_fine"] = mean_footprint_error(
                 recon_fine["r"], outputs["r_fine"],
             )
             metrics["soft_miou_fine"] = soft_miou(recon_fine["s"], outputs["s_fine"])
+            if outputs.get("latent_graph_vae"):
+                metrics["pred_pos_std_fine"] = recon_fine["p"].std(dim=0).mean().item()
+                from gvae.losses.gvae_loss import latent_peak_position_error
+                if outputs.get("z_fine") is not None:
+                    metrics["z_peak_err_fine"] = latent_peak_position_error(
+                        outputs["z_fine"],
+                        outputs["p_fine"],
+                        layout=outputs.get("layout_fine"),
+                    )
 
         recon_fine_z = outputs.get("recon_fine_zonly")
         if recon_fine_z is not None and outputs["p_fine"].numel() > 0:
@@ -113,6 +135,10 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
             metrics["pos_err_mid"] = mean_position_error(
                 outputs["recon_mid"]["p"], outputs["p_lm1"],
             )
+            if outputs.get("latent_graph_vae") and config.LATENT_POS_MATCHED:
+                metrics["pos_err_matched_mid"] = matched_position_error(
+                    outputs["recon_mid"]["p"], outputs["p_lm1"],
+                )
             metrics["size_err_mid"] = mean_footprint_error(
                 outputs["recon_mid"]["r"], outputs["r_lm1"],
             )

@@ -24,7 +24,7 @@ import torch
 from matplotlib.axes import Axes
 
 import config
-from gvae.checkpoint_compat import migrate_state_dict
+from gvae.checkpoint_compat import prepare_checkpoint
 from gvae.data.voxelize import _points_to_indices
 from gvae.losses.metrics import compute_metrics
 from gvae.models.decoder import sample_volume
@@ -66,15 +66,24 @@ _LEGACY_DECODER_MLP_P = (
 )
 
 
+def _parse_latent_dims(s: str | None) -> tuple[int, int, int] | None:
+    if not s:
+        return None
+    parts = [int(x.strip()) for x in s.split(",")]
+    if len(parts) != 3:
+        raise ValueError("--latent-dims must be fine,mid,coarse (three integers)")
+    return parts[0], parts[1], parts[2]
+
+
 def _load_model(
     checkpoint: str,
     device: torch.device,
     *,
     use_zonly_decoder: bool | None = None,
+    latent_levels: tuple[int, int, int] | None = None,
 ) -> GVAE:
-    state = migrate_state_dict(
-        torch.load(checkpoint, map_location=device, weights_only=True),
-    )
+    raw = torch.load(checkpoint, map_location=device, weights_only=True)
+    state = prepare_checkpoint(raw, latent_levels=latent_levels)
     if use_zonly_decoder is None:
         config.LATENT_GRAPH_VAE_MODE = any(
             k.startswith("latent_decoder_fine.") for k in state
@@ -85,6 +94,8 @@ def _load_model(
             )
     else:
         config.USE_Z_ONLY_DECODER = use_zonly_decoder
+    z = config.D_LATENT_LEVELS
+    print(f"Z dims:     {z[0]}/{z[1]}/{z[2]} (gnn {config.D_MODEL_LEVELS})")
     model = GVAE().to(device)
     incompatible = model.load_state_dict(state, strict=False)
     legacy_prefixes = _LEGACY_DECODER_MLP_P
@@ -470,6 +481,12 @@ def main() -> int:
         action="store_true",
         help="Load checkpoint trained without Z-only decoders (overrides auto-detect)",
     )
+    parser.add_argument(
+        "--latent-dims",
+        type=str,
+        default="",
+        help="Override Z channel widths fine,mid,coarse (default: infer from checkpoint)",
+    )
     args = parser.parse_args()
 
     device = get_device()
@@ -485,7 +502,12 @@ def main() -> int:
         return 1
 
     use_zonly = False if args.no_zonly_decoder else None
-    model = _load_model(args.checkpoint, device, use_zonly_decoder=use_zonly)
+    latent_levels = _parse_latent_dims(args.latent_dims or None)
+    model = _load_model(
+        args.checkpoint, device,
+        use_zonly_decoder=use_zonly,
+        latent_levels=latent_levels,
+    )
     print(f"Checkpoint: {args.checkpoint}")
     print(f"Levels:     {', '.join(levels)}")
     print(f"Scenes ({len(scenes)}): {', '.join(_scene_stem(g) for g in scenes)}")

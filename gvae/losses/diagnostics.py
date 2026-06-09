@@ -148,6 +148,12 @@ def _branch_terms(
         )
         total += lambda_norm * bd.terms[f"norm_contrast_{prefix}"]
 
+    from gvae.losses.gvae_loss import _lambda_z_peak, latent_peak_loss
+    lambda_peak = _lambda_z_peak(prefix)
+    if lambda_peak > 0 and p_true.numel() > 0:
+        _store_term(bd, f"z_peak_{prefix}", latent_peak_loss(z, p_true))
+        total += lambda_peak * bd.terms[f"z_peak_{prefix}"]
+
     return total
 
 

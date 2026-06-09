@@ -37,13 +37,15 @@ COARSEN_EXCLUDE_NON_INSTANTIABLE = True
 EDGE_PROXIMITY = 0.03
 
 # ─── Feature dimensions (progressive across graph levels) ─────────────────────
-# [instance G_L, region G_{L-1}, scene G_1] — each divisible by 6 (PointROPE)
+# GNN / splat width — each divisible by 6 (PointROPE)
 D_MODEL_LEVELS = [72, 144, 288]
 D_INSTANCE, D_REGION, D_SCENE = D_MODEL_LEVELS
-D_FINE_LATENT = D_INSTANCE    # Z^G_fine  channel dim
-D_MID_LATENT = D_REGION       # Z^G_mid   channel dim
-D_COARSE_LATENT = D_SCENE     # Z^G_coarse channel dim
 D_NUM_HEADS = [8, 8, 8]       # GATv2 heads per level (d % heads == 0)
+
+# Z volume channel width (U-Net I/O); may exceed D_MODEL_LEVELS via splat→1×1 proj
+# Each dim should be divisible by LATENT_GRAPH_ATTN_HEADS (8)
+D_LATENT_LEVELS = [96, 192, 384]
+D_FINE_LATENT, D_MID_LATENT, D_COARSE_LATENT = D_LATENT_LEVELS
 
 # ─── Voxel grid resolutions ( cubic, PR2 / Layer A ) ─────────────────────────
 # Fine / mid / coarse latent volumes — matched to diffusion hierarchy levels 3 / 2 / 1
@@ -115,8 +117,34 @@ LATENT_GRAPH_VAE_MODE = False
 LAMBDA_RECON_LATENT = 1.0       # reconstruction loss on Z-only slot decoder
 LATENT_GRAPH_MAX_SLOTS = 512    # max supernodes per level (queries)
 LATENT_GRAPH_ATTN_HEADS = 8
-LATENT_GRAPH_REFINE_FROM_Z_SAMPLE = True  # fuse slot trunk with Z sample at predicted p
-LAMBDA_POS_LATENT = 3.0        # position MSE weight in latent-graph recon (vs LAMBDA_POS)
+LATENT_GRAPH_SPATIAL_TEMP = 0.05   # lower → sharper softmax over voxels
+LATENT_GRAPH_Z_NORM_BIAS = True    # bias spatial logits toward high-||Z|| voxels
+LAMBDA_POS_LATENT = 2.0            # position MSE weight in latent-graph recon
+LAMBDA_SEM_LATENT = 1.0            # sem/size on honest graph_hat (Z sampled at p_hat)
+LAMBDA_SEM_AT_GT = 0.0             # aux sem/size loss: Z@p_gt, does not change graph_hat forward
+LAMBDA_SIZE_AT_GT = 0.0            # aux footprint at p_gt (0 = same weight as LAMBDA_SEM_AT_GT path)
+LAMBDA_SLOT_SPREAD = 0.5           # penalise distinct slots predicting the same point
+LATENT_TRAIN_Z_SAMPLE_AT_GT = False  # deprecated; use LAMBDA_SEM_AT_GT aux instead
+LATENT_LAYOUT_HEAD = True          # 1×1 conv → layout volume for peak loss (not full ||Z||)
+LATENT_GRAPH_SLOT_SPREAD_SIGMA = 0.12  # min separation scale in normalised space
+
+# ─── Z spatial layout (diffusion-ready latent peaks at supernode sites) ───────
+LAMBDA_Z_PEAK_FINE = 0.0         # KL( Gaussian(p_gt) ‖ softmax(||Z||) ) in k-NN window
+LAMBDA_Z_PEAK_MID = 0.0
+LAMBDA_Z_PEAK_COARSE = 0.0
+LATENT_PEAK_NEIGHBORS = 128      # voxels per supernode in peak loss / metrics
+LATENT_PEAK_SIGMA = 0.06         # target Gaussian σ in [-1,1] space (~2 fine voxels)
+LATENT_PEAK_TEMP = 0.15          # temperature on ||Z|| logits
+LATENT_DECODE_QUERY_WEIGHT = 1.0 # slot-query bias inside k-NN decode windows
+LATENT_DECODE_MODE = "vgae"      # vgae | query | nms_slots | nms
+LATENT_NMS_SUPPRESS_SIGMA = 0.08 # NMS suppression radius in [-1,1] space
+LATENT_POS_MATCHED = False       # if True: Hungarian pos loss (hides index mis-alignment)
+LATENT_GT_WINDOW_CURRICULUM = False  # query mode only: blend GT k-NN windows → query
+LATENT_GT_WINDOW_ANNEAL_EPOCHS = 60  # epochs to go mix 1→0 (0 = query-only forward in train)
+LATENT_GT_WINDOW_MIX = 1.0       # runtime; set each epoch by train loop
+LAMBDA_QUERY_COVER = 0.0         # min dist slot-query window → p_gt[i]
+LAMBDA_INDEX_PEAK_DISTILL = 0.0    # MSE(p_hat[i], oracle peak at k-NN(p_gt[i])) per slot
+LAMBDA_LAYOUT_DISTILL = 0.0      # deprecated alias → LAMBDA_INDEX_PEAK_DISTILL
 
 # ─── Z-only decoder (DDM-aligned readout from Z alone) ────────────────────────
 USE_Z_ONLY_DECODER = True
@@ -204,3 +232,17 @@ OCC_CACHE_SUFFIX_MID    = '_occ_mid.npy'
 OCC_CACHE_SUFFIX_COARSE = '_occ_coarse.npy'
 OCC_MAX_POINTS          = 500_000            # subsample LiDAR when building caches
 OCC_REQUIRE_CACHE       = True               # raise if caches missing at load time
+
+
+def apply_latent_levels(fine: int, mid: int, coarse: int) -> None:
+    """Set Z^G_* channel dims (call from train CLI before building the model)."""
+    levels = [fine, mid, coarse]
+    heads = LATENT_GRAPH_ATTN_HEADS
+    for d in levels:
+        if d % heads != 0:
+            raise ValueError(
+                f"latent dim {d} must be divisible by LATENT_GRAPH_ATTN_HEADS={heads}",
+            )
+    global D_LATENT_LEVELS, D_FINE_LATENT, D_MID_LATENT, D_COARSE_LATENT
+    D_LATENT_LEVELS = levels
+    D_FINE_LATENT, D_MID_LATENT, D_COARSE_LATENT = levels
