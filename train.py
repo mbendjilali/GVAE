@@ -23,6 +23,7 @@ from gvae.losses.gvae_loss import (
 )
 from gvae.losses.metrics import compute_metrics
 from gvae.probes.latent import run_latent_probes, save_probe_artifacts
+from gvae.training.freeze import apply_trainable_modules, reinit_zonly_decoders
 
 
 class SceneGraphDataset(torch.utils.data.Dataset):
@@ -247,7 +248,10 @@ def train(
 ):
     use_amp = _use_amp(device)
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+    trainable = [p for p in model.parameters() if p.requires_grad]
+    if not trainable:
+        raise RuntimeError("No trainable parameters — check --train-modules / --freeze-encoder")
+    optimizer = torch.optim.Adam(trainable, lr=config.LEARNING_RATE)
     step_counter = 0
     epoch_counter = 0
     best_loss = float('inf')
@@ -449,13 +453,20 @@ def _teardown_run_logging(log_file):
         log_file.close()
 
 
-def _load_init_checkpoint(model, path: str, device, term: Term) -> None:
-    """Load pretrained weights; allow architecture mismatches (e.g. phase-1 → phase-2)."""
+def _prepare_init_state(
+    path: str,
+    *,
+    latent_levels: tuple[int, int, int] | None = None,
+) -> dict:
+    """Infer Z dims from checkpoint (unless overridden), migrate legacy keys."""
     from gvae.checkpoint_compat import prepare_checkpoint
 
-    state = prepare_checkpoint(
-        torch.load(path, map_location=device, weights_only=True),
-    )
+    raw = torch.load(path, map_location="cpu", weights_only=True)
+    return prepare_checkpoint(raw, latent_levels=latent_levels)
+
+
+def _apply_init_state(model, state: dict, path: str, term: Term) -> None:
+    """Load pretrained weights; allow architecture mismatches (e.g. phase-1 → phase-2)."""
     incompatible = model.load_state_dict(state, strict=False)
     n_unexp = len(incompatible.unexpected_keys)
     n_miss = len(incompatible.missing_keys)
@@ -480,10 +491,26 @@ def main(
     run_probes: bool,
     probe_target: str,
     init_checkpoint: str | None = None,
+    latent_dims_cli: tuple[int, int, int] | None = None,
+    train_modules: str = "all",
+    freeze_encoder: bool = False,
+    reinit_zonly: bool = False,
 ):
     term = Term()
     device = get_device()
     use_amp = _use_amp(device)
+
+    init_state = None
+    if init_checkpoint:
+        init_state = _prepare_init_state(
+            init_checkpoint, latent_levels=latent_dims_cli,
+        )
+        if latent_dims_cli is None:
+            z = config.D_LATENT_LEVELS
+            term.ok(
+                f"Z dims from {init_checkpoint}: {z[0]}/{z[1]}/{z[2]} "
+                f"(gnn {config.D_MODEL_LEVELS})",
+            )
 
     train_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'train'))
     val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'test'))
@@ -601,6 +628,25 @@ def main(
             f"(mid/coarse={config.SPLAT_TRUNCATION_SIGMA}){cap} "
             f"trunc_floor={config.SPLAT_MIN_TRUNC_VOXEL_FRAC}×spacing"
         )
+    model = GVAE().to(device)
+    if init_state is not None:
+        _apply_init_state(model, init_state, init_checkpoint, term)
+    if reinit_zonly:
+        touched = reinit_zonly_decoders(model)
+        if touched:
+            term.ok(f"reinit Z-only heads: {', '.join(touched)}")
+        else:
+            term.warn("reinit-zonly: no zonly_decoder_* modules (is USE_Z_ONLY_DECODER on?)")
+    n_train, n_frozen, n_tensors = apply_trainable_modules(
+        model, train_modules=train_modules, freeze_encoder=freeze_encoder,
+    )
+    if train_modules != "all" or freeze_encoder:
+        banner_lines.append(
+            f"{term.paint('finetune', Style.DIM)} "
+            f"train={train_modules}"
+            + (" · encoder frozen" if freeze_encoder else "")
+            + f" · {n_tensors} tensors · {n_train:,} / {n_train + n_frozen:,} params trainable"
+        )
     banner_lines.append(
         f"{term.paint('tb', Style.DIM)}       "
         f"tensorboard --logdir {os.path.join(ckpt_dir, 'tb_logs')}",
@@ -613,10 +659,6 @@ def main(
 
     train_dataloader = make_dataloader(train_dataset, shuffle=True)
     val_dataloader = make_dataloader(val_dataset, shuffle=False)
-
-    model = GVAE().to(device)
-    if init_checkpoint:
-        _load_init_checkpoint(model, init_checkpoint, device, term)
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
 
     train(model, train_dataloader, val_dataloader, device, ckpt_dir, writer, term)
@@ -653,6 +695,24 @@ def _parse_args():
         help="Load weights from .pth before training (e.g. phase-1 best.pth); "
         "optimizer/epoch start fresh",
     )
+    parser.add_argument(
+        "--freeze-encoder", action="store_true",
+        help="Freeze encoder.* parameters (GNN + splat + U-Net)",
+    )
+    parser.add_argument(
+        "--train-modules",
+        choices=("all", "zonly", "decoders", "latent_decoders"),
+        default="all",
+        help="Train only parameters under these prefixes (default: all)",
+    )
+    parser.add_argument(
+        "--reinit-zonly", action="store_true",
+        help="After --init-checkpoint, re-randomize zonly_decoder_* (fresh Z-only head)",
+    )
+    parser.add_argument(
+        "--lambda-kl-max", type=float, default=None,
+        help="Override LAMBDA_KL_MAX (0 = no KL during finetune)",
+    )
     parser.add_argument("--epochs", type=int, default=None, help="Override NUM_EPOCHS")
     parser.add_argument(
         "--splat-sigma-fine", type=float, default=None,
@@ -677,6 +737,10 @@ def _parse_args():
     parser.add_argument(
         "--lambda-anchor-mid", type=float, default=None,
         help="Override LAMBDA_ANCHOR_MID",
+    )
+    parser.add_argument(
+        "--lambda-anchor-coarse", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_COARSE",
     )
     parser.add_argument(
         "--lambda-size", type=float, default=None,
@@ -729,6 +793,10 @@ def _parse_args():
     parser.add_argument(
         "--lambda-anchor-r-mid", type=float, default=None,
         help="Override LAMBDA_ANCHOR_R_MID",
+    )
+    parser.add_argument(
+        "--lambda-anchor-r-coarse", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_R_COARSE",
     )
     parser.add_argument(
         "--no-anchor-curriculum", action="store_true",
@@ -850,6 +918,8 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_ANCHOR_FINE = args.lambda_anchor_fine
     if args.lambda_anchor_mid is not None:
         config.LAMBDA_ANCHOR_MID = args.lambda_anchor_mid
+    if args.lambda_anchor_coarse is not None:
+        config.LAMBDA_ANCHOR_COARSE = args.lambda_anchor_coarse
     if args.lambda_size is not None:
         config.LAMBDA_SIZE = args.lambda_size
     if args.lambda_size_zonly is not None:
@@ -874,6 +944,8 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_ANCHOR_R_FINE = args.lambda_anchor_r_fine
     if args.lambda_anchor_r_mid is not None:
         config.LAMBDA_ANCHOR_R_MID = args.lambda_anchor_r_mid
+    if args.lambda_anchor_r_coarse is not None:
+        config.LAMBDA_ANCHOR_R_COARSE = args.lambda_anchor_r_coarse
     if args.no_anchor_curriculum:
         config.ANCHOR_MIX_CURRICULUM = False
         config.DECODER_GT_ANCHOR_MIX = 0.0
@@ -959,11 +1031,30 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_NORM_CONTRAST_FINE = args.lambda_norm_contrast_fine
     if args.lambda_norm_contrast_mid is not None:
         config.LAMBDA_NORM_CONTRAST_MID = args.lambda_norm_contrast_mid
+    if args.lambda_kl_max is not None:
+        config.LAMBDA_KL_MAX = args.lambda_kl_max
+
+
+def _validate_finetune_args(args) -> None:
+    if args.train_modules == "zonly" and args.no_zonly_decoder:
+        raise SystemExit("--train-modules zonly requires Z-only decoder (omit --no-zonly-decoder)")
+    if args.train_modules == "latent_decoders" and not args.latent_graph_vae:
+        raise SystemExit(
+            "--train-modules latent_decoders requires --latent-graph-vae",
+        )
+    if args.reinit_zonly and args.no_zonly_decoder:
+        raise SystemExit("--reinit-zonly requires Z-only decoder (omit --no-zonly-decoder)")
+    if args.train_modules == "zonly" and not args.init_checkpoint:
+        raise SystemExit(
+            "--train-modules zonly requires --init-checkpoint "
+            "(load a pretrained encoder before finetuning the Z-only head)",
+        )
 
 
 if __name__ == "__main__":
     args = _parse_args()
     _apply_config_overrides(args)
+    _validate_finetune_args(args)
 
     if args.ckpt_dir:
         ckpt_dir = args.ckpt_dir
@@ -977,11 +1068,18 @@ if __name__ == "__main__":
         term = Term()
         term.dim(f"checkpoint  {ckpt_dir}")
         term.dim(f"log         {os.path.join(ckpt_dir, 'train.log')}")
+        latent_dims_cli = (
+            _parse_latent_dims(args.latent_dims) if args.latent_dims else None
+        )
         main(
             ckpt_dir,
             run_probes=not args.no_probe,
             probe_target=args.probe_target,
             init_checkpoint=args.init_checkpoint,
+            latent_dims_cli=latent_dims_cli,
+            train_modules=args.train_modules,
+            freeze_encoder=args.freeze_encoder,
+            reinit_zonly=args.reinit_zonly,
         )
     except KeyboardInterrupt:
         tqdm.write("\nTraining interrupted.")
