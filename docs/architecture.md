@@ -37,7 +37,9 @@ Each training scene is a JSON file (see [data.md](data.md)). For every object (n
 
 **Edges** connect objects whose centers are within a small distance (`EDGE_PROXIMITY`).
 
-**Occupancy caches** (`occ_fine`, `occ_mid`, `occ_coarse`) are binary 3D grids from LiDAR — “was there a point here?” They supervise a separate occupancy head on each `Z` volume.
+**Occupancy caches** (`occ_fine`, `occ_mid`, `occ_coarse`) are binary 3D grids from LiDAR — “was there a point here?”
+
+They are **no longer predicted.** `OccGridHead` and the per-level occupancy BCE were removed in `a215503`; there is no occupancy head and no occupancy metric. The caches are still loaded, for one purpose only: the **norm-contrastive loss** samples empty voxels from them to push `‖Z(p_gt)‖` above `‖Z(empty)‖`. If you set `LAMBDA_NORM_CONTRAST_* = 0`, nothing reads them.
 
 ---
 
@@ -107,15 +109,28 @@ A **3D U-Net** refines the splatted grid and outputs Gaussian parameters `μ` an
 
 `Z = μ + σ ⊙ ε`   (standard VAE reparameterisation)
 
-| Output | Grid (H×W×D) | Channels | U-Net depth |
-|--------|----------------|----------|-------------|
-| `Z_fine` | 64×64×8 | 72 | **3** |
-| `Z_mid` | 32×32×8 | 144 | 3 |
-| `Z_coarse` | 16×16×4 | 288 | 2 |
+**Graph width and latent width are two different numbers.** The GNN carries
+`D_MODEL_LEVELS = [72, 144, 288]`; the splatted grid is then projected by a 1×1
+convolution up to `D_LATENT_LEVELS = [96, 192, 384]`, which is what the U-Net
+reads and writes. The two were equal until `346a8c0` widened the latent side.
+
+| Output | Grid (H×W×D) | GNN width | `Z` channels | U-Net depth |
+|--------|----------------|-----------|--------------|-------------|
+| `Z_fine` | 64×64×8 | 72 | **96** | **3** |
+| `Z_mid` | 32×32×8 | 144 | **192** | 3 |
+| `Z_coarse` | 16×16×4 | 288 | **384** | 2 |
 
 Grids are **fixed independent volumes**, not subdivisions of each other.
 
+Each level also carries a **layout head** — a `Conv3d(C, 1, 1)` giving one scalar
+per voxel. That scalar is the `layout_mag` the latent-graph decoder reads; see
+below.
+
 **GroupNorm** is used inside the U-Net (not BatchNorm) because we often train with one scene per batch element.
+
+U-Net depth on the fine level is **3, not 1**. Depth 1 was tried in May to reduce
+post-splat blur and destroyed the fine Z-only readout (`zpos` 0.09 → 0.48); see
+[development-retrospective.md](development-retrospective.md) §2 Phase E.
 
 ---
 
@@ -141,21 +156,31 @@ This path drives **`pos_err_fine`** / **`pos_err_mid`** — **`pos` matches `hzp
 
 ### Latent graph VAE mode (`LATENT_GRAPH_VAE_MODE`)
 
-Honest reconstruction path: **graph → encode → `Z` → `LatentGraphDecoder` → `graph_hat`**.
+The honest reconstruction path: **graph → encode → `Z` → `LatentGraphDecoder` → `graph_hat`**.
 
 - Encoder unchanged (splat + U-Net).
-- Decode uses **only** `Z` and supernode count **N** (slot `i` aligns with the *i*-th supernode in graph storage order — not GT `p`).
+- Decode uses **only** `Z` and the supernode count **N**. Slot `i` aligns with the *i*-th supernode in graph storage order — **not** GT `p`.
 - No `h`, no `p_gt` sampling, no anchor heads at decode.
 - Train with `--latent-graph-vae`; monitor **`pos` / `size` / `smiou`** on `recon_*` only.
 
-### Latent graph VAE mode (`LATENT_GRAPH_VAE_MODE`)
+This is the strictest of the three paths, and the one that answers the question
+the chapter actually asks: can `Z` alone carry layout? The other two decoders
+each receive something extra — `h` in one case, GT slot positions in the other.
 
-Honest reconstruction: **graph → encode → `Z` → `LatentGraphDecoder` → `graph_hat`**.
+**Position readout (`LATENT_DECODE_MODE`, default `vgae`).** Each slot has a
+learned query embedding. The query is scored against every voxel token, biased by
+the layout head's `layout_mag`, and softmaxed over the **whole grid**; the
+predicted position is the softmax-weighted sum of voxel centres, and the slot
+feature is the same weights applied to the tokens. This is a **spatial
+soft-argmax** — differentiable peak-finding over `Z`, with no k-NN and no GT
+anchor anywhere in the path (`2d2fecd`).
 
-- Encoder unchanged (splat + U-Net).
-- Decode uses **only** `Z` and supernode count **N** (slot `i` = *i*-th supernode in graph storage order — not GT `p`).
-- No `h`, no `p_gt` sampling, no anchor heads at decode.
-- Train: `--latent-graph-vae`. Metrics: **`pos` / `size` / `smiou`** on `recon_*` only.
+| Mode | Readout | Status |
+|------|---------|--------|
+| `vgae` | per-slot softmax over all voxels (soft-argmax) | **default** |
+| `query` | per-slot k-NN on the layout head | legacy |
+| `nms_slots` | NMS peaks + Hungarian assignment | legacy |
+| `nms` | global NMS only | legacy |
 
 ### Z-only decoder (DDM-aligned readout)
 
@@ -181,9 +206,10 @@ $$\mathcal{L} = \lambda_h \mathcal{L}_{\text{recon\_h}} + \lambda_z \mathcal{L}_
 | **Recon h** | `LAMBDA_RECON_H = 1.5` | Soft CE on class + MSE on `p`/`r` via h+Z path (`p` from ZOnlyDecoder at anchor) |
 | **Recon zonly** | `LAMBDA_RECON_ZONLY = 1.0` | Same targets via Z-only decoder at GT slots (+ train jitter) |
 | **Recon hzonly** | `LAMBDA_RECON_HZONLY = 0.8` | Z-only readout at h-predicted anchors (partially redundant with h recon for `p` when zonly pos readout is on) |
+| **Recon latent** | `LAMBDA_RECON_LATENT = 1.0` | Same targets via `LatentGraphDecoder` — `Z` and slot count only. Active in `--latent-graph-vae` mode |
 | **Anchor** | `LAMBDA_ANCHOR_FINE = 1.0`, `MID = 0.5` | MSE on `p_anchor` vs GT supernode centres (fine / mid) |
 | **KL** | cyclical → `LAMBDA_KL_MAX = 1e-3` | Regularise `μ, σ` toward standard normal |
-| **Norm contrast** | `0.1` fine & mid | Hinge: push `‖Z(p_gt)‖` above `‖Z(empty voxel)‖` (uses LiDAR occ cache for empty samples only) |
+| **Norm contrast** | `0.1` fine, mid **and coarse** | Hinge: push `‖Z(p_gt)‖` above `‖Z(empty voxel)‖` (uses LiDAR occ cache for empty samples only) |
 | **Pool** | soft mode only | Keep coarsening assignments compact and separated |
 
 **Anchor curriculum:** during training, `DECODER_GT_ANCHOR_MIX` blends GT into h-decoder reference boxes (1→0 over 40 epochs by default); validation always uses mix=0. See [training.md](training.md#command-line-overrides).
@@ -219,14 +245,21 @@ See [localization-progress.md](localization-progress.md) for current benchmark n
 
 ```
 gvae/
-├── models/       encoder, decoder, latent_graph_decoder, coarsening, splatting, unet3d, gvae
+├── models/       encoder, decoder, latent_graph_decoder, latent_layout,
+│                 coarsening, splatting, unet3d, gps, gvae
 ├── losses/       gvae_loss, metrics, diagnostics
 ├── probes/       offline latent probe library
-├── data/         scene_graph, occupancy, voxelize, graph_masks
+├── data/         scene_graph, voxelize, graph_masks
+├── training/     console output, freeze (selective requires_grad)
+├── checkpoint_compat.py   load older checkpoints (drops OccGridHead weights)
 train.py          training loop
 config.py         all hyperparameters
-utils/            build_scene_graph, probe_latent, visualize_supernodes, diagnostics
+utils/            build_scene_graph, probe_latent, visualize_recon,
+                  visualize_supernodes, metrics_sanity, smoke_test,
+                  profile_scene, diagnose_nan_losses
 ```
+
+`gvae/data/occupancy.py` no longer exists — it went with the occupancy head in `a215503`.
 
 ---
 
