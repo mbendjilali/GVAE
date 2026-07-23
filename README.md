@@ -49,14 +49,15 @@ python train.py
 # 4. (Optional) Re-run probes or visualize recon
 python utils/probe_latent.py --checkpoint checkpoint/<run>/best.pth \
   -o checkpoint/<run>/probe_report.txt
-python utils/visualize_recon.py --checkpoint checkpoint/<run>/best.pth --graph data/graphs/test/5080_54400.json
+python utils/visualize_recon.py --checkpoint checkpoint/<run>/best.pth \
+  --scenes 5080_54400 --levels fine mid
 ```
 
 Most hyperparameters live in `config.py`. Common overrides on the command line:
 
 ```bash
 python train.py --epochs 25 --ckpt-dir checkpoint/my_run \
-  --lambda-occ-grid-fine 1 --lambda-occ-grid-mid 1 --lambda-occ-grid-coarse 1
+  --lambda-anchor-fine 2.5 --lambda-anchor-mid 1.0
 ```
 
 Full flag list: [docs/training.md](docs/training.md#command-line-overrides).
