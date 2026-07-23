@@ -29,7 +29,8 @@ Read in this order if you are new:
 | 2 | [docs/architecture.md](docs/architecture.md) | How the model works (encoder, decoders, losses) |
 | 3 | [docs/training.md](docs/training.md) | How to train, read metrics, run probes |
 | 4 | [docs/localization-progress.md](docs/localization-progress.md) | Jun 2026 `pos` / anchor experiment recap |
-| 5 | [TODO.md](TODO.md) | Backlog and ablation recipes |
+| 5 | [docs/development-retrospective.md](docs/development-retrospective.md) | May 2026 record: Phase E ablations, obstacles, failed experiments |
+| 6 | [TODO.md](TODO.md) | Backlog and ablation recipes |
 
 Older drafts in [docs/archive/](docs/archive/) are **not** up to date.
 
