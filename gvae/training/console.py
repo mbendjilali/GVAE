@@ -9,6 +9,8 @@ import sys
 
 from tqdm import tqdm
 
+import config
+
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -76,34 +78,70 @@ class Term:
         star = self.paint("  ★ best", Style.YELLOW, Style.BOLD) if is_best else ""
         self.write(f"\n{ep}  {lr_s}  train {tr}  val {va}{star}")
 
-    @staticmethod
-    def _occ_iou_label(metrics: dict, level: str) -> str | None:
-        key = f"occ_iou_{level}"
-        if key not in metrics:
-            return None
-        return f"occ={metrics[key]:.0%}"
-
     def metrics_line(self, metrics: dict) -> None:
         if not metrics:
             return
         parts = []
         if "pos_err_fine" in metrics:
+            tag = "graph_hat" if metrics.get("latent_graph_vae") else "fine"
+            pos_r = metrics.get("pos_err_fine", 0)
+            pos_m = metrics.get("pos_err_matched_fine")
+            if pos_m is not None and config.LATENT_POS_MATCHED:
+                fine_pos = f"pos={pos_m:.3f}/{pos_r:.3f}"
+            else:
+                fine_pos = f"pos={pos_r:.3f}"
+                if pos_m is not None:
+                    fine_pos += f"*={pos_m:.3f}"
             fine = (
-                f"fine pos={metrics['pos_err_fine']:.3f} "
+                f"{tag} {fine_pos} "
                 f"smiou={metrics.get('soft_miou_fine', 0):.0%}"
             )
+            if metrics.get("latent_graph_vae"):
+                if "size_err_fine" in metrics:
+                    fine += f" size={metrics['size_err_fine']:.3f}"
+                if "pred_pos_std_fine" in metrics:
+                    fine += f" pstd={metrics['pred_pos_std_fine']:.3f}"
+                if "z_peak_err_fine" in metrics:
+                    fine += f" zpeak={metrics['z_peak_err_fine']:.3f}"
+                parts.append(fine)
+                mid_pos = metrics.get(
+                    "pos_err_matched_mid", metrics.get("pos_err_mid"),
+                )
+                mid = (
+                    f"mid pos={mid_pos:.3f} "
+                    f"inst={metrics.get('inst_pos_err_mid', 0):.3f}"
+                )
+                if "size_err_mid" in metrics:
+                    mid += f" size={metrics['size_err_mid']:.3f}"
+                mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
+                parts.append(mid)
+                line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)
+                self.write(line)
+                return
             if "pos_err_zonly_fine" in metrics:
                 fine += f" zpos={metrics['pos_err_zonly_fine']:.3f}"
-            occ_f = self._occ_iou_label(metrics, "fine")
-            if occ_f:
-                fine += f" {occ_f}"
+                if "soft_miou_zonly_fine" in metrics:
+                    fine += f" zsmiou={metrics['soft_miou_zonly_fine']:.0%}"
+            if "anchor_err_fine" in metrics:
+                fine += f" anc={metrics['anchor_err_fine']:.3f}"
+            if "size_err_fine" in metrics:
+                fine += f" size={metrics['size_err_fine']:.3f}"
+            if "anchor_size_err_fine" in metrics:
+                fine += f" asz={metrics['anchor_size_err_fine']:.3f}"
+            if "pos_err_zonly_hanchor_fine" in metrics:
+                fine += f" hzpos={metrics['pos_err_zonly_hanchor_fine']:.3f}"
             parts.append(fine)
         mid = f"mid inst={metrics.get('inst_pos_err_mid', 0):.3f}"
         if "pos_err_zonly_mid" in metrics:
             mid += f" zpos={metrics['pos_err_zonly_mid']:.3f}"
-        occ_m = self._occ_iou_label(metrics, "mid")
-        if occ_m:
-            mid += f" {occ_m}"
+        if "anchor_err_mid" in metrics:
+            mid += f" anc={metrics['anchor_err_mid']:.3f}"
+        if "size_err_mid" in metrics:
+            mid += f" size={metrics['size_err_mid']:.3f}"
+        if "anchor_size_err_mid" in metrics:
+            mid += f" asz={metrics['anchor_size_err_mid']:.3f}"
+        if "pos_err_zonly_hanchor_mid" in metrics:
+            mid += f" hzpos={metrics['pos_err_zonly_hanchor_mid']:.3f}"
         mid += f" smiou={metrics.get('soft_miou_mid', 0):.0%}"
         parts.append(mid)
         line = "  │ " + self.paint("metrics", Style.MAGENTA) + "  " + "  ·  ".join(parts)

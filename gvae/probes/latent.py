@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
+from typing import Literal
 
 import torch
 import torch.nn as nn
@@ -13,6 +16,8 @@ from gvae.data.voxelize import sample_occupancy_queries
 from gvae.losses.metrics import hard_miou, mean_position_error
 from gvae.models.decoder import sample_volume
 from gvae.models.gvae import GVAE
+
+ProbeTarget = Literal["supernode", "instance", "both"]
 
 
 @dataclass
@@ -170,6 +175,42 @@ def _collect_probe_samples(
     )
 
 
+def _collect_instance_fine_samples(
+    model: GVAE,
+    graphs: list,
+    device: torch.device,
+) -> ProbeDataset:
+    """Sample Z_fine at raw coarsenable instance positions (before S0 supernodes)."""
+    z_parts: list[torch.Tensor] = []
+    p_parts: list[torch.Tensor] = []
+    s_parts: list[torch.Tensor] = []
+    d = config.D_FINE_LATENT
+
+    with torch.no_grad():
+        for graph in graphs:
+            out = _forward_graph(model, graph, device)
+            g = graph.on_device(device)
+            idx = g.coarsen_mask.nonzero(as_tuple=True)[0]
+            if idx.numel() == 0:
+                continue
+            p = g.p[idx]
+            z_parts.append(sample_z_at_points(out["z_fine"], p))
+            p_parts.append(p)
+            s_parts.append(g.s[idx])
+
+    if not z_parts:
+        return ProbeDataset(
+            torch.zeros(0, d),
+            torch.zeros(0, 3),
+            torch.zeros(0, config.NUM_CLASSES),
+        )
+    return ProbeDataset(
+        torch.cat(z_parts, dim=0),
+        torch.cat(p_parts, dim=0),
+        torch.cat(s_parts, dim=0),
+    )
+
+
 def _train_linear_head(
     X_train: torch.Tensor,
     Y_train: torch.Tensor,
@@ -222,6 +263,7 @@ def linear_probe(
     *,
     epochs: int = 300,
     lr: float = 1e-2,
+    probe_target: ProbeTarget = "supernode",
 ) -> dict[str, dict[str, float]]:
     """
     Fit linear maps Z(p) → position and Z(p) → class on train; report error on val.
@@ -253,6 +295,31 @@ def linear_probe(
 
         results[spec.name] = level
 
+    if probe_target in ("instance", "both"):
+        train = _collect_instance_fine_samples(model, train_graphs, device)
+        val = _collect_instance_fine_samples(model, val_graphs, device)
+        inst: dict[str, float] = {
+            "n_train": float(train.z.shape[0]),
+            "n_val": float(val.z.shape[0]),
+        }
+        if train.z.shape[0] >= 4 and val.z.shape[0] >= 1:
+            val_pos, train_pos = _train_linear_head(
+                train.z, train.positions, val.z, val.positions, 3,
+                epochs=epochs, lr=lr, task="regression",
+            )
+            inst["linear_pos_err_val"] = val_pos
+            inst["linear_pos_err_train"] = train_pos
+
+            y_train_cls = train.labels.argmax(dim=1)
+            y_val_cls = val.labels.argmax(dim=1)
+            val_acc, train_acc = _train_linear_head(
+                train.z, y_train_cls, val.z, y_val_cls, config.NUM_CLASSES,
+                epochs=epochs, lr=lr, task="classification",
+            )
+            inst["linear_cls_acc_val"] = val_acc
+            inst["linear_cls_acc_train"] = train_acc
+        results["fine_instances"] = inst
+
     return results
 
 
@@ -263,6 +330,7 @@ def signal_vs_background(
     device: torch.device,
     *,
     n_empty_per_scene: int = 256,
+    probe_target: ProbeTarget = "supernode",
 ) -> dict[str, dict[str, float]]:
     """Compare ‖Z(p)‖ at GT node positions vs random empty occ voxels."""
     results: dict[str, dict[str, float]] = {}
@@ -318,6 +386,47 @@ def signal_vs_background(
 
         results[spec.name] = level
 
+    if probe_target in ("instance", "both"):
+        gt_norms: list[torch.Tensor] = []
+        empty_norms: list[torch.Tensor] = []
+
+        for graph in graphs:
+            out = _forward_graph(model, graph, device)
+            g = graph.on_device(device)
+            idx = g.coarsen_mask.nonzero(as_tuple=True)[0]
+            if idx.numel() == 0:
+                continue
+            p = g.p[idx]
+            z_gt = sample_z_at_points(out["z_fine"], p)
+            gt_norms.append(z_gt.norm(dim=1))
+
+            occ_grid = g.occ_fine
+            q, labels = sample_occupancy_queries(
+                occ_grid,
+                n_queries=n_empty_per_scene,
+                pos_ratio=0.0,
+            )
+            empty_pts = q[labels < 0.5]
+            if empty_pts.numel() == 0:
+                continue
+            z_empty = sample_z_at_points(out["z_fine"], empty_pts)
+            empty_norms.append(z_empty.norm(dim=1))
+
+        inst_level: dict[str, float] = {}
+        if gt_norms:
+            gt = torch.cat(gt_norms)
+            inst_level["gt_norm_mean"] = gt.mean().item()
+        if empty_norms:
+            em = torch.cat(empty_norms)
+            inst_level["empty_norm_mean"] = em.mean().item()
+        if gt_norms and empty_norms:
+            gt = torch.cat(gt_norms)
+            em = torch.cat(empty_norms)
+            inst_level["norm_ratio_gt_over_empty"] = (
+                gt.mean() / em.mean().clamp(min=1e-8)
+            ).item()
+        results["fine_instances"] = inst_level
+
     return results
 
 
@@ -338,6 +447,7 @@ def run_latent_probes(
     linear_epochs: int = 300,
     linear_lr: float = 1e-2,
     n_empty_per_scene: int = 256,
+    probe_target: ProbeTarget = "supernode",
 ) -> LatentProbeReport:
     eval_graphs = val_graphs if val_graphs else train_graphs
     return LatentProbeReport(
@@ -345,15 +455,71 @@ def run_latent_probes(
         linear=linear_probe(
             model, train_graphs, eval_graphs, device,
             epochs=linear_epochs, lr=linear_lr,
+            probe_target=probe_target,
         ),
         signal=signal_vs_background(
             model, eval_graphs, device, n_empty_per_scene=n_empty_per_scene,
+            probe_target=probe_target,
         ),
     )
 
 
-def format_report(report: LatentProbeReport) -> str:
+def report_to_dict(
+    report: LatentProbeReport,
+    *,
+    epoch: int | None = None,
+    checkpoint: str | None = None,
+    probe_target: ProbeTarget = "supernode",
+) -> dict:
+    payload = {
+        "probe_target": probe_target,
+        "anchor": report.anchor,
+        "linear": report.linear,
+        "signal": report.signal,
+    }
+    if epoch is not None:
+        payload["epoch"] = epoch
+    if checkpoint is not None:
+        payload["checkpoint"] = checkpoint
+    return payload
+
+
+def save_probe_artifacts(
+    report: LatentProbeReport,
+    ckpt_dir: str,
+    *,
+    epoch: int | None = None,
+    checkpoint_name: str = "best.pth",
+    probe_target: ProbeTarget = "supernode",
+    text_name: str = "probe_report.txt",
+    json_name: str = "probe_summary.json",
+) -> tuple[str, str]:
+    """Write human-readable report and JSON summary next to checkpoints."""
+    text_path = os.path.join(ckpt_dir, text_name)
+    json_path = os.path.join(ckpt_dir, json_name)
+    text = format_report(report, probe_target=probe_target)
+    with open(text_path, "w", encoding="utf-8") as f:
+        f.write(text)
+    payload = report_to_dict(
+        report,
+        epoch=epoch,
+        checkpoint=os.path.join(ckpt_dir, checkpoint_name),
+        probe_target=probe_target,
+    )
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+        f.write("\n")
+    return text_path, json_path
+
+
+def format_report(
+    report: LatentProbeReport,
+    *,
+    probe_target: ProbeTarget = "supernode",
+) -> str:
     lines = ["=" * 72, "Latent probes", "=" * 72]
+    if probe_target != "supernode":
+        lines.append(f"probe_target={probe_target}")
 
     lines.append("\n── A. Anchor ablation (decoder pos_err / miou vs GT anchor mix) ──")
     for level, metrics in report.anchor.items():

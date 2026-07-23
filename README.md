@@ -24,7 +24,9 @@ A neural encoder that turns **3D outdoor scene graphs** (cars, poles, trees, …
 | 1 | [docs/data.md](docs/data.md) | Input files: JSON graphs + occupancy caches |
 | 2 | [docs/architecture.md](docs/architecture.md) | Encoder, decoders, losses |
 | 3 | [docs/training.md](docs/training.md) | How to train, read metrics, run probes |
-| 4 | [TODO.md](TODO.md) | Backlog and ablation recipes |
+| 4 | [docs/localization-progress.md](docs/localization-progress.md) | Jun 2026 `pos` / anchor experiment recap |
+| 5 | [docs/development-retrospective.md](docs/development-retrospective.md) | May 2026 record: Phase E ablations, obstacles, failed experiments |
+| 6 | [TODO.md](TODO.md) | Backlog and ablation recipes |
 
 Older drafts in [docs/archive/](docs/archive/) are **not** up to date.
 
@@ -44,9 +46,10 @@ python utils/build_scene_graph.py <data_root>
 # 3. Train (writes checkpoint/<timestamp>/)
 python train.py
 
-# 4. (Optional) Run offline probes on the best checkpoint
+# 4. (Optional) Re-run probes or visualize recon
 python utils/probe_latent.py --checkpoint checkpoint/<run>/best.pth \
   -o checkpoint/<run>/probe_report.txt
+python utils/visualize_recon.py --checkpoint checkpoint/<run>/best.pth --graph data/graphs/test/5080_54400.json
 ```
 
 Most hyperparameters live in `config.py`. Common overrides on the command line:

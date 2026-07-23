@@ -1,5 +1,5 @@
 # gvae/data/voxelize.py
-# Point-cloud voxelisation and query sampling for occupancy supervision
+# Voxel indexing, query sampling (norm contrast / probes), occ cache paths
 
 from __future__ import annotations
 
@@ -37,23 +37,6 @@ def _points_to_indices(points: Tensor, grid: tuple[int, int, int]) -> tuple[Tens
         return idx.clamp(0, n - 1)
 
     return axis_idx(p[:, 0], H), axis_idx(p[:, 1], W), axis_idx(p[:, 2], D)
-
-
-def voxelize_points(points: Tensor, grid: tuple[int, int, int]) -> Tensor:
-    """
-    Mark voxels True if at least one point maps to that cell.
-
-    points: (P, 3) in normalised [-1, 1]³
-    Returns: (H, W, D) bool tensor
-    """
-    H, W, D = grid
-    occ = torch.zeros(H, W, D, dtype=torch.bool, device=points.device)
-    if points.numel() == 0:
-        return occ
-
-    i, j, k = _points_to_indices(points, grid)
-    occ[i, j, k] = True
-    return occ
 
 
 def voxelize_points_np(points: np.ndarray, grid: tuple[int, int, int]) -> np.ndarray:

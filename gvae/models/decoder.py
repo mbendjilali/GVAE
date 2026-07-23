@@ -9,6 +9,53 @@ import torch.nn.functional as F
 import config
 
 
+def bound_position(logits: torch.Tensor) -> torch.Tensor:
+    """Map position logits to normalized [-1, 1]³ (clamp avoids tanh edge saturation)."""
+    if config.POSITION_BOUND == "tanh":
+        return torch.tanh(logits)
+    return logits.clamp(-1.0, 1.0)
+
+
+def position_from_logits(
+    logits: torch.Tensor,
+    p_query: torch.Tensor,
+) -> torch.Tensor:
+    """Absolute position or residual refinement relative to query (anchor / GT slot)."""
+    if config.POSITION_RESIDUAL:
+        return (p_query + logits).clamp(-1.0, 1.0)
+    return bound_position(logits)
+
+
+def _anchor_mlp(d: int, out_dim: int) -> nn.Module:
+    """Anchor predictor: Linear (legacy) or 2-layer MLP when USE_ANCHOR_MLP."""
+    if not config.USE_ANCHOR_MLP:
+        return nn.Linear(d, out_dim)
+    hidden = d if config.ANCHOR_MLP_HIDDEN <= 0 else config.ANCHOR_MLP_HIDDEN
+    return nn.Sequential(
+        nn.Linear(d, hidden),
+        nn.ReLU(inplace=True),
+        nn.Linear(hidden, out_dim),
+    )
+
+
+def deformable_predicts_position() -> bool:
+    """Whether SceneGraphDecoder outputs p (vs anchor-only when Z-only patches position)."""
+    return (not config.USE_Z_ONLY_DECODER) or (not config.Z_ONLY_PATCH_DEFORMABLE_POSITION)
+
+
+def _z_pred_trunk(d: int) -> nn.Module:
+    """Shared 2-layer MLP on cross-attn z_pred before mlp_s / mlp_r / mlp_p."""
+    if not config.USE_Z_PRED_READOUT_MLP:
+        return nn.Identity()
+    hidden = d if config.Z_PRED_READOUT_MLP_HIDDEN <= 0 else config.Z_PRED_READOUT_MLP_HIDDEN
+    return nn.Sequential(
+        nn.Linear(d, hidden),
+        nn.ReLU(inplace=True),
+        nn.Linear(hidden, d),
+        nn.ReLU(inplace=True),
+    )
+
+
 def make_ref_grid(p, r):
     offsets_1d = torch.linspace(-1, 1, 3, device=p.device)
     gx, gy, gz = torch.meshgrid(offsets_1d, offsets_1d, offsets_1d, indexing='ij')
@@ -28,28 +75,32 @@ def sample_volume(Z, ref_pts):
 
 
 class SceneGraphDecoder(nn.Module):
-    def __init__(self, d: int):
+    def __init__(self, d_h: int, *, d_z: int | None = None):
         super().__init__()
-        self.d = d
+        self.d_h = d_h
+        self.d_z = d_z if d_z is not None else d_h
+        self.d = d_h  # legacy alias (h embedding width)
         P = config.NUM_REF_POINTS
 
-        self.mlp_p_anchor = nn.Linear(d, 3)
-        self.mlp_r_anchor = nn.Linear(d, 3)
+        self.mlp_p_anchor = _anchor_mlp(d_h, 3)
+        self.mlp_r_anchor = _anchor_mlp(d_h, 3)
         self.mlp_offset = nn.Sequential(
-            nn.Linear(d, d),
+            nn.Linear(d_h, d_h),
             nn.ReLU(),
-            nn.Linear(d, P * 3),
+            nn.Linear(d_h, P * 3),
         )
-        self.W_Q = nn.Linear(d, d)
-        self.W_K = nn.Linear(d, d)
-        self.W_V = nn.Linear(d, d)
-        self.mlp_s = nn.Linear(d, config.NUM_CLASSES)
-        self.mlp_p = nn.Linear(d, 3)
-        self.mlp_r = nn.Linear(d, 3)
+        self.W_Q = nn.Linear(d_h, d_h)
+        self.W_K = nn.Linear(self.d_z, d_h)
+        self.W_V = nn.Linear(self.d_z, d_h)
+        self.z_pred_trunk = _z_pred_trunk(d_h)
+        self.mlp_s = nn.Linear(d_h, config.NUM_CLASSES)
+        self.mlp_r = nn.Linear(d_h, 3)
+        if deformable_predicts_position():
+            self.mlp_p = nn.Linear(d_h, 3)
         self.softplus = nn.Softplus()
 
     def _reference_geometry(self, h, p_gt=None, r_gt=None):
-        p_anchor = torch.tanh(self.mlp_p_anchor(h))
+        p_anchor = bound_position(self.mlp_p_anchor(h))
         r_anchor = self.softplus(self.mlp_r_anchor(h))
         mix = config.DECODER_GT_ANCHOR_MIX
         if mix > 0.0 and p_gt is not None and r_gt is not None:
@@ -70,15 +121,26 @@ class SceneGraphDecoder(nn.Module):
         K = self.W_K(Z_sampled)
         V = self.W_V(Z_sampled)
 
-        scale = self.d ** 0.5
+        scale = self.d_h ** 0.5
         attn = torch.softmax((Q @ K.transpose(1, 2)) / scale, dim=2)
         z_pred = (attn @ V).squeeze(1)
+        feat = self.z_pred_trunk(z_pred)
+
+        if deformable_predicts_position():
+            p_hat = position_from_logits(self.mlp_p(feat), p_ref)
+        else:
+            # GVAE.forward patches p from ZOnlyDecoder @ p_anchor when Z_ONLY_PATCH_DEFORMABLE_POSITION.
+            p_hat = p_ref
 
         return {
-            's': torch.softmax(self.mlp_s(z_pred), dim=1),
-            'p': torch.tanh(self.mlp_p(z_pred)),
-            'r': self.softplus(self.mlp_r(z_pred)),
+            's': torch.softmax(self.mlp_s(feat), dim=1),
+            'p': p_hat,
+            'r': self.softplus(self.mlp_r(feat)),
         }
+
+    def predict_anchors(self, h: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """h-predicted reference box (used for anchor loss and hz readout)."""
+        return bound_position(self.mlp_p_anchor(h)), self.softplus(self.mlp_r_anchor(h))
 
 
 def zonly_query_points(p_gt: torch.Tensor, *, training: bool) -> torch.Tensor:
@@ -108,7 +170,7 @@ class ZOnlyDecoder(nn.Module):
         z = self.readout(z)
         return {
             's': torch.softmax(self.mlp_s(z), dim=1),
-            'p': torch.tanh(self.mlp_p(z)),
+            'p': position_from_logits(self.mlp_p(z), p_query),
             'r': self.softplus(self.mlp_r(z)),
         }
 

@@ -7,7 +7,7 @@ import torch.nn as nn
 import config
 from gvae.models.gps import GPSLayer
 from gvae.models.coarsening import FPSCoarsening
-from gvae.models.splatting import GaussianSplatting
+from gvae.models.splatting import GaussianSplatting, center_splat_grid
 from gvae.models.unet3d import UNet3D
 
 _NODE_INPUT_DIM = config.NUM_CLASSES + 3 + 3
@@ -19,10 +19,24 @@ def _empty_latent(device, grid, d):
     return z, z, z
 
 
+def _latent_proj(in_dim: int, out_dim: int) -> nn.Module:
+    if in_dim == out_dim:
+        return nn.Identity()
+    return nn.Conv3d(in_dim, out_dim, kernel_size=1)
+
+
+def _project_splat(proj: nn.Module, grid: torch.Tensor) -> torch.Tensor:
+    """(d_in, H, W, D) → (d_out, H, W, D) when widening Z before U-Net."""
+    if isinstance(proj, nn.Identity):
+        return grid
+    return proj(grid.unsqueeze(0)).squeeze(0)
+
+
 class SceneGraphEncoder(nn.Module):
     def __init__(self):
         super().__init__()
         d_L, d_L1, d_1 = config.D_MODEL_LEVELS
+        z_L, z_L1, z_1 = config.D_LATENT_LEVELS
         h_L, h_L1, h_1 = config.D_NUM_HEADS
 
         self.input_proj_L = nn.Linear(_NODE_INPUT_DIM, d_L)
@@ -62,9 +76,15 @@ class SceneGraphEncoder(nn.Module):
         )
         self.splat_mid = GaussianSplatting(config.GRID_MID, feature_dim=d_L1)
         self.splat_coarse = GaussianSplatting(config.GRID_COARSE, feature_dim=d_1)
-        self.unet_fine = UNet3D(d_L, depth=config.UNET_DEPTH_FINE)
-        self.unet_mid = UNet3D(d_L1, depth=config.UNET_DEPTH_MID)
-        self.unet_coarse = UNet3D(d_1, depth=config.UNET_DEPTH_COARSE)
+        self.latent_proj_fine = _latent_proj(d_L, z_L)
+        self.latent_proj_mid = _latent_proj(d_L1, z_L1)
+        self.latent_proj_coarse = _latent_proj(d_1, z_1)
+        self.unet_fine = UNet3D(z_L, depth=config.UNET_DEPTH_FINE)
+        self.unet_mid = UNet3D(z_L1, depth=config.UNET_DEPTH_MID)
+        self.unet_coarse = UNet3D(z_1, depth=config.UNET_DEPTH_COARSE)
+        self.layout_fine = nn.Conv3d(z_L, 1, kernel_size=1)
+        self.layout_mid = nn.Conv3d(z_L1, 1, kernel_size=1)
+        self.layout_coarse = nn.Conv3d(z_1, 1, kernel_size=1)
 
     def _fine_graph(self, c0):
         p0, r0, s0, edge_index_0 = c0['p'], c0['r'], c0['s'], c0['edge_index']
@@ -146,29 +166,40 @@ class SceneGraphEncoder(nn.Module):
             's_1': c2['s'],
             'h_1': torch.zeros(0, config.D_SCENE, device=device),
         }
+        z_f, z_m, z_c = config.D_LATENT_LEVELS
         for key, grid, d in (
-            ('fine', config.GRID_FINE, config.D_INSTANCE),
-            ('mid', config.GRID_MID, config.D_REGION),
-            ('coarse', config.GRID_COARSE, config.D_SCENE),
+            ('fine', config.GRID_FINE, z_f),
+            ('mid', config.GRID_MID, z_m),
+            ('coarse', config.GRID_COARSE, z_c),
         ):
             z, mu, lv = _empty_latent(device, grid, d)
             out[f'z_{key}'] = z
             out[f'mu_{key}'] = mu
             out[f'logvar_{key}'] = lv
+            H, W, D = grid
+            out[f'layout_{key}'] = torch.zeros(1, H, W, D, device=device)
 
         if h_fine.numel() > 0:
-            F_fine = self.splat_fine(h_fine, p_fine, r_fine)
+            F_fine = _project_splat(
+                self.latent_proj_fine,
+                center_splat_grid(self.splat_fine(h_fine, p_fine, r_fine)),
+            )
             z_fine, mu_fine, logvar_fine = self.unet_fine(F_fine)
             out['z_fine'] = z_fine
             out['mu_fine'] = mu_fine
             out['logvar_fine'] = logvar_fine
+            out['layout_fine'] = self.layout_fine(z_fine.unsqueeze(0)).squeeze(0)
 
         if h_Lm1.numel() > 0:
-            F_mid = self.splat_mid(h_Lm1, p1, r1)
+            F_mid = _project_splat(
+                self.latent_proj_mid,
+                center_splat_grid(self.splat_mid(h_Lm1, p1, r1)),
+            )
             z_mid, mu_mid, logvar_mid = self.unet_mid(F_mid)
             out['z_mid'] = z_mid
             out['mu_mid'] = mu_mid
             out['logvar_mid'] = logvar_mid
+            out['layout_mid'] = self.layout_mid(z_mid.unsqueeze(0)).squeeze(0)
 
         h_1, p2, r2, s2, edge_index_2 = self._scene_graph(c2)
         out['h_1'] = h_1
@@ -178,10 +209,14 @@ class SceneGraphEncoder(nn.Module):
         out['edge_index_1'] = edge_index_2
 
         if h_1.numel() > 0:
-            F_coarse = self.splat_coarse(h_1, p2, r2)
+            F_coarse = _project_splat(
+                self.latent_proj_coarse,
+                center_splat_grid(self.splat_coarse(h_1, p2, r2)),
+            )
             z_coarse, mu_coarse, logvar_coarse = self.unet_coarse(F_coarse)
             out['z_coarse'] = z_coarse
             out['mu_coarse'] = mu_coarse
             out['logvar_coarse'] = logvar_coarse
+            out['layout_coarse'] = self.layout_coarse(z_coarse.unsqueeze(0)).squeeze(0)
 
         return out

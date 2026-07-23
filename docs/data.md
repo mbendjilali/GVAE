@@ -76,7 +76,7 @@ Occupancy is **real LiDAR voxelisation**, not bounding-box fill.
 | Mid | 32×32×8 | `{stem}_occ_mid.npy` |
 | Coarse | 16×16×4 | `{stem}_occ_coarse.npy` |
 
-These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` and the `OccGridHead` output shapes.
+These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` (used for norm-contrastive empty-voxel sampling, not occupancy prediction).
 
 ### Build settings
 
@@ -86,7 +86,7 @@ These grids match `config.GRID_FINE`, `GRID_MID`, `GRID_COARSE` and the `OccGrid
 | `OCC_REQUIRE_CACHE` | `True` | Crash early if a sidecar is missing |
 | `OCC_FILTER_NON_INSTANTIABLE` | `True` | Drop ground/vegetation/fence from occ GT |
 
-Training supervises occupancy with **full-grid BCE** on `OccGridHead` (not random query points). Probes may sample query locations from these grids for diagnostics.
+Probes may sample query locations from these grids for norm-contrast diagnostics (Probe C).
 
 ---
 
@@ -103,11 +103,18 @@ Point the script at your LAZ / tile root (see script help for exact arguments). 
 Organise outputs into:
 
 ```
-data/graphs/train/   # training scenes
-data/graphs/test/    # held-out validation scenes
+data/graphs/train/   # training scenes (29 tiles)
+data/graphs/test/    # held-out validation scenes (11 tiles)
 ```
 
-The exact tile IDs for the fixed split should be documented in TODO G1. Graphs with **no coarsenable instances** are skipped by the dataset loader.
+**Fixed validation split** (tile IDs = JSON stems without `.json`):
+
+| Split | Count | Tile IDs |
+|-------|------:|----------|
+| **train** | 29 | `5080_54435`, `5085_54320`, `5095_54440`, `5095_54455`, `5100_54495`, `5105_54405`, `5105_54460`, `5110_54320`, `5110_54460`, `5110_54475`, `5110_54495`, `5115_54480`, `5130_54355`, `5135_54495`, `5140_54445`, `5145_54340`, `5145_54405`, `5145_54460`, `5145_54470`, `5145_54480`, `5150_54340`, `5160_54330`, `5165_54390`, `5165_54395`, `5180_54435`, `5180_54485`, `5185_54390`, `5185_54485`, `5190_54400` |
+| **test** (val) | 11 | `5080_54400`, `5080_54470`, `5100_54440`, `5100_54490`, `5120_54445`, `5135_54430`, `5135_54435`, `5140_54390`, `5150_54325`, `5155_54335`, `5175_54395` |
+
+`train.py` loads `data/graphs/train/` for training and `data/graphs/test/` for validation (despite the folder name, this is the **val** split). Graphs with **no coarsenable instances** are skipped by the dataset loader.
 
 ---
 
@@ -132,3 +139,5 @@ If you edit `GRID_FINE`, `GRID_MID`, or `GRID_COARSE` in `config.py`, you must *
 
 - Model use of this data: [architecture.md](architecture.md)
 - Training commands: [training.md](training.md)
+- Reconstruction BEV checks: `utils/visualize_recon.py` (loads `best.pth` + val graph)
+- Localization experiment recap: [localization-progress.md](localization-progress.md)

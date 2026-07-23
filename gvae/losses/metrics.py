@@ -1,12 +1,12 @@
 # gvae/losses/metrics.py
-# Primary validation metrics: fine instance layout, mid supernode, occupancy
+# Primary validation metrics: fine instance layout, mid supernode, reconstruction
 
 from __future__ import annotations
 
 import torch
 
 import config
-from gvae.losses.gvae_loss import soft_semantic_loss
+from gvae.losses.gvae_loss import soft_cross_entropy_loss
 
 
 def soft_miou(pred_probs: torch.Tensor, true_soft: torch.Tensor) -> float:
@@ -48,25 +48,20 @@ def mean_position_error(pred_positions: torch.Tensor, true_positions: torch.Tens
     return torch.norm(pred_positions - true_positions, dim=1).mean().item()
 
 
-def _occupancy_grid_iou(
-    occ_grid_head,
-    z: torch.Tensor,
-    occ_gt: torch.Tensor,
-) -> tuple[float, float]:
-    if occ_gt.numel() == 0:
-        return float("nan"), float("nan")
-    logits = occ_grid_head(z)
-    probs = torch.sigmoid(logits)
-    pred = probs >= config.METRICS_OCC_THRESHOLD
-    flat_gt = occ_gt.flatten().bool()
-    flat_pred = pred.flatten()
-    tp = (flat_pred & flat_gt).sum().float()
-    fp = (flat_pred & ~flat_gt).sum().float()
-    fn = (~flat_pred & flat_gt).sum().float()
-    union = tp + fp + fn
-    iou = (tp / union.clamp(min=1)).item()
-    precision = (tp / (tp + fp).clamp(min=1)).item()
-    return iou, precision
+def matched_position_error(pred_positions: torch.Tensor, true_positions: torch.Tensor) -> float:
+    """Mean L2 after Hungarian match (fair when peak order ≠ graph order)."""
+    from gvae.losses.gvae_loss import matched_position_loss
+
+    if pred_positions.numel() == 0:
+        return float("nan")
+    return matched_position_loss(pred_positions, true_positions).sqrt().item()
+
+
+def mean_footprint_error(pred_r: torch.Tensor, true_r: torch.Tensor) -> float:
+    """Mean L1 error on footprint semi-axes (x, y, z)."""
+    if pred_r.numel() == 0:
+        return float("nan")
+    return (pred_r - true_r).abs().mean().item()
 
 
 def _instance_pos_err_mid(outputs, graph) -> float:
@@ -83,31 +78,69 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
     """Primary monitoring metrics (console + TensorBoard)."""
     with torch.no_grad():
         metrics: dict[str, float] = {}
+        if outputs.get("latent_graph_vae"):
+            metrics["latent_graph_vae"] = 1.0
 
         recon_fine = outputs.get("recon_fine")
         if recon_fine is not None and outputs["p_fine"].numel() > 0:
             metrics["pos_err_fine"] = mean_position_error(
                 recon_fine["p"], outputs["p_fine"],
             )
-            metrics["soft_miou_fine"] = soft_miou(recon_fine["s"], outputs["s_fine"])
-            if config.LAMBDA_OCC_GRID_FINE > 0:
-                iou_f, _ = _occupancy_grid_iou(
-                    outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
+            if outputs.get("latent_graph_vae") and config.LATENT_POS_MATCHED:
+                metrics["pos_err_matched_fine"] = matched_position_error(
+                    recon_fine["p"], outputs["p_fine"],
                 )
-                metrics["occ_iou_fine"] = iou_f
+            metrics["size_err_fine"] = mean_footprint_error(
+                recon_fine["r"], outputs["r_fine"],
+            )
+            metrics["soft_miou_fine"] = soft_miou(recon_fine["s"], outputs["s_fine"])
+            if outputs.get("latent_graph_vae"):
+                metrics["pred_pos_std_fine"] = recon_fine["p"].std(dim=0).mean().item()
+                from gvae.losses.gvae_loss import latent_peak_position_error
+                if outputs.get("z_fine") is not None:
+                    metrics["z_peak_err_fine"] = latent_peak_position_error(
+                        outputs["z_fine"],
+                        outputs["p_fine"],
+                        layout=outputs.get("layout_fine"),
+                    )
 
         recon_fine_z = outputs.get("recon_fine_zonly")
         if recon_fine_z is not None and outputs["p_fine"].numel() > 0:
             metrics["pos_err_zonly_fine"] = mean_position_error(
                 recon_fine_z["p"], outputs["p_fine"],
             )
+            metrics["size_err_zonly_fine"] = mean_footprint_error(
+                recon_fine_z["r"], outputs["r_fine"],
+            )
             metrics["soft_miou_zonly_fine"] = soft_miou(
                 recon_fine_z["s"], outputs["s_fine"],
+            )
+
+        recon_fine_z_h = outputs.get("recon_fine_zonly_hanchor")
+        if recon_fine_z_h is not None and outputs["p_fine"].numel() > 0:
+            metrics["pos_err_zonly_hanchor_fine"] = mean_position_error(
+                recon_fine_z_h["p"], outputs["p_fine"],
+            )
+
+        p_anchor_f = outputs.get("p_anchor_fine")
+        if p_anchor_f is not None and p_anchor_f.numel() > 0 and outputs["p_fine"].numel() > 0:
+            metrics["anchor_err_fine"] = mean_position_error(p_anchor_f, outputs["p_fine"])
+        r_anchor_f = outputs.get("r_anchor_fine")
+        if r_anchor_f is not None and r_anchor_f.numel() > 0 and outputs["r_fine"].numel() > 0:
+            metrics["anchor_size_err_fine"] = mean_footprint_error(
+                r_anchor_f, outputs["r_fine"],
             )
 
         if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
             metrics["pos_err_mid"] = mean_position_error(
                 outputs["recon_mid"]["p"], outputs["p_lm1"],
+            )
+            if outputs.get("latent_graph_vae") and config.LATENT_POS_MATCHED:
+                metrics["pos_err_matched_mid"] = matched_position_error(
+                    outputs["recon_mid"]["p"], outputs["p_lm1"],
+                )
+            metrics["size_err_mid"] = mean_footprint_error(
+                outputs["recon_mid"]["r"], outputs["r_lm1"],
             )
             metrics["soft_miou_mid"] = soft_miou(
                 outputs["recon_mid"]["s"], outputs["s_lm1"],
@@ -119,12 +152,22 @@ def compute_metrics(outputs, graph, step: int = 0) -> dict[str, float]:
                 recon_mid_z["p"], outputs["p_lm1"],
             )
 
+        recon_mid_z_h = outputs.get("recon_mid_zonly_hanchor")
+        if recon_mid_z_h is not None and outputs["p_lm1"].numel() > 0:
+            metrics["pos_err_zonly_hanchor_mid"] = mean_position_error(
+                recon_mid_z_h["p"], outputs["p_lm1"],
+            )
+
+        p_anchor_m = outputs.get("p_anchor_mid")
+        if p_anchor_m is not None and p_anchor_m.numel() > 0 and outputs["p_lm1"].numel() > 0:
+            metrics["anchor_err_mid"] = mean_position_error(p_anchor_m, outputs["p_lm1"])
+        r_anchor_m = outputs.get("r_anchor_mid")
+        if r_anchor_m is not None and r_anchor_m.numel() > 0 and outputs["r_lm1"].numel() > 0:
+            metrics["anchor_size_err_mid"] = mean_footprint_error(
+                r_anchor_m, outputs["r_lm1"],
+            )
+
         if outputs.get("recon_mid") is not None:
-            if config.LAMBDA_OCC_GRID_MID > 0:
-                iou, _ = _occupancy_grid_iou(
-                    outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
-                )
-                metrics["occ_iou_mid"] = iou
             metrics["inst_pos_err_mid"] = _instance_pos_err_mid(outputs, graph)
 
         if config.LOG_FULL_METRICS:
@@ -142,24 +185,14 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
     recon_fine = outputs.get("recon_fine")
     if recon_fine is not None and outputs["p_fine"].numel() > 0:
         metrics["miou_fine"] = hard_miou(recon_fine["s"], outputs["s_fine"])
-        metrics["recon_sem_fine"] = soft_semantic_loss(
+        metrics["recon_sem_fine"] = soft_cross_entropy_loss(
             recon_fine["s"], outputs["s_fine"],
         ).item()
-        if config.LAMBDA_OCC_GRID_FINE > 0:
-            _, prec_f = _occupancy_grid_iou(
-                outputs["occ_grid_head_fine"], outputs["z_fine"], graph.occ_fine,
-            )
-            metrics["occ_precision_fine"] = prec_f
 
     if outputs.get("recon_mid") is not None and outputs["p_lm1"].numel() > 0:
-        metrics["recon_sem_mid"] = soft_semantic_loss(
+        metrics["recon_sem_mid"] = soft_cross_entropy_loss(
             outputs["recon_mid"]["s"], outputs["s_lm1"],
         ).item()
-        if config.LAMBDA_OCC_GRID_MID > 0:
-            _, prec_m = _occupancy_grid_iou(
-                outputs["occ_grid_head_mid"], outputs["z_mid"], graph.occ_mid,
-            )
-            metrics["occ_precision_mid"] = prec_m
 
     if outputs.get("recon_coarse") is not None:
         if outputs["p_1"].numel() > 0:
@@ -169,12 +202,6 @@ def _full_metrics(outputs, graph, step: int) -> dict[str, float]:
             metrics["soft_miou_coarse"] = soft_miou(
                 outputs["recon_coarse"]["s"], outputs["s_1"],
             )
-            if config.LAMBDA_OCC_GRID_COARSE > 0:
-                iou_c, prec_c = _occupancy_grid_iou(
-                    outputs["occ_grid_head_coarse"], outputs["z_coarse"], graph.occ_coarse,
-                )
-                metrics["occ_iou_coarse"] = iou_c
-                metrics["occ_precision_coarse"] = prec_c
 
     if outputs["mu_fine"].numel() > 0:
         metrics["kl_fine"] = KL_loss(outputs["mu_fine"], outputs["logvar_fine"]).item()

@@ -4,6 +4,7 @@ from gvae.probes.latent import (
     anchor_ablation,
     linear_probe,
     run_latent_probes,
+    save_probe_artifacts,
     signal_vs_background,
 )
 
@@ -11,5 +12,6 @@ __all__ = [
     "anchor_ablation",
     "linear_probe",
     "run_latent_probes",
+    "save_probe_artifacts",
     "signal_vs_background",
 ]

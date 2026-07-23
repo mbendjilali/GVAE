@@ -83,7 +83,10 @@ class UNet3D(nn.Module):
         x = self._run_block(self.bottleneck, x)
 
         for decoder in self.decoders:
-            x = nn.functional.interpolate(x, scale_factor=self.pool_kernel, mode='trilinear', align_corners=False)
+            x = nn.functional.interpolate(
+                x, scale_factor=self.pool_kernel, mode='trilinear',
+                align_corners=config.UNET_ALIGN_CORNERS,
+            )
             skip = skips.pop()
             x = torch.cat([x, skip], dim=1)
             x = self._run_block(decoder, x)

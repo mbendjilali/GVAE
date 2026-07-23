@@ -15,8 +15,15 @@ import config
 from gvae.training.console import Style, Term, strip_ansi
 from gvae.models.gvae import GVAE
 from gvae.data.scene_graph import SceneGraph
-from gvae.losses.gvae_loss import compute_branch_losses, compute_loss
+from gvae.losses.gvae_loss import (
+    compute_branch_losses,
+    compute_loss,
+    decoder_gt_anchor_mix_for_epoch,
+    latent_gt_window_mix_for_epoch,
+)
 from gvae.losses.metrics import compute_metrics
+from gvae.probes.latent import run_latent_probes, save_probe_artifacts
+from gvae.training.freeze import apply_trainable_modules, reinit_zonly_decoders
 
 
 class SceneGraphDataset(torch.utils.data.Dataset):
@@ -65,18 +72,18 @@ def _forward_loss(model, graph, step, device, use_amp: bool):
     graph = graph.on_device(device, non_blocking=True)
     with torch.amp.autocast('cuda', enabled=use_amp):
         outputs = model(graph)
-        branches, lambda_kl = compute_branch_losses(outputs, graph, step)
+        branches, lambda_kl = compute_branch_losses(outputs, graph, step, model=model)
 
     zero = graph.p.new_zeros(())
-    L_recon = L_KL = L_occ = L_pool = zero
+    L_recon = L_KL = L_pool = zero
     for _, _, parts in branches:
         L_recon = L_recon + parts.get('recon', zero)
+        L_recon = L_recon + parts.get('recon_latent', zero)
         L_KL = L_KL + parts.get('KL', zero)
-        L_occ = L_occ + parts.get('occ', zero)
         if 'pool' in parts:
             L_pool = L_pool + parts['pool']
     components = {
-        'recon': L_recon, 'KL': L_KL, 'occ': L_occ, 'lambda_kl': lambda_kl,
+        'recon': L_recon, 'KL': L_KL, 'lambda_kl': lambda_kl,
     }
     if config.USE_POOL_LOSS and config.COARSEN_ASSIGNMENT == "soft":
         components['pool'] = L_pool
@@ -149,6 +156,10 @@ def _tqdm_kwargs(desc: str, colour: str) -> dict:
 
 def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
     model.eval()
+    saved_mix = config.DECODER_GT_ANCHOR_MIX
+    config.DECODER_GT_ANCHOR_MIX = 0.0
+    saved_gt_win = config.LATENT_GT_WINDOW_MIX
+    config.LATENT_GT_WINDOW_MIX = 0.0
 
     per_graph_losses = []
     all_metrics = []
@@ -162,7 +173,7 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
                 with torch.amp.autocast('cuda', enabled=use_amp):
                     outputs = model(graph)
                     loss, components = compute_loss(
-                        outputs, graph, step=step,
+                        outputs, graph, step=step, model=model,
                     )
                 val = loss.item()
                 per_graph_losses.append(val)
@@ -187,17 +198,66 @@ def validate(model, loader, device, step=0, desc='val', use_amp: bool = False):
             avg_metrics[key], _ = _strict_mean(vals)
 
     model.train()
+    config.DECODER_GT_ANCHOR_MIX = saved_mix
+    config.LATENT_GT_WINDOW_MIX = saved_gt_win
     return avg_loss, avg_metrics, avg_components, n_graphs, n_failed, failed_paths
 
 
-def train(model, loader, val_loader, device, ckpt_dir, writer, term: Term):
+def _run_probes(
+    model,
+    train_graphs,
+    val_graphs,
+    device,
+    ckpt_dir,
+    term: Term,
+    *,
+    epoch: int | None = None,
+    probe_target: str = "supernode",
+    text_name: str = "probe_report.txt",
+    json_name: str = "probe_summary.json",
+) -> None:
+    model.eval()
+    report = run_latent_probes(
+        model,
+        train_graphs,
+        val_graphs,
+        device,
+        probe_target=probe_target,
+    )
+    text_path, json_path = save_probe_artifacts(
+        report,
+        ckpt_dir,
+        epoch=epoch,
+        probe_target=probe_target,
+        text_name=text_name,
+        json_name=json_name,
+    )
+    model.train()
+    ep_note = f" (ep {epoch})" if epoch is not None else ""
+    term.ok(f"probes saved{ep_note} → {os.path.basename(text_path)}, {os.path.basename(json_path)}")
+
+
+def train(
+    model,
+    loader,
+    val_loader,
+    device,
+    ckpt_dir,
+    writer,
+    term: Term,
+):
     use_amp = _use_amp(device)
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+    trainable = [p for p in model.parameters() if p.requires_grad]
+    if not trainable:
+        raise RuntimeError("No trainable parameters — check --train-modules / --freeze-encoder")
+    optimizer = torch.optim.Adam(trainable, lr=config.LEARNING_RATE)
     step_counter = 0
     epoch_counter = 0
     best_loss = float('inf')
     current_lr = config.LEARNING_RATE
+    config.DECODER_GT_ANCHOR_MIX = decoder_gt_anchor_mix_for_epoch(0)
+    config.LATENT_GT_WINDOW_MIX = latent_gt_window_mix_for_epoch(0)
 
     for epoch in range(config.NUM_EPOCHS):
         lr = _lr_for_epoch(epoch)
@@ -208,6 +268,24 @@ def train(model, loader, val_loader, device, ckpt_dir, writer, term: Term):
                 f"  LR → {current_lr:.1e} (epoch {epoch + 1})",
                 Style.YELLOW,
             ))
+
+        mix = decoder_gt_anchor_mix_for_epoch(epoch)
+        if mix != config.DECODER_GT_ANCHOR_MIX:
+            config.DECODER_GT_ANCHOR_MIX = mix
+            if config.ANCHOR_MIX_CURRICULUM:
+                tqdm.write(term.paint(
+                    f"  anchor mix → {mix:.2f} (epoch {epoch + 1})",
+                    Style.YELLOW,
+                ))
+
+        gt_mix = latent_gt_window_mix_for_epoch(epoch)
+        if gt_mix != config.LATENT_GT_WINDOW_MIX:
+            config.LATENT_GT_WINDOW_MIX = gt_mix
+            if config.LATENT_GRAPH_VAE_MODE and config.LATENT_GT_WINDOW_CURRICULUM:
+                tqdm.write(term.paint(
+                    f"  gt-window mix → {gt_mix:.2f} (epoch {epoch + 1})",
+                    Style.YELLOW,
+                ))
 
         per_graph_losses = []
         epoch_components = []
@@ -375,10 +453,64 @@ def _teardown_run_logging(log_file):
         log_file.close()
 
 
-def main(ckpt_dir):
+def _prepare_init_state(
+    path: str,
+    *,
+    latent_levels: tuple[int, int, int] | None = None,
+) -> dict:
+    """Infer Z dims from checkpoint (unless overridden), migrate legacy keys."""
+    from gvae.checkpoint_compat import prepare_checkpoint
+
+    raw = torch.load(path, map_location="cpu", weights_only=True)
+    return prepare_checkpoint(raw, latent_levels=latent_levels)
+
+
+def _apply_init_state(model, state: dict, path: str, term: Term) -> None:
+    """Load pretrained weights; allow architecture mismatches (e.g. phase-1 → phase-2)."""
+    incompatible = model.load_state_dict(state, strict=False)
+    n_unexp = len(incompatible.unexpected_keys)
+    n_miss = len(incompatible.missing_keys)
+    if n_unexp:
+        term.dim(
+            f"init from {path}: ignored {n_unexp} checkpoint key(s) "
+            f"(not in this model)"
+        )
+    if n_miss:
+        preview = ", ".join(incompatible.missing_keys[:6])
+        suffix = " ..." if n_miss > 6 else ""
+        term.warn(
+            f"init: {n_miss} module(s) not in checkpoint — random init ({preview}{suffix})"
+        )
+    if not n_unexp and not n_miss:
+        term.ok(f"init from {path} (strict match)")
+
+
+def main(
+    ckpt_dir,
+    *,
+    run_probes: bool,
+    probe_target: str,
+    init_checkpoint: str | None = None,
+    latent_dims_cli: tuple[int, int, int] | None = None,
+    train_modules: str = "all",
+    freeze_encoder: bool = False,
+    reinit_zonly: bool = False,
+):
     term = Term()
     device = get_device()
     use_amp = _use_amp(device)
+
+    init_state = None
+    if init_checkpoint:
+        init_state = _prepare_init_state(
+            init_checkpoint, latent_levels=latent_dims_cli,
+        )
+        if latent_dims_cli is None:
+            z = config.D_LATENT_LEVELS
+            term.ok(
+                f"Z dims from {init_checkpoint}: {z[0]}/{z[1]}/{z[2]} "
+                f"(gnn {config.D_MODEL_LEVELS})",
+            )
 
     train_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'train'))
     val_dataset = SceneGraphDataset(os.path.join(config.GRAPH_DATA_DIR, 'test'))
@@ -395,33 +527,95 @@ def main(ckpt_dir):
         f"@ ep {config.LR_DECAY_EPOCH + 1} · batch {config.BATCH_SIZE}",
         f"{term.paint('grid', Style.DIM)}     "
         f"fine {config.GRID_FINE} · mid {config.GRID_MID} · coarse {config.GRID_COARSE} · "
+        f"gnn {config.D_INSTANCE}/{config.D_REGION}/{config.D_SCENE} · "
+        f"Z {config.D_FINE_LATENT}/{config.D_MID_LATENT}/{config.D_COARSE_LATENT} · "
         f"unet depth fine/mid/coarse = "
         f"{config.UNET_DEPTH_FINE}/{config.UNET_DEPTH_MID}/{config.UNET_DEPTH_COARSE}",
         f"{term.paint('coarsen', Style.DIM)}  "
         f"{config.COARSEN_ASSIGNMENT} · ratios {config.REDUCTION_RATIO_LEVELS}"
         + (f" · pool λ={config.LAMBDA_POOL}" if config.USE_POOL_LOSS else ""),
     ]
-    occ_grid = (
-        config.LAMBDA_OCC_GRID_FINE,
-        config.LAMBDA_OCC_GRID_MID,
-        config.LAMBDA_OCC_GRID_COARSE,
-    )
-    banner_lines.append(
-        f"{term.paint('occ', Style.DIM)} "
-        f"grid λ fine/mid/coarse = {occ_grid[0]}/{occ_grid[1]}/{occ_grid[2]}"
-    )
+    if config.LATENT_GRAPH_VAE_MODE:
+        banner_lines.append(
+            f"{term.paint('latent-vae', Style.DIM)} "
+            f"Z→graph_hat (per-slot spatial) λ recon={config.LAMBDA_RECON_LATENT} "
+            f"λ_peak={config.LAMBDA_Z_PEAK_FINE}/{config.LAMBDA_Z_PEAK_MID}/"
+            f"{config.LAMBDA_Z_PEAK_COARSE} "
+            f"decode={config.LATENT_DECODE_MODE} λ_pos={config.LAMBDA_POS_LATENT} "
+            f"λ_peak layout (recon+KL+norm; VGAE slot readout)"
+        )
     if config.USE_Z_ONLY_DECODER:
+        pos_mode = (
+            "patch p←Z@anchor"
+            if config.Z_ONLY_PATCH_DEFORMABLE_POSITION
+            else "aux losses only (deformable p)"
+        )
         banner_lines.append(
             f"{term.paint('zonly', Style.DIM)} "
-            f"λ h/z = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY} "
-            f"jitter={config.Z_ONLY_QUERY_JITTER}"
+            f"λ h/z/hz = {config.LAMBDA_RECON_H}/{config.LAMBDA_RECON_ZONLY}/"
+            f"{config.LAMBDA_RECON_HZONLY} jitter={config.Z_ONLY_QUERY_JITTER} · {pos_mode}"
         )
-    if config.LAMBDA_NORM_CONTRAST_FINE > 0 or config.LAMBDA_NORM_CONTRAST_MID > 0:
+    if (
+        config.LAMBDA_ANCHOR_FINE > 0
+        or config.LAMBDA_ANCHOR_MID > 0
+        or config.LAMBDA_ANCHOR_COARSE > 0
+        or config.LAMBDA_ANCHOR_R_FINE > 0
+        or config.LAMBDA_ANCHOR_R_MID > 0
+        or config.LAMBDA_ANCHOR_R_COARSE > 0
+    ):
+        banner_lines.append(
+            f"{term.paint('anchor', Style.DIM)} "
+            f"λ p fine/mid/coarse = "
+            f"{config.LAMBDA_ANCHOR_FINE}/{config.LAMBDA_ANCHOR_MID}/"
+            f"{config.LAMBDA_ANCHOR_COARSE} · "
+            f"λ r = {config.LAMBDA_ANCHOR_R_FINE}/"
+            f"{config.LAMBDA_ANCHOR_R_MID}/{config.LAMBDA_ANCHOR_R_COARSE}"
+        )
+    banner_lines.append(
+        f"{term.paint('recon', Style.DIM)} "
+        f"λ sem/pos/size = {config.LAMBDA_SEM}/"
+        f"{config.LAMBDA_POS}/{config.LAMBDA_SIZE} "
+        f"(zonly sem/size = {config.LAMBDA_SEM_ZONLY}/{config.LAMBDA_SIZE_ZONLY})"
+    )
+    if config.ANCHOR_MIX_CURRICULUM:
+        banner_lines.append(
+            f"{term.paint('anchor', Style.DIM)} "
+            f"mix curriculum {config.ANCHOR_MIX_START:.1f}→{config.ANCHOR_MIX_END:.1f} "
+            f"over {config.ANCHOR_MIX_ANNEAL_EPOCHS} ep"
+        )
+    if (
+        config.LAMBDA_NORM_CONTRAST_FINE > 0
+        or config.LAMBDA_NORM_CONTRAST_MID > 0
+        or config.LAMBDA_NORM_CONTRAST_COARSE > 0
+    ):
         banner_lines.append(
             f"{term.paint('norm', Style.DIM)} "
-            f"contrast λ fine/mid = "
-            f"{config.LAMBDA_NORM_CONTRAST_FINE}/{config.LAMBDA_NORM_CONTRAST_MID} "
+            f"contrast λ fine/mid/coarse = "
+            f"{config.LAMBDA_NORM_CONTRAST_FINE}/"
+            f"{config.LAMBDA_NORM_CONTRAST_MID}/"
+            f"{config.LAMBDA_NORM_CONTRAST_COARSE} "
             f"margin={config.NORM_CONTRAST_MARGIN}"
+        )
+    if config.USE_ANCHOR_MLP:
+        banner_lines.append(
+            f"{term.paint('anchor', Style.DIM)} "
+            f"anchor MLP (hidden={'d' if config.ANCHOR_MLP_HIDDEN <= 0 else config.ANCHOR_MLP_HIDDEN})"
+        )
+    banner_lines.append(
+        f"{term.paint('decoder', Style.DIM)} "
+        f"position bound={config.POSITION_BOUND} "
+        f"residual={config.POSITION_RESIDUAL}"
+    )
+    if config.USE_Z_PRED_READOUT_MLP:
+        hidden = "d" if config.Z_PRED_READOUT_MLP_HIDDEN <= 0 else config.Z_PRED_READOUT_MLP_HIDDEN
+        banner_lines.append(
+            f"{term.paint('decoder', Style.DIM)} "
+            f"z_pred readout MLP (hidden={hidden})"
+        )
+    if config.SPLAT_SUBTRACT_SPATIAL_MEAN:
+        banner_lines.append(
+            f"{term.paint('splat', Style.DIM)} "
+            f"subtract spatial mean before U-Net"
         )
     if (
         config.SPLAT_TRUNCATION_SIGMA_FINE != config.SPLAT_TRUNCATION_SIGMA
@@ -431,7 +625,27 @@ def main(ckpt_dir):
         banner_lines.append(
             f"{term.paint('splat', Style.DIM)} "
             f"σ fine={config.SPLAT_TRUNCATION_SIGMA_FINE} "
-            f"(mid/coarse={config.SPLAT_TRUNCATION_SIGMA}){cap}"
+            f"(mid/coarse={config.SPLAT_TRUNCATION_SIGMA}){cap} "
+            f"trunc_floor={config.SPLAT_MIN_TRUNC_VOXEL_FRAC}×spacing"
+        )
+    model = GVAE().to(device)
+    if init_state is not None:
+        _apply_init_state(model, init_state, init_checkpoint, term)
+    if reinit_zonly:
+        touched = reinit_zonly_decoders(model)
+        if touched:
+            term.ok(f"reinit Z-only heads: {', '.join(touched)}")
+        else:
+            term.warn("reinit-zonly: no zonly_decoder_* modules (is USE_Z_ONLY_DECODER on?)")
+    n_train, n_frozen, n_tensors = apply_trainable_modules(
+        model, train_modules=train_modules, freeze_encoder=freeze_encoder,
+    )
+    if train_modules != "all" or freeze_encoder:
+        banner_lines.append(
+            f"{term.paint('finetune', Style.DIM)} "
+            f"train={train_modules}"
+            + (" · encoder frozen" if freeze_encoder else "")
+            + f" · {n_tensors} tensors · {n_train:,} / {n_train + n_frozen:,} params trainable"
         )
     banner_lines.append(
         f"{term.paint('tb', Style.DIM)}       "
@@ -445,8 +659,6 @@ def main(ckpt_dir):
 
     train_dataloader = make_dataloader(train_dataset, shuffle=True)
     val_dataloader = make_dataloader(val_dataset, shuffle=False)
-
-    model = GVAE().to(device)
     writer = SummaryWriter(log_dir=os.path.join(ckpt_dir, 'tb_logs'))
 
     train(model, train_dataloader, val_dataloader, device, ckpt_dir, writer, term)
@@ -455,6 +667,22 @@ def main(ckpt_dir):
     writer.close()
     term.ok(f"done — checkpoints in {ckpt_dir}/ (best.pth, last.pth)")
 
+    best_path = os.path.join(ckpt_dir, "best.pth")
+    if run_probes and os.path.isfile(best_path):
+        from gvae.checkpoint_compat import migrate_state_dict
+        model.load_state_dict(
+            migrate_state_dict(
+                torch.load(best_path, map_location=device, weights_only=True),
+            ),
+            strict=False,
+        )
+        _run_probes(
+            model, train_dataset.graphs, val_dataset.graphs, device, ckpt_dir, term,
+            probe_target=probe_target,
+        )
+    elif run_probes:
+        term.warn("no best.pth saved; skipping probes")
+
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Train GVAE")
@@ -462,19 +690,30 @@ def _parse_args():
         "--ckpt-dir", type=str, default="",
         help="Checkpoint directory (default: checkpoint/<timestamp>)",
     )
+    parser.add_argument(
+        "--init-checkpoint", type=str, default=None,
+        help="Load weights from .pth before training (e.g. phase-1 best.pth); "
+        "optimizer/epoch start fresh",
+    )
+    parser.add_argument(
+        "--freeze-encoder", action="store_true",
+        help="Freeze encoder.* parameters (GNN + splat + U-Net)",
+    )
+    parser.add_argument(
+        "--train-modules",
+        choices=("all", "zonly", "decoders", "latent_decoders"),
+        default="all",
+        help="Train only parameters under these prefixes (default: all)",
+    )
+    parser.add_argument(
+        "--reinit-zonly", action="store_true",
+        help="After --init-checkpoint, re-randomize zonly_decoder_* (fresh Z-only head)",
+    )
+    parser.add_argument(
+        "--lambda-kl-max", type=float, default=None,
+        help="Override LAMBDA_KL_MAX (0 = no KL during finetune)",
+    )
     parser.add_argument("--epochs", type=int, default=None, help="Override NUM_EPOCHS")
-    parser.add_argument(
-        "--lambda-occ-grid-fine", type=float, default=None,
-        help="Override LAMBDA_OCC_GRID_FINE",
-    )
-    parser.add_argument(
-        "--lambda-occ-grid-mid", type=float, default=None,
-        help="Override LAMBDA_OCC_GRID_MID",
-    )
-    parser.add_argument(
-        "--lambda-occ-grid-coarse", type=float, default=None,
-        help="Override LAMBDA_OCC_GRID_COARSE",
-    )
     parser.add_argument(
         "--splat-sigma-fine", type=float, default=None,
         help="Override SPLAT_TRUNCATION_SIGMA_FINE",
@@ -488,8 +727,145 @@ def _parse_args():
         help="Override LAMBDA_RECON_H",
     )
     parser.add_argument(
+        "--lambda-recon-hzonly", type=float, default=None,
+        help="Override LAMBDA_RECON_HZONLY (Z-only at h anchors)",
+    )
+    parser.add_argument(
+        "--lambda-anchor-fine", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_FINE",
+    )
+    parser.add_argument(
+        "--lambda-anchor-mid", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_MID",
+    )
+    parser.add_argument(
+        "--lambda-anchor-coarse", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_COARSE",
+    )
+    parser.add_argument(
+        "--lambda-size", type=float, default=None,
+        help="Override LAMBDA_SIZE (h+Z footprint loss in L_recon)",
+    )
+    parser.add_argument(
+        "--lambda-size-zonly", type=float, default=None,
+        help="Override LAMBDA_SIZE_ZONLY (Z-only / hz footprint weight)",
+    )
+    parser.add_argument(
+        "--lambda-sem-zonly", type=float, default=None,
+        help="Override LAMBDA_SEM_ZONLY (Z-only / hz semantic CE weight)",
+    )
+    parser.add_argument(
+        "--lambda-norm-contrast-coarse", type=float, default=None,
+        help="Override LAMBDA_NORM_CONTRAST_COARSE",
+    )
+    parser.add_argument(
+        "--no-anchor-mlp", action="store_true",
+        help="Use Linear anchor heads (USE_ANCHOR_MLP=False)",
+    )
+    parser.add_argument(
+        "--no-zpred-readout-mlp", action="store_true",
+        help="Linear s/r/p heads on z_pred (USE_Z_PRED_READOUT_MLP=False)",
+    )
+    parser.add_argument(
+        "--position-bound", choices=("clamp", "tanh"), default=None,
+        help="Position head: clamp (default) or tanh",
+    )
+    parser.add_argument(
+        "--no-position-residual", action="store_true",
+        help="Predict absolute p from Z (POSITION_RESIDUAL=False)",
+    )
+    parser.add_argument(
+        "--latent-dims", type=str, default=None,
+        help="Z channel dims fine,mid,coarse (e.g. 96,192,384). GNN dims stay at D_MODEL_LEVELS.",
+    )
+    parser.add_argument(
+        "--no-splat-center", action="store_true",
+        help="Disable SPLAT_SUBTRACT_SPATIAL_MEAN before U-Net",
+    )
+    parser.add_argument(
+        "--splat-min-trunc-frac", type=float, default=None,
+        help="Override SPLAT_MIN_TRUNC_VOXEL_FRAC",
+    )
+    parser.add_argument(
+        "--lambda-anchor-r-fine", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_R_FINE",
+    )
+    parser.add_argument(
+        "--lambda-anchor-r-mid", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_R_MID",
+    )
+    parser.add_argument(
+        "--lambda-anchor-r-coarse", type=float, default=None,
+        help="Override LAMBDA_ANCHOR_R_COARSE",
+    )
+    parser.add_argument(
+        "--no-anchor-curriculum", action="store_true",
+        help="Disable DECODER_GT_ANCHOR_MIX curriculum (fixed mix=0)",
+    )
+    parser.add_argument(
+        "--anchor-mix-anneal-epochs", type=int, default=None,
+        help="Override ANCHOR_MIX_ANNEAL_EPOCHS",
+    )
+    parser.add_argument(
+        "--latent-graph-vae", action="store_true",
+        help="Honest graph VAE: encode→Z→LatentGraphDecoder→graph_hat (no h at decode)",
+    )
+    parser.add_argument(
+        "--lambda-recon-latent", type=float, default=None,
+        help="Override LAMBDA_RECON_LATENT (Z→graph_hat reconstruction)",
+    )
+    parser.add_argument(
+        "--lambda-z-peak-fine", type=float, default=None,
+        help="Override LAMBDA_Z_PEAK_FINE (||Z|| peaks at supernode sites)",
+    )
+    parser.add_argument(
+        "--lambda-z-peak-mid", type=float, default=None,
+        help="Override LAMBDA_Z_PEAK_MID",
+    )
+    parser.add_argument(
+        "--lambda-z-peak-coarse", type=float, default=None,
+        help="Override LAMBDA_Z_PEAK_COARSE",
+    )
+    parser.add_argument(
+        "--lambda-slot-spread", type=float, default=None,
+        help="Override LAMBDA_SLOT_SPREAD (latent graph decode)",
+    )
+    parser.add_argument(
+        "--lambda-index-peak-distill", type=float, default=None,
+        help="Per-slot MSE(p_hat[i], oracle layout peak at k-NN(p_gt[i]))",
+    )
+    parser.add_argument(
+        "--lambda-layout-distill", type=float, default=None,
+        help="Deprecated alias for --lambda-index-peak-distill",
+    )
+    parser.add_argument(
+        "--lambda-pos-latent", type=float, default=None,
+        help="Override LAMBDA_POS_LATENT (index MSE in recon when --latent-pos-matched off)",
+    )
+    parser.add_argument(
+        "--latent-pos-matched", action="store_true",
+        help="Use Hungarian pos in latent recon (hides slot-order error in loss)",
+    )
+    parser.add_argument(
+        "--lambda-sem-at-gt", type=float, default=None,
+        help="Aux sem/size loss at p_gt (does not change graph_hat forward)",
+    )
+    parser.add_argument(
+        "--lambda-query-cover", type=float, default=None,
+        help="Pull slot-query k-NN windows over GT sites (query decode mode)",
+    )
+    parser.add_argument(
+        "--latent-decode-mode", choices=("vgae", "query", "nms_slots", "nms"), default=None,
+        help="LatentGraphDecoder position readout mode",
+    )
+    parser.add_argument(
         "--no-zonly-decoder", action="store_true",
         help="Disable Z-only decode path (USE_Z_ONLY_DECODER=False)",
+    )
+    parser.add_argument(
+        "--zonly-aux-loss-only", action="store_true",
+        help="Z-only @ GT/anchor for training losses only; deformable mlp_p sets "
+        "recon p (Z_ONLY_PATCH_DEFORMABLE_POSITION=False)",
     )
     parser.add_argument(
         "--zonly-jitter", type=float, default=None,
@@ -507,26 +883,146 @@ def _parse_args():
         "--lambda-norm-contrast-mid", type=float, default=None,
         help="Override LAMBDA_NORM_CONTRAST_MID",
     )
+    parser.add_argument(
+        "--no-probe", action="store_true",
+        help="Skip latent probes after training (default: probe best.pth once at end)",
+    )
+    parser.add_argument(
+        "--probe-target", choices=("supernode", "instance", "both"), default="both",
+        help="Probe sampling: supernode GT, raw instances, or both",
+    )
     return parser.parse_args()
 
 
+def _parse_latent_dims(spec: str) -> tuple[int, int, int]:
+    parts = [int(x.strip()) for x in spec.split(",")]
+    if len(parts) != 3:
+        raise SystemExit("--latent-dims requires three comma-separated integers, e.g. 96,192,384")
+    return parts[0], parts[1], parts[2]
+
+
 def _apply_config_overrides(args) -> None:
+    if args.latent_dims is not None:
+        config.apply_latent_levels(*_parse_latent_dims(args.latent_dims))
     if args.epochs is not None:
         config.NUM_EPOCHS = args.epochs
-    if args.lambda_occ_grid_fine is not None:
-        config.LAMBDA_OCC_GRID_FINE = args.lambda_occ_grid_fine
-    if args.lambda_occ_grid_mid is not None:
-        config.LAMBDA_OCC_GRID_MID = args.lambda_occ_grid_mid
-    if args.lambda_occ_grid_coarse is not None:
-        config.LAMBDA_OCC_GRID_COARSE = args.lambda_occ_grid_coarse
     if args.splat_sigma_fine is not None:
         config.SPLAT_TRUNCATION_SIGMA_FINE = args.splat_sigma_fine
     if args.lambda_recon_zonly is not None:
         config.LAMBDA_RECON_ZONLY = args.lambda_recon_zonly
     if args.lambda_recon_h is not None:
         config.LAMBDA_RECON_H = args.lambda_recon_h
+    if args.lambda_recon_hzonly is not None:
+        config.LAMBDA_RECON_HZONLY = args.lambda_recon_hzonly
+    if args.lambda_anchor_fine is not None:
+        config.LAMBDA_ANCHOR_FINE = args.lambda_anchor_fine
+    if args.lambda_anchor_mid is not None:
+        config.LAMBDA_ANCHOR_MID = args.lambda_anchor_mid
+    if args.lambda_anchor_coarse is not None:
+        config.LAMBDA_ANCHOR_COARSE = args.lambda_anchor_coarse
+    if args.lambda_size is not None:
+        config.LAMBDA_SIZE = args.lambda_size
+    if args.lambda_size_zonly is not None:
+        config.LAMBDA_SIZE_ZONLY = args.lambda_size_zonly
+    if args.lambda_sem_zonly is not None:
+        config.LAMBDA_SEM_ZONLY = args.lambda_sem_zonly
+    if args.lambda_norm_contrast_coarse is not None:
+        config.LAMBDA_NORM_CONTRAST_COARSE = args.lambda_norm_contrast_coarse
+    if args.no_anchor_mlp:
+        config.USE_ANCHOR_MLP = False
+    if args.no_zpred_readout_mlp:
+        config.USE_Z_PRED_READOUT_MLP = False
+    if args.position_bound is not None:
+        config.POSITION_BOUND = args.position_bound
+    if args.no_position_residual:
+        config.POSITION_RESIDUAL = False
+    if args.no_splat_center:
+        config.SPLAT_SUBTRACT_SPATIAL_MEAN = False
+    if args.splat_min_trunc_frac is not None:
+        config.SPLAT_MIN_TRUNC_VOXEL_FRAC = args.splat_min_trunc_frac
+    if args.lambda_anchor_r_fine is not None:
+        config.LAMBDA_ANCHOR_R_FINE = args.lambda_anchor_r_fine
+    if args.lambda_anchor_r_mid is not None:
+        config.LAMBDA_ANCHOR_R_MID = args.lambda_anchor_r_mid
+    if args.lambda_anchor_r_coarse is not None:
+        config.LAMBDA_ANCHOR_R_COARSE = args.lambda_anchor_r_coarse
+    if args.no_anchor_curriculum:
+        config.ANCHOR_MIX_CURRICULUM = False
+        config.DECODER_GT_ANCHOR_MIX = 0.0
+    if args.anchor_mix_anneal_epochs is not None:
+        config.ANCHOR_MIX_ANNEAL_EPOCHS = args.anchor_mix_anneal_epochs
+    if args.latent_graph_vae:
+        config.LATENT_GRAPH_VAE_MODE = True
+        config.USE_Z_ONLY_DECODER = False
+        config.LAMBDA_RECON_H = 0.0
+        config.LAMBDA_RECON_ZONLY = 0.0
+        config.LAMBDA_RECON_HZONLY = 0.0
+        config.LAMBDA_ANCHOR_FINE = 0.0
+        config.LAMBDA_ANCHOR_MID = 0.0
+        config.LAMBDA_ANCHOR_COARSE = 0.0
+        config.LAMBDA_ANCHOR_R_FINE = 0.0
+        config.LAMBDA_ANCHOR_R_MID = 0.0
+        config.LAMBDA_ANCHOR_R_COARSE = 0.0
+        config.ANCHOR_MIX_CURRICULUM = False
+        config.DECODER_GT_ANCHOR_MIX = 0.0
+        config.LAMBDA_NORM_CONTRAST_FINE = max(
+            config.LAMBDA_NORM_CONTRAST_FINE, 0.3,
+        )
+        if args.lambda_z_peak_fine is None:
+            config.LAMBDA_Z_PEAK_FINE = 1.0
+        if args.lambda_z_peak_mid is None:
+            config.LAMBDA_Z_PEAK_MID = 0.3
+        if args.lambda_z_peak_coarse is None:
+            config.LAMBDA_Z_PEAK_COARSE = 0.2
+        if not args.no_splat_center:
+            config.SPLAT_SUBTRACT_SPATIAL_MEAN = False
+        config.LATENT_LAYOUT_HEAD = True
+        config.LATENT_TRAIN_Z_SAMPLE_AT_GT = False
+        config.LATENT_DECODE_MODE = "vgae"
+        config.LATENT_POS_MATCHED = False
+        config.LATENT_GT_WINDOW_CURRICULUM = False
+        if getattr(args, 'lambda_sem_at_gt', None) is None:
+            config.LAMBDA_SEM_AT_GT = 0.0
+        if args.lambda_index_peak_distill is None and args.lambda_layout_distill is None:
+            config.LAMBDA_INDEX_PEAK_DISTILL = 0.0
+        if args.lambda_query_cover is None:
+            config.LAMBDA_QUERY_COVER = 0.0
+        if args.lambda_pos_latent is None:
+            config.LAMBDA_POS_LATENT = 1.0
+        if args.lambda_slot_spread is None:
+            config.LAMBDA_SLOT_SPREAD = 0.0
+    if args.lambda_recon_latent is not None:
+        config.LAMBDA_RECON_LATENT = args.lambda_recon_latent
+    if args.lambda_z_peak_fine is not None:
+        config.LAMBDA_Z_PEAK_FINE = args.lambda_z_peak_fine
+    if args.lambda_z_peak_mid is not None:
+        config.LAMBDA_Z_PEAK_MID = args.lambda_z_peak_mid
+    if args.lambda_z_peak_coarse is not None:
+        config.LAMBDA_Z_PEAK_COARSE = args.lambda_z_peak_coarse
+    if args.lambda_slot_spread is not None:
+        config.LAMBDA_SLOT_SPREAD = args.lambda_slot_spread
+    if args.lambda_index_peak_distill is not None:
+        config.LAMBDA_INDEX_PEAK_DISTILL = args.lambda_index_peak_distill
+    if args.lambda_layout_distill is not None:
+        config.LAMBDA_LAYOUT_DISTILL = args.lambda_layout_distill
+        if args.lambda_index_peak_distill is None:
+            config.LAMBDA_INDEX_PEAK_DISTILL = args.lambda_layout_distill
+    if args.lambda_pos_latent is not None:
+        config.LAMBDA_POS_LATENT = args.lambda_pos_latent
+    if args.latent_pos_matched:
+        config.LATENT_POS_MATCHED = True
+    if args.lambda_sem_at_gt is not None:
+        config.LAMBDA_SEM_AT_GT = args.lambda_sem_at_gt
+    if args.lambda_query_cover is not None:
+        config.LAMBDA_QUERY_COVER = args.lambda_query_cover
+    if args.latent_decode_mode is not None:
+        config.LATENT_DECODE_MODE = args.latent_decode_mode
     if args.no_zonly_decoder:
         config.USE_Z_ONLY_DECODER = False
+    if args.zonly_aux_loss_only:
+        if args.no_zonly_decoder:
+            raise SystemExit("--zonly-aux-loss-only requires Z-only decoder (omit --no-zonly-decoder)")
+        config.Z_ONLY_PATCH_DEFORMABLE_POSITION = False
     if args.zonly_jitter is not None:
         config.Z_ONLY_QUERY_JITTER = args.zonly_jitter
     if args.unet_depth_fine is not None:
@@ -535,11 +1031,30 @@ def _apply_config_overrides(args) -> None:
         config.LAMBDA_NORM_CONTRAST_FINE = args.lambda_norm_contrast_fine
     if args.lambda_norm_contrast_mid is not None:
         config.LAMBDA_NORM_CONTRAST_MID = args.lambda_norm_contrast_mid
+    if args.lambda_kl_max is not None:
+        config.LAMBDA_KL_MAX = args.lambda_kl_max
+
+
+def _validate_finetune_args(args) -> None:
+    if args.train_modules == "zonly" and args.no_zonly_decoder:
+        raise SystemExit("--train-modules zonly requires Z-only decoder (omit --no-zonly-decoder)")
+    if args.train_modules == "latent_decoders" and not args.latent_graph_vae:
+        raise SystemExit(
+            "--train-modules latent_decoders requires --latent-graph-vae",
+        )
+    if args.reinit_zonly and args.no_zonly_decoder:
+        raise SystemExit("--reinit-zonly requires Z-only decoder (omit --no-zonly-decoder)")
+    if args.train_modules == "zonly" and not args.init_checkpoint:
+        raise SystemExit(
+            "--train-modules zonly requires --init-checkpoint "
+            "(load a pretrained encoder before finetuning the Z-only head)",
+        )
 
 
 if __name__ == "__main__":
     args = _parse_args()
     _apply_config_overrides(args)
+    _validate_finetune_args(args)
 
     if args.ckpt_dir:
         ckpt_dir = args.ckpt_dir
@@ -553,7 +1068,19 @@ if __name__ == "__main__":
         term = Term()
         term.dim(f"checkpoint  {ckpt_dir}")
         term.dim(f"log         {os.path.join(ckpt_dir, 'train.log')}")
-        main(ckpt_dir)
+        latent_dims_cli = (
+            _parse_latent_dims(args.latent_dims) if args.latent_dims else None
+        )
+        main(
+            ckpt_dir,
+            run_probes=not args.no_probe,
+            probe_target=args.probe_target,
+            init_checkpoint=args.init_checkpoint,
+            latent_dims_cli=latent_dims_cli,
+            train_modules=args.train_modules,
+            freeze_encoder=args.freeze_encoder,
+            reinit_zonly=args.reinit_zonly,
+        )
     except KeyboardInterrupt:
         tqdm.write("\nTraining interrupted.")
         raise

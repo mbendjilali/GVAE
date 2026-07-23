@@ -19,15 +19,18 @@ sys.path.insert(0, _REPO)
 import torch
 
 import config
+from gvae.checkpoint_compat import prepare_checkpoint
 from gvae.models.gvae import GVAE
-from gvae.probes.latent import format_report, run_latent_probes
+from gvae.probes.latent import format_report, run_latent_probes, save_probe_artifacts
 from train import SceneGraphDataset, get_device
 
 
 def _load_model(checkpoint: str, device: torch.device) -> GVAE:
+    state = prepare_checkpoint(
+        torch.load(checkpoint, map_location=device, weights_only=True),
+    )
     model = GVAE().to(device)
-    state = torch.load(checkpoint, map_location=device, weights_only=True)
-    model.load_state_dict(state)
+    model.load_state_dict(state, strict=False)
     model.eval()
     return model
 
@@ -47,6 +50,10 @@ def main():
         "--anchor-mixes", type=str, default="0,0.5,1",
         help="Comma-separated DECODER_GT_ANCHOR_MIX values",
     )
+    parser.add_argument(
+        "--probe-target", choices=("supernode", "instance", "both"), default="both",
+        help="Sample Z at supernode GT, raw instances, or both (fine level)",
+    )
     parser.add_argument("-o", "--output", type=str, default="", help="Optional text report path")
     args = parser.parse_args()
 
@@ -61,6 +68,7 @@ def main():
     print(f"Train:      {len(train_ds)} graphs ({args.train_split})")
     print(f"Val:        {len(val_ds)} graphs ({args.val_split})")
     print(f"Anchor mix: {mixes}")
+    print(f"Probe target: {args.probe_target}")
     print()
 
     model = _load_model(args.checkpoint, device)
@@ -73,15 +81,35 @@ def main():
         linear_epochs=args.linear_epochs,
         linear_lr=args.linear_lr,
         n_empty_per_scene=args.n_empty,
+        probe_target=args.probe_target,
     )
-    text = format_report(report)
+    text = format_report(report, probe_target=args.probe_target)
     print(text)
 
     if args.output:
-        os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+        out_dir = os.path.dirname(os.path.abspath(args.output))
+        os.makedirs(out_dir, exist_ok=True)
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(text)
+        json_path = os.path.join(
+            out_dir,
+            os.path.splitext(os.path.basename(args.output))[0] + ".json",
+        )
+        from gvae.probes.latent import report_to_dict
+        import json
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(
+                report_to_dict(
+                    report,
+                    checkpoint=args.checkpoint,
+                    probe_target=args.probe_target,
+                ),
+                f,
+                indent=2,
+            )
+            f.write("\n")
         print(f"Report written to {args.output}")
+        print(f"JSON written to {json_path}")
 
 
 if __name__ == "__main__":
