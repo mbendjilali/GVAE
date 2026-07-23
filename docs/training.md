@@ -89,12 +89,15 @@ python train.py --ckpt-dir checkpoint/anchor_v2 \
 
 At end of training, probes run automatically on `best.pth` → `probe_report.txt`, `probe_summary.json`. Pass `--no-probe` to skip; `--probe-target {supernode,instance,both}` (default `both`).
 
-### Example ablation (25 epochs, all occupancy levels)
+### Example ablation (25 epochs, norm contrast off)
 
 ```bash
 python train.py --epochs 25 --ckpt-dir checkpoint/my_ablation \
-  --lambda-occ-grid-fine 1 --lambda-occ-grid-mid 1 --lambda-occ-grid-coarse 1
+  --lambda-norm-contrast-fine 0 --lambda-norm-contrast-mid 0
 ```
+
+Use a fresh `--ckpt-dir` per ablation; reusing a directory overwrites the
+previous run.
 
 ---
 
