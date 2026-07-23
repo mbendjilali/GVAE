@@ -62,9 +62,9 @@ After training: probes + `visualize_recon.py` on 3 val tiles.
 
 | ID | Task |
 |----|------|
-| D1 | TensorBoard loss components (recon / anchor / occ per level) |
+| D1 | TensorBoard loss components (recon / anchor per level) |
 | D2 | Log `‖F_fine‖` fraction non-zero per scene (splat health) |
-| D3 | Document fixed 11-scene val split in `docs/data.md` |
+| ~~D3~~ | ~~Document fixed 11-scene val split in `docs/data.md`~~ — done, see [docs/data.md](docs/data.md#train--test-split) |
 
 ---
 
