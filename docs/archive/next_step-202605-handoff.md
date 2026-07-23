@@ -175,6 +175,33 @@ Pick one or combine (ablation matrix below):
 
 ### Phase 3 — Small ablation matrix (few epochs each, ~20–30 ep enough for probe direction)
 
+> **Status: invalidated, not completed (assessed 2026-07-23).**
+>
+> Runs 0–3 were executed — `7b76c03` implements Phase 1 plus Phase 2A, and the
+> backlog entry "Re-run ablations post fine-coarsening — old Run 1–3 numbers not
+> comparable" records that they produced numbers. **Run 4 was never executed**;
+> it survives on the backlog as L4 (Phase 2B soft density), carried through every
+> rewrite since and still unrun.
+>
+> The numbers did not survive, invalidated twice over. First the fine coarsening
+> layer S0 (`2050200`, merged `a18690c`) redefined what a "fine supernode" is,
+> which is what that backlog entry is about. Then `a215503` deleted `OccGridHead`
+> and all voxel occupancy prediction, removing the **occupancy-IoU column that
+> runs 1 and 2 were judged on** — `utils/metrics_sanity.py` now asserts
+> `occ_iou_fine` is absent from the metrics dict. No per-run artefacts remain on
+> disk.
+>
+> **This ladder will not be rerun.** Doing so would mean restoring a component the
+> project deliberately removed, purely to populate a table, and §4.3 of the
+> [retrospective](../development-retrospective.md) already shows the column it
+> turns on had a structural ceiling near 50% from over-prediction — so the rerun
+> would be uninformative even if completed. The surviving ablation with intact
+> numbers and a clean conclusion is **Phase E** (May 25) in that document:
+> depth-1 rejected, norm contrast shown harmless, and a confounded combined run
+> correctly decomposed.
+>
+> Kept below as the record of what was planned.
+
 Run same seed/data subset if needed for speed (optional: `--max-graphs 10` flag on train — **not implemented yet**).
 
 | Run | Changes | Hypothesis |
