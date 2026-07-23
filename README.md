@@ -25,8 +25,9 @@ A neural encoder that turns **3D outdoor scene graphs** (cars, poles, trees, …
 | 2 | [docs/architecture.md](docs/architecture.md) | Encoder, decoders, losses |
 | 3 | [docs/training.md](docs/training.md) | How to train, read metrics, run probes |
 | 4 | [docs/localization-progress.md](docs/localization-progress.md) | Jun 2026 `pos` / anchor experiment recap |
-| 5 | [docs/development-retrospective.md](docs/development-retrospective.md) | May 2026 record: Phase E ablations, obstacles, failed experiments |
-| 6 | [TODO.md](TODO.md) | Backlog and ablation recipes |
+| 5 | [docs/probe-results.md](docs/probe-results.md) | Probe A / B / C per checkpoint, and which runs are lost |
+| 6 | [docs/development-retrospective.md](docs/development-retrospective.md) | May 2026 record: Phase E ablations, obstacles, failed experiments |
+| 7 | [TODO.md](TODO.md) | Backlog and ablation recipes |
 
 Older drafts in [docs/archive/](docs/archive/) are **not** up to date.
 
